@@ -1,0 +1,37 @@
+# Design Mind Pattern Candidate
+# Generated: 2026-03-20T20:50:58.021Z
+# Status: logged
+# NOTE: written locally — API was unreachable. Submit to design-mind-mcp when online.
+
+candidate_id: "2026-03-20T20-50-58-assessmentinstrumentlist"
+pattern_name: "AssessmentInstrumentList"
+status: logged
+frequency_count: 1
+
+description: >
+  A patient-scoped list surface showing available clinical screening instruments (PHQ-9, GAD-7, SDOH, AUDIT-C, etc.) with canonical instrument codes, full verbatim names, domain, estimated time, question count, and last-administered date. Each row follows the established flat list pattern (bg-card, border-b, border-l accent, hover:bg-muted/60, Button from shadcn). Clicking a row or its Start Assessment button opens the full assessment form in a new artifact tab.
+
+intent_it_serves: >
+  Coordinator or clinician needs to select and administer a screening instrument for the current patient. The list surfaces what's available, what's been done, and lets them navigate into the instrument in one click — without leaving the patient context.
+
+why_existing_patterns_didnt_fit: >
+  consult_before_build returned ClinicalAlertBanner (0.20), PatientContextHeader (0.20), and PatientRow (0.19) — none cover a list of assessment instruments. CareGapCard and TaskActionRow cover actionable work items with status/due-date semantics; assessments are selection items without due dates or urgency states. The pattern needed to express availability (available vs coming-soon), verbatim instrument identity (safety rule 14), and a primary action that opens a new surface rather than modifying data.
+
+implementation_ref: "shell/artifacts/AssessmentsListArtifact.tsx"
+
+ontology_refs:
+  - Patient
+  - ClinicalAssessment
+  - PHQ-9
+  - GAD-7
+  - SDOH
+  - AUDIT-C
+
+similar_candidates:
+  []
+
+# Instructions for human ratification:
+# 1. Review the description and intent
+# 2. Check similar_candidates — merge if duplicate
+# 3. If valid: create patterns/AssessmentInstrumentList/ with meta.yaml and component.tsx
+# 4. Run: node server/src/seed.js to re-index

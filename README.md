@@ -34,7 +34,28 @@ The Design Mind organises knowledge at four levels:
 
 ---
 
-## Quick start
+## Quick start — hosted (recommended)
+
+The server runs publicly at Railway. No local install needed.
+
+**Add to your project's `.mcp.json`:**
+
+```json
+{
+  "mcpServers": {
+    "design-mind": {
+      "type": "sse",
+      "url": "https://design-mind-mcp.up.railway.app/sse"
+    }
+  }
+}
+```
+
+That's it. Claude Code connects over SSE — no local process to manage.
+
+---
+
+## Quick start — local (self-hosted)
 
 **1. Install dependencies**
 
@@ -119,29 +140,27 @@ Current surfaces:
 
 ## Candidate submission API
 
-`report_pattern` submits new pattern candidates to a central hosted endpoint so maintainers can ratify them and promote them into the genome for everyone.
+`report_pattern` submits new pattern candidates to a central endpoint so maintainers can ratify them and promote them into the genome for everyone.
 
-**Run locally:**
+In **hosted mode** the `/candidates` route is served by the same MCP server process — no separate process needed.
+
+**Run the standalone API locally (only needed for local dev):**
 
 ```bash
 cd api && node src/index.js
 ```
 
-**Environment variables:**
+**Environment variables (hosted / Railway deployment):**
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `PORT` | `3456` | API port |
-| `API_KEY` | `dm-local-dev-key` | Auth key (change in production) |
-| `SLACK_WEBHOOK_URL` | — | Optional Slack webhook for notifications |
-
-**MCP server variables:**
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DESIGN_MIND_API_URL` | `http://localhost:3456` | Candidate API endpoint |
-| `DESIGN_MIND_API_KEY` | `dm-local-dev-key` | API key |
-| `DESIGN_MIND_PROJECT` | (dirname) | Project name attached to submissions |
+| `TRANSPORT` | `stdio` | Set to `sse` to enable HTTP/SSE transport |
+| `PORT` | `8080` | HTTP port (Railway sets this automatically) |
+| `API_KEY` | `dm-local-dev-key` | Key for `/candidates` endpoint — **change in production** |
+| `DESIGN_MIND_API_KEY` | `dm-local-dev-key` | Must match `API_KEY` — used by `report_pattern` when submitting |
+| `DESIGN_MIND_API_URL` | `http://localhost:3456` | Base URL of the candidates API (set to your Railway URL in production) |
+| `SLACK_WEBHOOK_URL` | — | Optional Slack webhook for candidate notifications |
+| `DESIGN_MIND_PROJECT` | (dirname) | Project name attached to candidate submissions |
 
 If the API is unreachable, `report_pattern` falls back to writing the candidate locally to `patterns/_candidates/`.
 
