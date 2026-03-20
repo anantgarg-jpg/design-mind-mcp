@@ -29,6 +29,22 @@ const PORT     = parseInt(process.env.PORT || '3456', 10);
 const API_KEY  = process.env.API_KEY || 'dm-local-dev-key';
 const SLACK_WEBHOOK = process.env.SLACK_WEBHOOK_URL || '';
 
+// ── Similarity helpers ────────────────────────────────────────────────────────
+
+function compositeText(pattern_name = '', description = '', intent_it_serves = '') {
+  return [pattern_name, pattern_name, pattern_name, description, intent_it_serves]
+    .join(' ')
+    .toLowerCase();
+}
+
+function stringSimilarity(a, b) {
+  const wordsA = new Set(a.split(/\s+/).filter(w => w.length > 2));
+  const wordsB = new Set(b.split(/\s+/).filter(w => w.length > 2));
+  const intersection = new Set([...wordsA].filter(w => wordsB.has(w)));
+  const union = new Set([...wordsA, ...wordsB]);
+  return union.size > 0 ? intersection.size / union.size : 0;
+}
+
 // ── Storage ───────────────────────────────────────────────────────────────────
 
 function ensureStore() {
@@ -106,8 +122,8 @@ async function notifySlack(candidate) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
     };
+    const { request } = await import('node:https');
     await new Promise((resolve, reject) => {
-      const { request } = await import('node:https');
       const req = request(options, res => {
         res.resume();
         res.on('end', resolve);
@@ -160,10 +176,19 @@ async function handleRequest(req, res) {
       if (!body[field]) return send(res, 400, { error: `Missing required field: ${field}` });
     }
 
-    // Check for similar existing candidates to compute frequency
-    const existing = loadCandidates();
+    // Check for similar existing candidates using composite similarity
+    // (name × 3 + description + intent) so patterns with different names
+    // but the same underlying concept (e.g. SdohAssessmentTab vs ClinicalAssessmentForm)
+    // are recognised as duplicates and their frequency count is merged.
     const nameLower = body.pattern_name.toLowerCase().trim();
-    const matches = existing.filter(c => c.pattern_name?.toLowerCase().trim() === nameLower);
+    const existing = loadCandidates();
+    const incomingText = compositeText(body.pattern_name, body.description, body.intent_it_serves);
+    const matches = existing.filter(c =>
+      stringSimilarity(
+        incomingText,
+        compositeText(c.pattern_name, c.description, c.intent_it_serves)
+      ) > 0.2
+    );
     const frequency_count = matches.length + 1;
     const status = frequency_count >= 3 ? 'ready_for_ratification'
                  : frequency_count === 2 ? 'needs_more_signal'

@@ -1,0 +1,33 @@
+# Design Mind Pattern Candidate
+# Generated: 2026-03-20T20:18:25.743Z
+# Status: logged
+# NOTE: written locally — API was unreachable. Submit to design-mind-mcp when online.
+
+candidate_id: "2026-03-20T20-18-25-clinicalassessmentform"
+pattern_name: "ClinicalAssessmentForm"
+status: logged
+frequency_count: 1
+
+description: >
+  A scored clinical assessment instrument form. Renders verbatim instrument questions with a frequency/severity response grid, computes a running total score, maps the score to a severity classification using MDS severity tokens, and submits the completed assessment. Q9-style safety flag for any self-harm indicator answer.
+
+intent_it_serves: >
+  Coordinator or clinician needs to administer a standardised screening instrument (PHQ-9, GAD-7, etc.) and record the result against a patient record.
+
+why_existing_patterns_didnt_fit: >
+  consult_before_build returned ClinicalAlertBanner (display-only), InlinePatientCard (identity display), PatientRow (list row) — none cover a scored multi-question assessment form with severity classification output.
+
+implementation_ref: "shell/artifacts/PHQ9Artifact.tsx"
+
+ontology_refs:
+  - Patient
+  - Coordinator
+
+similar_candidates:
+  []
+
+# Instructions for human ratification:
+# 1. Review the description and intent
+# 2. Check similar_candidates — merge if duplicate
+# 3. If valid: create patterns/ClinicalAssessmentForm/ with meta.yaml and component.tsx
+# 4. Run: node server/src/seed.js to re-index

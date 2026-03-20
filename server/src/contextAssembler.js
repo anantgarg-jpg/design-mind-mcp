@@ -517,22 +517,34 @@ function loadExistingCandidates(candidatesDir) {
   return files.map(f => {
     try {
       const content = readFileSync(join(candidatesDir, f), 'utf-8');
-      // Simple extraction of pattern_name from YAML
-      const nameMatch = content.match(/pattern_name:\s*["']?(.+?)["']?\n/);
+      const nameMatch    = content.match(/pattern_name:\s*["']?(.+?)["']?\n/);
+      const descMatch    = content.match(/description:\s*[>|]?\s*\n?((?:  .+\n?)+)/);
+      const intentMatch  = content.match(/intent_it_serves:\s*[>|]?\s*\n?((?:  .+\n?)+)/);
       return {
         file: f,
-        pattern_name: nameMatch ? nameMatch[1].trim() : f,
+        pattern_name:     nameMatch   ? nameMatch[1].trim()              : f,
+        description:      descMatch   ? descMatch[1].replace(/\s+/g, ' ').trim()   : '',
+        intent_it_serves: intentMatch ? intentMatch[1].replace(/\s+/g, ' ').trim() : '',
       };
     } catch {
-      return { file: f, pattern_name: f };
+      return { file: f, pattern_name: f, description: '', intent_it_serves: '' };
     }
   });
 }
 
+// Composite text for similarity: name carries 3x weight by repetition,
+// description and intent carry 1x each. This means two patterns with
+// very different names (SdohAssessmentTab vs ClinicalAssessmentForm) but
+// similar descriptions and intents will still score as similar.
+function compositeText(pattern_name, description = '', intent_it_serves = '') {
+  return [pattern_name, pattern_name, pattern_name, description, intent_it_serves]
+    .join(' ')
+    .toLowerCase()
+}
+
 function stringSimilarity(a, b) {
-  // Simple Jaccard similarity on words
-  const wordsA = new Set(a.toLowerCase().split(/\s+/));
-  const wordsB = new Set(b.toLowerCase().split(/\s+/));
+  const wordsA = new Set(a.split(/\s+/).filter(w => w.length > 2));
+  const wordsB = new Set(b.split(/\s+/).filter(w => w.length > 2));
   const intersection = new Set([...wordsA].filter(w => wordsB.has(w)));
   const union = new Set([...wordsA, ...wordsB]);
   return union.size > 0 ? intersection.size / union.size : 0;
@@ -596,9 +608,16 @@ function localFallback(params, basePath, reason) {
   if (!existsSync(candidatesDir)) mkdirSync(candidatesDir, { recursive: true });
 
   const existing = loadExistingCandidates(candidatesDir);
+  const incomingText = compositeText(pattern_name, params.description, params.intent_it_serves);
   const similar = existing
-    .map(e => ({ ...e, similarity: stringSimilarity(pattern_name, e.pattern_name) }))
-    .filter(e => e.similarity > 0.3)
+    .map(e => ({
+      ...e,
+      similarity: stringSimilarity(
+        incomingText,
+        compositeText(e.pattern_name, e.description, e.intent_it_serves)
+      ),
+    }))
+    .filter(e => e.similarity > 0.2)
     .sort((a, b) => b.similarity - a.similarity)
     .slice(0, 3);
 
