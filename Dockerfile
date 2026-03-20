@@ -1,9 +1,9 @@
-FROM node:18-alpine
+FROM node:18-slim
 
 WORKDIR /app
 
 # python3 + PyYAML are required by knowledge.js for YAML parsing
-RUN apk add --no-cache python3 py3-yaml
+RUN apt-get update && apt-get install -y --no-install-recommends python3 python3-yaml && rm -rf /var/lib/apt/lists/*
 
 # Install server dependencies first (better layer caching)
 COPY server/package.json ./server/
