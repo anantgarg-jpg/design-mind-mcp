@@ -1,0 +1,35 @@
+id: StatCard
+status: active
+confidence: 0.88
+version: 1.0.0
+
+summary: >
+  Metric display card for dashboard summary rows. Shows a label,
+  a large numeric value, and an optional subtitle. Used in the
+  artifact content header area to give coordinators their daily
+  snapshot at a glance.
+
+when:
+  - showing summary counts at the top of a dashboard artifact
+  - showing labelled count stats like Patients Need Attention or Tasks Due Today
+  - value needs to be scannable at a glance
+
+not_when:
+  - inline text metric — just use a span
+  - chart or trend data → use a chart component
+  - more than 6 stats in a row (breaks density)
+
+variants:
+  default: neutral — general counts
+  urgent: destructive red — requires immediate attention
+  warning: warning yellow — overdue or at-risk
+  success: success green — positive outcomes
+
+key_rules:
+  - value always uses tabular-nums for alignment
+  - label always uppercase tracking-wide (wayfinding, not a headline)
+  - max 4 StatCards in a single row for readability
+
+embedding_hint: >
+  stat card metric dashboard summary count number value
+  patients tasks care gaps overdue attention daily snapshot

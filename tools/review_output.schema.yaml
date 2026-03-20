@@ -1,0 +1,62 @@
+tool: review_output
+version: 1.0.0
+description: >
+  Call after generating UI to get a structured critique from the
+  Critic agent. Returns what honored the genome, what was borderline,
+  what was novel, and what to fix.
+
+input:
+  generated_output:
+    type: string
+    required: true
+    description: The generated code or detailed description of the UI
+
+  original_intent:
+    type: string
+    required: true
+    description: The same intent_description passed to consult_before_build
+
+  context_used:
+    type: object
+    required: false
+    description: The context returned from consult_before_build, if available
+
+output:
+  honored:
+    type: array
+    items:
+      observation: string
+      rule_or_pattern_ref: string
+
+  borderline:
+    type: array
+    items:
+      observation: string
+      tension: string
+      recommendation: string
+
+  novel:
+    type: array
+    items:
+      description: string
+      coherent_with_taste: boolean
+      coherence_reasoning: string
+
+  fix:
+    type: array
+    items:
+      problem: string
+      rule_violated: string
+      correction: string
+
+  candidate_patterns:
+    type: array
+    description: Novel items worth promoting to the genome
+    items:
+      name: string
+      description: string
+      promoted_to_candidates: boolean
+
+  confidence:
+    type: number
+    description: Overall genome compliance score (0.0–1.0)

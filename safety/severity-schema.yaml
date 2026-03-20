@@ -1,0 +1,74 @@
+# Severity schema — machine-readable
+# Single source of truth for severity rendering across all surfaces.
+# Updated to use MDS (Masala Design System) tokens from theme.css.
+# Referenced by: ClinicalAlertBanner/meta.yaml, StatusBadge/meta.yaml,
+# runtime generation layer, conversational layer.
+
+# IMPORTANT NAMING NOTE:
+# The CSS token --alert is MDS Orange and maps to HIGH clinical severity.
+# It does NOT mean "any clinical alert" — that is an entity in ontology/entities.yaml.
+# The CSS token --destructive is MDS Red and maps to CRITICAL clinical severity.
+# --destructive serves both "destructive UI actions" AND "Critical severity" — same color, two contexts.
+
+severity_levels:
+  critical:
+    mds_token: "--destructive"
+    mds_token_light: null                        # no --destructive-light in MDS — use inline bg
+    hex_reference: "#D62400"                     # MDS Red — WCAG AA on white
+    tailwind_equivalent: "text-destructive"
+    bg_class: "bg-destructive/10"                # 10% opacity destructive for banner bg
+    text_class: "text-destructive"
+    border_class: "border-destructive/30"
+    solid_class: "bg-destructive text-destructive-foreground"
+    icon: "alert-octagon"
+    permitted_actions: [acknowledge, escalate]
+    forbidden_actions: [dismiss, archive]
+    requires_acknowledgment: true
+    audit_required: true
+    sla_hours: 1
+
+  high:
+    mds_token: "--alert"                         # MDS Orange — NOT the same as the Alert entity
+    mds_token_light: "--alert-light"             # #FFF2DB
+    hex_reference: "#9A4700"                     # WCAG AA accessible foreground
+    tailwind_equivalent: "text-alert"
+    bg_class: "bg-[var(--alert-light)]"
+    text_class: "text-alert"
+    border_class: "border-alert/30"
+    solid_class: "bg-alert text-alert-foreground"
+    icon: "alert-triangle"
+    permitted_actions: [acknowledge, escalate, dismiss_with_reason]
+    forbidden_actions: [dismiss_without_reason]
+    requires_acknowledgment: true
+    audit_required: true
+    sla_hours: 4
+
+  medium:
+    mds_token: "--warning"
+    mds_token_light: "--warning-light"           # #FFF9E5
+    hex_reference: "#7A5400"                     # WCAG AA accessible foreground
+    tailwind_equivalent: "text-warning"
+    bg_class: "bg-[var(--warning-light)]"
+    text_class: "text-warning"
+    border_class: "border-warning/30"
+    solid_class: "bg-warning text-warning-foreground"
+    icon: "alert-circle"
+    permitted_actions: [acknowledge, escalate, dismiss]
+    requires_acknowledgment: false
+    audit_required: true
+    sla_hours: 24
+
+  low:
+    mds_token: "--accent"
+    mds_token_light: "--accent"                  # accent is already the light bg
+    hex_reference: "#0051AD"                     # accent-foreground — WCAG AA
+    tailwind_equivalent: "text-accent-foreground"
+    bg_class: "bg-accent"
+    text_class: "text-accent-foreground"
+    border_class: "border-accent-foreground/20"
+    solid_class: "bg-primary text-primary-foreground"
+    icon: "info"
+    permitted_actions: [acknowledge, escalate, dismiss]
+    requires_acknowledgment: false
+    audit_required: false
+    sla_hours: 72

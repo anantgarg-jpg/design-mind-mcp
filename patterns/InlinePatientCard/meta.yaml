@@ -1,0 +1,46 @@
+id: InlinePatientCard
+status: active
+confidence: 0.85
+version: 1.0.0
+introduced: 2026-03-20
+last_evolved: 2026-03-20
+
+summary: >
+  A compact structured card rendered inside an assistant message bubble in Panel 2,
+  triggered by a ChatQuickActionChip. Uses a shared InlineCard shell: initials avatar
+  (risk-tinted color pool) + patient name (Last, First) + secondary badge, followed
+  by 1-2 info rows with icons, then a divider footer with metadata. Two implementations:
+  InlineOutreachCard (last outreach: type, outcome, care gap, coordinator, timestamp)
+  and InlineNextPatientCard (next patient: risk tier, open gap count, next due item,
+  suggested action).
+
+when:
+  - displaying structured patient data inline in the chat conversation after a chip tap
+  - data fits the avatar + 2 rows + footer template (not more complex)
+  - always paired with ChatQuickActionChip — never rendered standalone
+
+not_when:
+  - data requires more than 2 info rows — open a full artifact instead
+  - outside Panel 2 / chat context — use PatientRow or PatientContextHeader
+  - displaying more than one patient record — use a list artifact
+
+because: >
+  Inline cards keep the coordinator in conversation flow. The shared InlineCard shell
+  ensures visual consistency across all chip-triggered responses regardless of the
+  data domain. Avatar + secondary badge + rows + footer is the minimum viable
+  structure for patient-scoped data.
+
+ontology_refs:
+  entities: [Patient, CareGap, Task]
+  states: [CareGapStatus]
+  actions: []
+
+usage_signal:
+  renders_total: 0
+  products: []
+  override_rate: 0.0
+
+embedding_hint: >
+  inline card chat assistant message patient avatar initials outreach next patient
+  risk tier care gap suggested action coordinator timestamp bubble panel 2
+  structured data compact two rows footer shared shell chip triggered

@@ -1,0 +1,99 @@
+tool: consult_before_build
+version: 1.0.0
+description: >
+  Call before generating any UI surface or component. Returns the
+  relevant patterns, rules, ontology refs, and institutional memory
+  for the stated intent. Closes the context gap before generation.
+
+input:
+  intent_description:
+    type: string
+    required: true
+    description: >
+      Plain language description of what you are about to build.
+      Be specific about the user type, the data being shown,
+      and the actions available.
+    example: "A worklist row showing a care gap with status,
+              due date, and a Close Gap action for coordinators"
+
+  component_type:
+    type: string
+    required: true
+    enum: [card, row, banner, header, modal, drawer, form,
+           table, list, badge, button, page, panel, other]
+
+  domain:
+    type: string
+    required: true
+    enum: [clinical-alerts, patient-data, care-gaps, tasks,
+           navigation, data-display, forms, admin, other]
+
+  user_type:
+    type: array
+    items:
+      enum: [clinician, coordinator, patient, admin]
+    required: true
+
+  product_area:
+    type: string
+    required: false
+    description: Which product this is being built for
+
+output:
+  patterns:
+    type: array
+    description: Ranked relevant patterns from the library
+    items:
+      id: string
+      relevance_score: number
+      when: string
+      not_when: string
+      because: string
+      confidence: number
+      usage_signal: object
+
+  rules:
+    type: array
+    description: Applicable cross-component rules
+    items:
+      rule_id: string
+      summary: string
+      applies_because: string
+
+  ontology_refs:
+    type: array
+    description: Relevant concept definitions
+    items:
+      concept: string
+      canonical_name: string
+      ui_label: string
+      notes: string
+
+  safety_constraints:
+    type: array
+    description: Hard constraints in scope for this intent
+    items:
+      constraint_id: number
+      rule: string
+      applies_because: string
+
+  similar_builds:
+    type: array
+    description: Past builds from episodic memory with similar intent
+    items:
+      build_id: string
+      intent: string
+      what_worked: string
+      what_to_watch: string
+
+  confidence:
+    type: number
+    description: >
+      How well the genome covers this intent (0.0–1.0).
+      Below 0.7 means the agent is likely to invent — flag output.
+
+  gaps:
+    type: array
+    description: What the system doesn't have a pattern for yet
+    items:
+      type: string

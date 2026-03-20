@@ -1,0 +1,32 @@
+# Design Mind Pattern Candidate
+# Generated: 2026-03-20T11:53:02.464Z
+# Status: logged
+
+candidate_id: "2026-03-20T11-53-02-chatquickactionchip"
+pattern_name: "ChatQuickActionChip"
+status: ratified
+frequency_count: 1
+
+description: >
+  A persistent strip of pill-shaped chip buttons above the chat input in Panel 2. Each chip triggers a structured assistant response inline in the conversation — no artifact tab opened. The response is a typed card (InlineOutreachCard, etc.) rendered inside the assistant message bubble below the reply text. Chip style: rounded-full, border-border/70, hover:border-primary/50, shadow-card. Card style: bg-card border rounded-xl shadow-card with icon rows and a divider footer for metadata.
+
+intent_it_serves: >
+  Coordinator needs a one-tap shortcut to surface structured clinical data (last outreach, recent task, etc.) inline in the chat without navigating to a new artifact tab or typing a query.
+
+why_existing_patterns_didnt_fit: >
+  No chat interaction pattern exists in the genome. consult_before_build returned 0.30 confidence with no relevant matches. PatientRow and ClinicalAlertBanner are Panel 3 display patterns. The inline-in-chat card is a novel interaction model for this shell.
+
+implementation_ref: "shell/panels/ChatPanel.tsx"
+
+ontology_refs:
+  - Patient
+  - CareGap
+
+similar_candidates:
+  []
+
+# Instructions for human ratification:
+# 1. Review the description and intent
+# 2. Check similar_candidates — merge if duplicate
+# 3. If valid: create patterns/ChatQuickActionChip/ with meta.yaml and component.tsx
+# 4. Run: node server/src/seed.js to re-index

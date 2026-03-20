@@ -1,0 +1,9 @@
+# TF-IDF vector indexes — build artifacts, not source of truth
+# Regenerate with: node src/seed.js
+.index/
+
+# Node modules (none used currently, but safe to ignore)
+node_modules/
+
+# Local test outputs
+*.test.json

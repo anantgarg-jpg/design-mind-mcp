@@ -1,0 +1,27 @@
+id: SectionHeader
+status: active
+confidence: 0.90
+version: 1.0.0
+
+summary: >
+  Artifact content section label with optional count and action.
+  Used to divide Panel 3 content into named groups — "NEEDS ATTENTION",
+  "COMING UP", "CARE GAPS". Muted and small — organizes without competing.
+
+when:
+  - dividing a list into named sections
+  - section has a count worth surfacing
+  - section has a single optional action (e.g. "View all")
+
+not_when:
+  - page-level heading — use an ArtifactContentHeader instead
+  - decorative divider with no semantic meaning — use a Separator
+
+key_rules:
+  - always uppercase tracking-wider — wayfinding, not a headline
+  - count urgent/warning variants only when the count itself is urgent
+  - never bold or large — should recede visually, not dominate
+
+embedding_hint: >
+  section header label group divider needs attention coming up
+  care gaps count wayfinding artifact content organizer

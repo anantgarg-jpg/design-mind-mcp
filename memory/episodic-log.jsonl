@@ -1,0 +1,22 @@
+# episodic-log.jsonl
+# Each line is a JSON object representing one agent interaction.
+# Written by the context-builder after every consult_before_build
+# and review_output call.
+#
+# Schema per entry:
+# {
+#   "id": "uuid",
+#   "timestamp": "ISO8601",
+#   "call_type": "consult_before_build" | "review_output" | "report_pattern",
+#   "product_area": "string",
+#   "intent_description": "string",
+#   "component_type": "string",
+#   "domain": "string",
+#   "user_types": ["string"],
+#   "patterns_returned": ["PatternId"],
+#   "rules_returned": ["rule-id"],
+#   "confidence_returned": 0.0,
+#   "gaps_flagged": ["string"],
+#   "novel_patterns": ["string"],
+#   "review_confidence": 0.0     // only on review_output calls
+# }

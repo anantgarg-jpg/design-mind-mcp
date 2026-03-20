@@ -1,0 +1,50 @@
+id: TaskActionRow
+status: active
+confidence: 0.87
+version: 1.0.0
+introduced: seed-v0
+last_evolved: seed-v0
+
+summary: >
+  The atomic unit of "something needs to be done." Renders a single
+  Task in a list or worklist view with its status, due date, assignee,
+  and primary action. Used across all products — care management,
+  population health, admin. Muscle memory for this component is
+  critical: if it behaves differently per product, coordinators slow down.
+
+when:
+  - displaying Task entities in any list, worklist, or queue
+  - user needs to take an action on a task (complete, reassign, etc.)
+  - task status and due date need to be scannable at a glance
+
+not_when:
+  - task detail view with full notes and history → use a detail panel
+  - task creation form → use a form component
+  - task count or metric display → use a stat component
+
+actions_available:
+  - Complete (primary — marks task as Completed)
+  - Reassign (changes assignee)
+  - Add Note (adds to task history)
+  - Cancel (soft-cancels task — not the same as Delete)
+
+behavior:
+  - overdue tasks show amber left border accent automatically
+  - completed and cancelled tasks render at reduced opacity
+  - due date shows relative time when < 7 days, absolute otherwise
+  - clicking the task title expands to show detail inline
+
+ontology_refs:
+  entities: [Task, Patient, Provider]
+  states: [TaskStatus]
+  actions: [Assign, Archive]
+
+usage_signal:
+  renders_total: 0
+  products: []
+  override_rate: 0.0
+
+embedding_hint: >
+  task action row worklist queue to-do assignment complete reassign
+  due date overdue status care coordinator workflow list item
+  action unit patient task management

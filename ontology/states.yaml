@@ -1,0 +1,121 @@
+# Canonical state and status definitions
+# These are the ONLY status values permitted in UI. No synonyms in copy.
+# Color tokens are defined here. safety/severity-schema.yaml extends this
+# for clinical severity specifically.
+
+# ── TASK STATES ──────────────────────────────────────────────────────────────
+
+TaskStatus:
+  values:
+    open:
+      canonical_name: "Open"
+      synonyms: ["pending", "new", "unstarted", "to-do"]
+      color_token: "--status-neutral"
+      badge_variant: "outline"
+      meaning: Task created, not yet started. Default state.
+
+    in_progress:
+      canonical_name: "In Progress"
+      synonyms: ["active", "started", "working", "in-progress"]
+      color_token: "--status-info"
+      badge_variant: "subtle-blue"
+      meaning: Task has been picked up by an assignee. Work is underway.
+
+    completed:
+      canonical_name: "Completed"
+      synonyms: ["done", "finished", "resolved", "closed", "complete"]
+      color_token: "--status-success"
+      badge_variant: "subtle-green"
+      meaning: Task has been finished. No further action required.
+
+    overdue:
+      canonical_name: "Overdue"
+      synonyms: ["late", "past due", "missed", "expired"]
+      color_token: "--status-warning"
+      badge_variant: "subtle-amber"
+      meaning: Task due date has passed without completion. Requires attention.
+
+    cancelled:
+      canonical_name: "Cancelled"
+      synonyms: ["voided", "withdrawn", "removed"]
+      color_token: "--status-muted"
+      badge_variant: "muted"
+      meaning: Task was intentionally stopped. Not a failure state.
+
+# ── CARE GAP STATES ───────────────────────────────────────────────────────────
+
+CareGapStatus:
+  values:
+    open:
+      canonical_name: "Open"
+      color_token: "--status-warning"
+      badge_variant: "subtle-amber"
+      meaning: Gap identified, not yet addressed.
+
+    in_outreach:
+      canonical_name: "In Outreach"
+      synonyms: ["outreach in progress", "contacted", "attempting"]
+      color_token: "--status-info"
+      badge_variant: "subtle-blue"
+      meaning: Care team is actively attempting to close the gap.
+
+    closed:
+      canonical_name: "Closed"
+      synonyms: ["resolved", "completed", "met", "satisfied"]
+      color_token: "--status-success"
+      badge_variant: "subtle-green"
+      meaning: Gap has been addressed. Service was delivered.
+
+    excluded:
+      canonical_name: "Excluded"
+      synonyms: ["exempt", "excluded", "not applicable", "N/A"]
+      color_token: "--status-muted"
+      badge_variant: "muted"
+      meaning: Patient has a documented clinical exclusion for this measure.
+
+# ── ALERT SEVERITY ────────────────────────────────────────────────────────────
+# See also: safety/severity-schema.yaml for hard constraints on these values.
+
+AlertSeverity:
+  values:
+    critical:
+      canonical_name: "Critical"
+      synonyms: ["urgent", "STAT", "P1", "high-priority", "emergent"]
+      color_token: "--severity-critical"
+      hex_reference: "#DC2626"   # red-600 — never change without SME approval
+      badge_variant: "solid-red"
+      requires_acknowledgment: true
+      sla_hours: 1
+      meaning: >
+        Requires immediate clinical intervention. Patient safety at risk.
+        Cannot be dismissed — only acknowledged with audit trail.
+
+    high:
+      canonical_name: "High"
+      synonyms: ["elevated", "P2", "important", "significant"]
+      color_token: "--severity-high"
+      hex_reference: "#D97706"   # amber-600
+      badge_variant: "solid-amber"
+      requires_acknowledgment: true
+      sla_hours: 4
+      meaning: Requires action within 4 hours. Clinician review needed.
+
+    medium:
+      canonical_name: "Medium"
+      synonyms: ["moderate", "P3", "informational", "standard"]
+      color_token: "--severity-medium"
+      hex_reference: "#CA8A04"   # yellow-600
+      badge_variant: "subtle-yellow"
+      requires_acknowledgment: false
+      sla_hours: 24
+      meaning: Requires attention within 24 hours. Can be triaged.
+
+    low:
+      canonical_name: "Low"
+      synonyms: ["minor", "P4", "routine", "informational"]
+      color_token: "--severity-low"
+      hex_reference: "#2563EB"   # blue-600
+      badge_variant: "subtle-blue"
+      requires_acknowledgment: false
+      sla_hours: 72
+      meaning: Informational. No immediate action required.

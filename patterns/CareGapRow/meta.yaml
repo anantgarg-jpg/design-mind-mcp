@@ -1,0 +1,27 @@
+id: CareGapRow
+status: active
+confidence: 0.90
+version: 1.0.0
+
+summary: >
+  Inline care gap item for patient panels and coordinator worklists.
+  Compact row showing measure name, status, due date, and Close Gap
+  action. Secondary actions (Assign, Exclude) hidden until hover.
+
+when:
+  - displaying care gaps in a patient detail panel
+  - coordinator worklist with multiple gap types
+  - any list where Close Gap is the primary action
+
+not_when:
+  - population-level gap analytics → use chart
+  - gap summary count → use a stat/metric component
+
+ontology_refs:
+  entities: [CareGap, Patient]
+  states: [CareGapStatus]
+  actions: [CloseGap, Assign]
+
+embedding_hint: >
+  care gap row measure HEDIS quality close gap assign exclude
+  coordinator outreach status due date patient worklist inline

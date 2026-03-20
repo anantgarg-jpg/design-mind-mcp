@@ -1,0 +1,16 @@
+{
+  "name": "@design-mind/mcp",
+  "version": "1.0.0",
+  "description": "Design Mind MCP server — genome, patterns, and candidate submission API",
+  "type": "module",
+  "scripts": {
+    "start":        "node server/src/index.js",
+    "seed":         "node server/src/seed.js",
+    "seed:vectors": "node server/src/seed-vectors.js",
+    "api":          "node api/src/index.js",
+    "api:dev":      "node --watch api/src/index.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

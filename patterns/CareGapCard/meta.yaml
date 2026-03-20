@@ -1,0 +1,49 @@
+id: CareGapCard
+status: active
+confidence: 0.88
+version: 1.0.0
+introduced: seed-v0
+last_evolved: seed-v0
+
+summary: >
+  The primary action unit for care coordinators. Displays a single
+  care gap with its status, due date, and available actions. Used in
+  lists, dashboards, and worklist views. Coordinators will see this
+  component hundreds of times per day — consistency here directly
+  affects workflow speed.
+
+when:
+  - displaying a CareGap entity in any list or worklist
+  - care coordinator needs to take action on a specific gap
+  - showing gap status with due date and assignment context
+
+not_when:
+  - summary-level gap counts → use a metric/stat component
+  - gap history or audit trail → use a timeline component
+  - population-level gap analytics → use a chart component
+
+actions_available:
+  - Close Gap (primary — when gap is Open or In Outreach)
+  - Assign (always available)
+  - Add Note (always available)
+  - Exclude (available with reason — requires clinical justification)
+
+status_display:
+  - status badge uses StatusBadge component
+  - due date shows relative time when < 7 days, absolute when older
+  - overdue styling applies automatically when due_date < today
+
+ontology_refs:
+  entities: [CareGap, Patient, Provider]
+  states: [CareGapStatus]
+  actions: [CloseGap, Assign, Dismiss]
+
+usage_signal:
+  renders_total: 0
+  products: []
+  override_rate: 0.0
+
+embedding_hint: >
+  care gap card measure quality HEDIS coordinator worklist
+  close gap assign outreach due date status open closed excluded
+  patient action unit list row workflow

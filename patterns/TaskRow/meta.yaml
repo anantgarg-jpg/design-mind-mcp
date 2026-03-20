@@ -1,0 +1,33 @@
+id: TaskRow
+status: active
+confidence: 0.91
+version: 1.0.0
+
+summary: >
+  Compact task item for care management worklists. Shows patient
+  context, task title, status badge, due date, and actions.
+  Designed for coordinator density — scannable at 48px height.
+
+when:
+  - displaying Task entities in any list or queue
+  - coordinator worklist, daily task view, patient task panel
+
+not_when:
+  - task detail/notes view → use a detail panel
+  - task creation → use a form
+
+key_rules:
+  - patient name always above task title, smaller/muted
+  - status badge inline with meta, never on its own line
+  - overdue gets warning left border AND warning-colored due date
+  - Complete and Reassign only visible on hover (reduce visual noise)
+  - isDone rows at 50% opacity — out of the way, not deleted
+
+ontology_refs:
+  entities: [Task, Patient]
+  states: [TaskStatus]
+  actions: [Assign]
+
+embedding_hint: >
+  task row worklist coordinator complete reassign due date
+  overdue status badge care management daily tasks queue

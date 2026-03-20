@@ -1,0 +1,15 @@
+{
+  "_instructions": [
+    "Copy this file to ~/.claude/claude_desktop_config.json on your machine.",
+    "Replace ABSOLUTE_PATH_TO_DESIGN_MIND with the actual absolute path to your design-mind/ folder.",
+    "Example on macOS: /Users/anant/code/design-mind",
+    "Then restart Claude Code — the design-mind tools will appear automatically."
+  ],
+  "mcpServers": {
+    "design-mind": {
+      "command": "node",
+      "args": ["ABSOLUTE_PATH_TO_DESIGN_MIND/server/src/index.js"],
+      "env": {}
+    }
+  }
+}

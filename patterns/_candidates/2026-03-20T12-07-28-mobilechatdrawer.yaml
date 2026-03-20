@@ -1,0 +1,33 @@
+# Design Mind Pattern Candidate
+# Generated: 2026-03-20T12:07:28.262Z
+# Status: logged
+
+candidate_id: "2026-03-20T12-07-28-mobilechatdrawer"
+pattern_name: "MobileChatDrawer"
+status: logged
+frequency_count: 1
+
+description: >
+  A right-side drawer overlay containing a mobile phone frame that renders a coordinator-patient message thread. Outgoing messages (coordinator) appear right-aligned with bg-primary, incoming (patient) left-aligned with bg-muted. Includes phone chrome (status bar, app bar, read-only input footer). Opened by clicking any outreach log row.
+
+intent_it_serves: >
+  Coordinator wants to review the full message exchange behind an outreach log entry without leaving the outreach log surface.
+
+why_existing_patterns_didnt_fit: >
+  consult_before_build returned OutreachLogRow (read-only list row) and ChatQuickActionChip (action chip inside chat panel) — neither covers a mobile-framed conversation thread drawer. No drawer or chat-bubble pattern exists in the genome.
+
+implementation_ref: "shell/artifacts/OutreachLogArtifact.tsx"
+
+ontology_refs:
+  - Patient
+  - OutreachRecord
+  - Coordinator
+
+similar_candidates:
+  []
+
+# Instructions for human ratification:
+# 1. Review the description and intent
+# 2. Check similar_candidates — merge if duplicate
+# 3. If valid: create patterns/MobileChatDrawer/ with meta.yaml and component.tsx
+# 4. Run: node server/src/seed.js to re-index

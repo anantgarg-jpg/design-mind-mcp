@@ -1,0 +1,32 @@
+# Design Mind Pattern Candidate
+# Generated: 2026-03-20T11:39:52.946Z
+# Status: logged
+
+candidate_id: "2026-03-20T11-39-52-sdohassessmenttab"
+pattern_name: "SdohAssessmentTab"
+status: ratified
+frequency_count: 1
+
+description: >
+  A two-view component for SDOH (Social Determinants of Health) screening in a patient detail context. View 1: scored questionnaire across 5 domains (Housing, Food Security, Transportation, Social Isolation, Financial Strain) using AHC HRSN-inspired questions with radio-button responses. View 2: results summary showing per-domain need level (flagged/clear/not screened) with warning/success tokens and a Create Task CTA on flagged domains. Supports re-screening and links into the Task workflow.
+
+intent_it_serves: >
+  Care coordinator needs to screen a patient for social determinants of health, record identified needs, and create follow-up tasks for flagged domains — all within the patient detail view without leaving context.
+
+why_existing_patterns_didnt_fit: >
+  consult_before_build returned confidence 0.23 with no relevant matches. Closest patterns (PatientContextHeader, PatientRow, ClinicalAlertBanner) are display/identity patterns, not assessment forms. No form pattern exists in the genome. SDOH is not an entity in the ontology. The domain "forms" has zero seeded patterns.
+
+implementation_ref: "shell/artifacts/SdohAssessmentTab.tsx"
+
+ontology_refs:
+  - Patient
+  - Task
+
+similar_candidates:
+  []
+
+# Instructions for human ratification:
+# 1. Review the description and intent
+# 2. Check similar_candidates — merge if duplicate
+# 3. If valid: create patterns/SdohAssessmentTab/ with meta.yaml and component.tsx
+# 4. Run: node server/src/seed.js to re-index

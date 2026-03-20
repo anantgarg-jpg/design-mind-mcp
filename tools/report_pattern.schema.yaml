@@ -1,0 +1,60 @@
+tool: report_pattern
+version: 1.0.0
+description: >
+  Call when you have built something novel that the genome doesn't
+  cover. This is how new patterns enter the candidate queue.
+  The Design Mind reviews, and if seen by 3+ teams, it goes to
+  human ratification.
+
+input:
+  pattern_name:
+    type: string
+    required: true
+    description: A short descriptive name for the pattern
+
+  description:
+    type: string
+    required: true
+    description: What the pattern is and what problem it solves
+
+  intent_it_serves:
+    type: string
+    required: true
+
+  implementation_ref:
+    type: string
+    required: false
+    description: File path or PR link to the implementation
+
+  why_existing_patterns_didnt_fit:
+    type: string
+    required: true
+    description: >
+      What you looked for in consult_before_build and why
+      none of the returned patterns covered this case
+
+  ontology_refs:
+    type: array
+    required: false
+    description: Entities, states, or actions from the ontology this touches
+
+output:
+  candidate_id:
+    type: string
+    description: ID assigned to this candidate in patterns/_candidates/
+
+  similar_candidates:
+    type: array
+    description: Other candidates in the queue that might be the same pattern
+
+  frequency_count:
+    type: number
+    description: How many times this pattern has been reported (1 = first time)
+
+  status:
+    type: string
+    enum: [logged, needs_more_signal, ready_for_ratification]
+    description: >
+      logged: first sighting, watching
+      needs_more_signal: seen 2 times, one more triggers ratification
+      ready_for_ratification: seen 3+ times, queued for human review

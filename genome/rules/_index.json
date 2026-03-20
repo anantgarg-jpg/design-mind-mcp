@@ -1,0 +1,123 @@
+{
+  "version": "1.2.0",
+  "generated": "seed-v0",
+  "last_updated": "mds-token-integration",
+  "rules": {
+    "shell-layout": {
+      "file": "genome/rules/shell-layout.rule.md",
+      "confidence": 0.95,
+      "status": "active",
+      "ratified_by": "design-leadership",
+      "mutation_count": 0,
+      "last_challenged": null,
+      "note": "Added after shell screenshot review. Load this before navigation-patterns for any layout decision."
+    },
+    "navigation-patterns": {
+      "file": "genome/rules/navigation-patterns.rule.md",
+      "confidence": 0.92,
+      "status": "active",
+      "ratified_by": "design-leadership",
+      "mutation_count": 1,
+      "last_challenged": "shell-review-v1",
+      "note": "v2.0 \u2014 rewritten for 3-panel shell. Removed horizontal top-nav assumptions from v1."
+    },
+    "destructive-actions": {
+      "file": "genome/rules/destructive-actions.rule.md",
+      "confidence": 0.95,
+      "status": "active",
+      "ratified_by": "design-leadership",
+      "mutation_count": 0,
+      "last_challenged": null
+    },
+    "data-density": {
+      "file": "genome/rules/data-density.rule.md",
+      "confidence": 0.88,
+      "status": "active",
+      "ratified_by": "design-leadership",
+      "mutation_count": 0,
+      "last_challenged": null
+    },
+    "styling-tokens": {
+      "file": "genome/rules/styling-tokens.rule.md",
+      "confidence": 0.97,
+      "status": "active",
+      "ratified_by": "design-leadership",
+      "mutation_count": 0,
+      "last_challenged": null,
+      "note": "Added after theme.css (MDS tokens) was provided. Supersedes hardcoded Tailwind color usage. Load this rule for ANY styling decision."
+    }
+  },
+  "patterns": {
+    "StatusBadge": {
+      "file": "patterns/StatusBadge/meta.yaml",
+      "confidence": 0.95,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "ClinicalAlertBanner": {
+      "file": "patterns/ClinicalAlertBanner/meta.yaml",
+      "confidence": 0.93,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "PatientContextHeader": {
+      "file": "patterns/PatientContextHeader/meta.yaml",
+      "confidence": 0.9,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "CareGapCard": {
+      "file": "patterns/CareGapCard/meta.yaml",
+      "confidence": 0.88,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "TaskActionRow": {
+      "file": "patterns/TaskActionRow/meta.yaml",
+      "confidence": 0.87,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    }
+  },
+  "ontology": {
+    "entities": {
+      "file": "ontology/entities.yaml",
+      "owned_by": "clinical-smes"
+    },
+    "states": {
+      "file": "ontology/states.yaml",
+      "owned_by": "clinical-smes"
+    },
+    "actions": {
+      "file": "ontology/actions.yaml",
+      "owned_by": "clinical-smes"
+    },
+    "copy-voice": {
+      "file": "ontology/copy-voice.md",
+      "owned_by": "design-leadership"
+    }
+  },
+  "safety": {
+    "hard-constraints": {
+      "file": "safety/hard-constraints.md",
+      "owned_by": "clinical-leadership",
+      "agent_mutable": false
+    },
+    "severity-schema": {
+      "file": "safety/severity-schema.yaml",
+      "owned_by": "clinical-leadership",
+      "agent_mutable": false
+    }
+  },
+  "notes": {
+    "token_file": "theme.css",
+    "font": "Nunito Sans via --font-sans",
+    "critical_disambiguation": "--alert token = MDS Orange = High severity. NOT the Alert clinical entity.",
+    "destructive_dual_use": "--destructive = delete actions AND Critical severity \u2014 same color, both are highest-stakes."
+  }
+}
