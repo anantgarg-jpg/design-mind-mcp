@@ -1,5 +1,13 @@
 id: SdohAssessmentTab
 status: active
+component_type: form
+structural_family: assessment-form
+family_invariants:
+  - "Instrument questions are verbatim — never paraphrased or shortened (safety rule 14)"
+  - "Submit disabled until all required questions answered"
+  - "Score and results not shown until at least one answer recorded"
+  - "Self-harm indicator question: trigger Review badge on any non-zero answer"
+  - "Never navigate away on submit — show inline success/results state"
 confidence: 0.85
 version: 1.0.0
 introduced: 2026-03-20

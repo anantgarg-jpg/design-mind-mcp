@@ -1,5 +1,13 @@
 id: ClinicalAlertBanner
 status: active
+component_type: banner
+structural_family: severity-alert-banner
+family_invariants:
+  - "Severity token map: critical=destructive, high=alert, medium=warning, low=accent"
+  - "Never hardcode colors — all visual decisions flow from the severity prop"
+  - "Critical and High must render Acknowledge — never Dismiss on Critical"
+  - "Always renders above page content — never inline or in sidebar"
+  - "Stacking order: Critical first, High, Medium, Low"
 confidence: 0.93
 version: 1.0.0
 introduced: seed-v0

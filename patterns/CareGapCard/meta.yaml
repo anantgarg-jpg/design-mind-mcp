@@ -1,5 +1,13 @@
 id: CareGapCard
 status: active
+component_type: card
+structural_family: actionable-item-card
+family_invariants:
+  - "Container: flex items-start justify-between gap-4 p-4 bg-card border border-border/60 rounded-lg shadow-card hover:shadow-card-hover transition-shadow"
+  - "Content left: flex-1 min-w-0"
+  - "Actions right: flex items-center gap-2 flex-shrink-0"
+  - "Primary action: Button variant='outline' size='sm' className='h-7 text-xs'"
+  - "Secondary actions: DropdownMenu with MoreHorizontal trigger"
 confidence: 0.88
 version: 1.0.0
 introduced: seed-v0

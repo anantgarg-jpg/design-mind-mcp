@@ -203,6 +203,8 @@ export function loadKnowledge(basePath) {
           notWhenStr,
           meta.because || '',
           meta.embedding_hint || '',
+          meta.structural_family || '',
+          meta.component_type || '',
         ].join(' ');
 
         kb.patterns.push(meta);

@@ -1,5 +1,14 @@
 id: TaskRow
 status: active
+component_type: row
+structural_family: actionable-list-row
+family_invariants:
+  - "Layout: flex items-start gap-3 px-4 py-3.5"
+  - "Container: border-b border-border/40 last:border-0 bg-card hover:bg-muted/60 transition-colors"
+  - "Left accent: border-l-2 (warning for overdue, accent for active/available, transparent for neutral)"
+  - "Primary action: Button variant='outline' size='sm' className='h-7 text-xs'"
+  - "Secondary actions: Button variant='ghost' size='sm' className='h-7 w-7 p-0 text-muted-foreground'"
+  - "Meta row: flex items-center gap-3 mt-1.5 with text-xs text-muted-foreground"
 confidence: 0.91
 version: 1.0.0
 

@@ -199,6 +199,9 @@ export function buildKnowledgeIndexes(kb) {
       ontology_refs: p.ontology_refs || {},
       critical_rules: p.critical_rules || [],
       safety_refs: p.safety_refs || [],
+      component_type: p.component_type || null,
+      structural_family: p.structural_family || null,
+      family_invariants: p.family_invariants || [],
     },
   }));
   const patternIndex = buildIndex(patternDocs);

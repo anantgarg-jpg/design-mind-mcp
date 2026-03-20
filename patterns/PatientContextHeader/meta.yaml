@@ -1,5 +1,13 @@
 id: PatientContextHeader
 status: active
+component_type: header
+structural_family: patient-context-header
+family_invariants:
+  - "Layout: flex items-center justify-between gap-4 px-6 py-4 bg-card border-b border-border"
+  - "Patient name: Last, First format — never truncated, never first-name only"
+  - "MRN always labeled 'MRN' — never 'Patient ID', 'Chart Number', etc."
+  - "DOB always full format: MMM D, YYYY — never shortened or omitted"
+  - "Always the topmost element of any patient-scoped surface"
 confidence: 0.90
 version: 1.0.0
 introduced: seed-v0

@@ -49,11 +49,13 @@ function formatArr(val) {
 function patternEmbedText(p) {
   return [
     `Pattern: ${p.id}`,
-    p.metadata?.summary || '',
-    `When to use: ${formatArr(p.metadata?.when)}`,
-    `Do not use when: ${formatArr(p.metadata?.not_when)}`,
-    p.metadata?.because || '',
-    p.metadata?.embedding_hint || '',
+    p.summary || '',
+    p.structural_family ? `Structural family: ${p.structural_family}` : '',
+    p.component_type ? `Component type: ${p.component_type}` : '',
+    `When to use: ${formatArr(p.when)}`,
+    `Do not use when: ${formatArr(p.not_when)}`,
+    p.because || '',
+    p.embedding_hint || '',
   ].filter(Boolean).join('\n')
 }
 
@@ -93,13 +95,16 @@ async function main() {
     id: stableId('pattern:' + p.id),
     vector: patternVectors[i],
     payload: {
-      id: p.id,
-      summary:       p.metadata?.summary || '',
-      when:          p.metadata?.when || '',
-      not_when:      p.metadata?.not_when || '',
-      because:       p.metadata?.because || '',
-      confidence:    p.metadata?.confidence || 0.9,
-      ontology_refs: p.metadata?.ontology_refs || {},
+      id:                p.id,
+      summary:           p.summary || '',
+      when:              p.when || '',
+      not_when:          p.not_when || '',
+      because:           p.because || '',
+      confidence:        p.confidence || 0.9,
+      ontology_refs:     p.ontology_refs || {},
+      component_type:    p.component_type || null,
+      structural_family: p.structural_family || null,
+      family_invariants: p.family_invariants || [],
     },
   })))
 

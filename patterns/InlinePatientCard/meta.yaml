@@ -1,5 +1,12 @@
 id: InlinePatientCard
 status: active
+component_type: card
+structural_family: inline-chat-card
+family_invariants:
+  - "Only rendered inside Panel 2 chat context — never standalone"
+  - "Structure: avatar (initials, risk-tinted) + name + badge + max 2 info rows + footer divider"
+  - "Container: bg-card border border-border rounded-lg"
+  - "Always paired with a ChatQuickActionChip trigger"
 confidence: 0.85
 version: 1.0.0
 introduced: 2026-03-20

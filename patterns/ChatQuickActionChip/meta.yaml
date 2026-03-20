@@ -1,5 +1,12 @@
 id: ChatQuickActionChip
 status: active
+component_type: button
+structural_family: quick-action-chip
+family_invariants:
+  - "Shape: rounded-full border border-border/70 hover:border-primary/50 shadow-card"
+  - "Triggers inline card in Panel 2 only — never opens artifact tab"
+  - "Read-only triggers — chips never modify data directly"
+  - "Maximum ~4 chips in strip before needing command palette"
 confidence: 0.85
 version: 1.0.0
 introduced: 2026-03-20

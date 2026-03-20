@@ -1,5 +1,12 @@
 id: StatusBadge
 status: active
+component_type: badge
+structural_family: status-indicator
+family_invariants:
+  - "Label text from ontology/states.yaml canonical_name only — never custom text"
+  - "Color token from ontology/states.yaml color_token only — never custom colors"
+  - "Always include aria-label for accessibility"
+  - "Sizes: sm (inline/dense), md (default in cards/rows) — never lg"
 confidence: 0.95
 version: 1.0.0
 introduced: seed-v0

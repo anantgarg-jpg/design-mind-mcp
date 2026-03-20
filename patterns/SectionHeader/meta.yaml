@@ -1,5 +1,11 @@
 id: SectionHeader
 status: active
+component_type: other
+structural_family: section-divider
+family_invariants:
+  - "Typography: text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+  - "Never bold or large — should recede visually, not dominate"
+  - "Always uppercase tracking-wider — wayfinding label, not a headline"
 confidence: 0.90
 version: 1.0.0
 

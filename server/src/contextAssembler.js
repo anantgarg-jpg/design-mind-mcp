@@ -14,6 +14,31 @@ import { query } from './vectorIndex.js';
 import { embedOne } from './embedder.js';
 import { search, isSeeded } from './vectorstore.js';
 
+// Maps query component_type to the pattern component_types it should structurally match.
+// "list" queries match "row" and "card" patterns since lists are composed of rows/cards.
+const TYPE_FAMILIES = {
+  list:   ['row', 'card'],
+  row:    ['row'],
+  card:   ['card'],
+  table:  ['row', 'table'],
+  banner: ['banner'],
+  header: ['header'],
+  form:   ['form'],
+  badge:  ['badge'],
+  button: ['button'],
+  modal:  ['modal'],
+  drawer: ['drawer'],
+  page:   ['page', 'panel'],
+  panel:  ['panel', 'page'],
+  other:  ['other'],
+};
+
+function structuralBoost(patternComponentType, queryComponentType) {
+  if (!queryComponentType || !patternComponentType) return 0;
+  const related = TYPE_FAMILIES[queryComponentType] || [queryComponentType];
+  return related.includes(patternComponentType) ? 0.35 : 0;
+}
+
 // Set to true by index.js after confirming the vector store has been seeded
 let _useVectorStore = false;
 export function setUseVectorStore(val) { _useVectorStore = val; }
@@ -211,20 +236,62 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
   ].join(' ');
 
   // ── Vector search (Qdrant semantic or TF-IDF fallback) ──────────────────────
-  const patternResults = await queryPatterns(searchText, 3, patternIndex);
+  const patternResults = await queryPatterns(searchText, 8, patternIndex);
+
+  // Apply structural boost and re-rank
+  const boostedResults = patternResults
+    .map(r => ({
+      ...r,
+      score: r.score + structuralBoost(r.metadata?.component_type, component_type),
+      structurally_matched: structuralBoost(r.metadata?.component_type, component_type) > 0,
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5);
+
   const ruleResults = await queryRules(searchText, 2, ruleIndex);
 
   // ── Pattern results ─────────────────────────────────────────────────────────
-  const patterns = patternResults.map(r => ({
+  const patterns = boostedResults.map(r => ({
     id: r.id,
     relevance_score: parseFloat(r.score.toFixed(4)),
-    summary: r.metadata.summary || '',
-    when: formatWhen(r.metadata.when),
-    not_when: formatNotWhen(r.metadata.not_when),
-    because: r.metadata.because || '',
-    confidence: r.metadata.confidence || 0.9,
+    structural_family: r.metadata?.structural_family || null,
+    component_type: r.metadata?.component_type || null,
+    structurally_matched: r.structurally_matched || false,
+    summary: r.metadata?.summary || '',
+    when: formatWhen(r.metadata?.when),
+    not_when: formatNotWhen(r.metadata?.not_when),
+    because: r.metadata?.because || '',
+    confidence: r.metadata?.confidence || 0.9,
     usage_signal: { renders_total: 0, override_rate: 0.0 },
   }));
+
+  // ── Structural guidance — dominant family + invariants ──────────────────────
+  // When multiple top patterns share a structural family, surface the invariants
+  // so the LLM knows exactly which tokens are non-negotiable.
+  const familyCounts = {};
+  for (const r of boostedResults) {
+    const fam = r.metadata?.structural_family;
+    if (fam && r.structurally_matched) {
+      familyCounts[fam] = (familyCounts[fam] || []);
+      familyCounts[fam].push(r);
+    }
+  }
+  const dominantFamilyEntry = Object.entries(familyCounts)
+    .sort((a, b) => b[1].length - a[1].length)[0];
+
+  let structuralGuidance = null;
+  if (dominantFamilyEntry) {
+    const [familyName, familyPatterns] = dominantFamilyEntry;
+    // Collect unique invariants from all patterns in this family
+    const allInvariants = familyPatterns
+      .flatMap(r => r.metadata?.family_invariants || [])
+      .filter((v, i, a) => a.indexOf(v) === i);
+    structuralGuidance = {
+      family: familyName,
+      invariants: allInvariants,
+      examples: familyPatterns.map(r => r.id),
+    };
+  }
 
   // ── Rule results ────────────────────────────────────────────────────────────
   const rules = ruleResults.map(r => ({
@@ -235,7 +302,7 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
   }));
 
   // ── Ontology refs (from top matched pattern) ────────────────────────────────
-  const topPatternRefs = patternResults[0]?.metadata?.ontology_refs || {};
+  const topPatternRefs = boostedResults[0]?.metadata?.ontology_refs || {};
   const ontologyRefs = getOntologyRefs(topPatternRefs, kb);
 
   // ── Safety constraints (always all of them) ─────────────────────────────────
@@ -246,7 +313,7 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
   // ── Confidence score ────────────────────────────────────────────────────────
   // Vector store: cosine similarity 0.0–1.0, good match ~0.70+
   // TF-IDF: naturally tops out ~0.5–0.6, scaled by /0.55 so ~0.5 maps to ~0.9
-  const topPatternScore = patternResults[0]?.score || 0;
+  const topPatternScore = boostedResults[0]?.score || 0;
   const confidence = _useVectorStore
     ? parseFloat(Math.min(topPatternScore, 1.0).toFixed(4))
     : parseFloat(Math.min(topPatternScore / 0.55, 1.0).toFixed(4));
@@ -255,7 +322,7 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
   // Vector store: low match < 0.45 cosine. TF-IDF: low match < 0.25 raw.
   const lowThreshold = _useVectorStore ? 0.45 : 0.25;
   const gaps = [];
-  if (patternResults.length === 0) {
+  if (boostedResults.length === 0) {
     gaps.push('No pattern matches found. This is likely a novel UI element — flag with DESIGN MIND comment.');
   } else if (topPatternScore < lowThreshold) {
     gaps.push(
@@ -283,6 +350,7 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
 
   return {
     surface,
+    structural_guidance: structuralGuidance,
     patterns,
     rules,
     ontology_refs: ontologyRefs,

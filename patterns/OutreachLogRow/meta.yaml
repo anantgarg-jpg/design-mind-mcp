@@ -1,5 +1,12 @@
 id: OutreachLogRow
 status: active
+component_type: row
+structural_family: readonly-list-row
+family_invariants:
+  - "Layout: flex items-center gap-3 px-4 py-3 border-b border-border/40"
+  - "No action buttons — read-only display only"
+  - "Status indicators use icon + colored text, not Button components"
+  - "Hover: cursor-pointer if row opens detail, but no data modification on click"
 confidence: 0.85
 version: 1.0.0
 introduced: 2026-03-20

@@ -1,5 +1,12 @@
 id: StatCard
 status: active
+component_type: card
+structural_family: stat-metric-card
+family_invariants:
+  - "Label: text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+  - "Value: text-2xl font-bold tabular-nums"
+  - "Maximum 4 StatCards per row"
+  - "Variant tokens: default=foreground, urgent=destructive, warning=warning, success=success"
 confidence: 0.88
 version: 1.0.0
 
