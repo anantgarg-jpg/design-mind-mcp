@@ -40,6 +40,23 @@ async function queryRules(text, k, ruleIndex) {
   return query(ruleIndex, text, k);
 }
 
+// Surface matching — TF-IDF Jaccard on embedding_input (surfaces are few enough
+// that a full vector store is not needed; linear scan is fast)
+function querySurfaces(text, surfaces) {
+  if (!surfaces || surfaces.length === 0) return null;
+  const textWords = new Set(text.toLowerCase().split(/\s+/).filter(w => w.length > 2));
+  let best = null, bestScore = 0;
+  for (const s of surfaces) {
+    const surfaceWords = new Set((s.embedding_input || '').split(/\s+/).filter(w => w.length > 2));
+    const intersection = [...textWords].filter(w => surfaceWords.has(w)).length;
+    const union = new Set([...textWords, ...surfaceWords]).size;
+    const score = union > 0 ? intersection / union : 0;
+    if (score > bestScore) { bestScore = score; best = { surface: s, score }; }
+  }
+  // Only return a surface match if it's reasonably confident
+  return bestScore > 0.08 ? best : null;
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function toArray(val) {
@@ -175,7 +192,7 @@ function getOntologyRefs(ontologyRefs, kb) {
  * Returns the most relevant patterns, rules, ontology refs, and safety
  * constraints for the agent's stated intent.
  */
-export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex) {
+export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, surfaces) {
   const {
     intent_description,
     component_type = 'other',
@@ -248,10 +265,24 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex) {
     );
   }
 
+  // ── Surface match — which governed surface is this being built inside? ───────
+  const surfaceMatch = querySurfaces(searchText, surfaces || kb.surfaces || []);
+  const surface = surfaceMatch ? {
+    id:                surfaceMatch.surface.id,
+    intent:            surfaceMatch.surface.intent || '',
+    what_it_omits:     surfaceMatch.surface.what_it_omits || [],
+    empty_state_meaning: surfaceMatch.surface.empty_state_meaning || '',
+    ordering:          surfaceMatch.surface.ordering || '',
+    actions:           surfaceMatch.surface.actions || [],
+    never:             surfaceMatch.surface.never || [],
+    match_score:       parseFloat(surfaceMatch.score.toFixed(3)),
+  } : null;
+
   // ── Episodic memory — similar past builds ───────────────────────────────────
   const similarBuilds = loadSimilarBuilds(kb.basePath, searchText);
 
   return {
+    surface,
     patterns,
     rules,
     ontology_refs: ontologyRefs,
@@ -677,6 +708,7 @@ function localFallback(params, basePath, reason) {
 export async function reportPattern(params, basePath) {
   const payload = {
     pattern_name:                    params.pattern_name,
+    type:                            params.type || 'decision',
     description:                     params.description,
     intent_it_serves:                params.intent_it_serves,
     why_existing_patterns_didnt_fit: params.why_existing_patterns_didnt_fit,

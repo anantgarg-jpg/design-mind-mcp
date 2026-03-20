@@ -127,6 +127,7 @@ export function loadKnowledge(basePath) {
   const kb = {
     basePath,
     patterns: [],
+    surfaces: [],
     rules: [],
     ontology: {},
     safety: {
@@ -248,9 +249,34 @@ export function loadKnowledge(basePath) {
     }
   }
 
+  // ── Surfaces ────────────────────────────────────────────────────────────────
+  process.stderr.write('[knowledge] Loading surfaces...\n');
+  const surfacesDir = join(basePath, 'surfaces');
+  if (existsSync(surfacesDir)) {
+    for (const file of readdirSync(surfacesDir)) {
+      if (!file.endsWith('.surface.yaml')) continue;
+      try {
+        const content = readFileSync(join(surfacesDir, file), 'utf-8');
+        const parsed = parseYaml(content);
+        // Build embedding input from intent + what_it_omits + never fields
+        parsed.embedding_input = [
+          parsed.id || '',
+          parsed.intent || '',
+          Array.isArray(parsed.what_it_omits) ? parsed.what_it_omits.join(' ') : '',
+          Array.isArray(parsed.never) ? parsed.never.join(' ') : '',
+          Array.isArray(parsed.user_type) ? parsed.user_type.join(' ') : '',
+        ].join(' ');
+        kb.surfaces.push(parsed);
+        process.stderr.write(`[knowledge]   surface: ${parsed.id}\n`);
+      } catch (e) {
+        process.stderr.write(`[knowledge]   WARN: could not parse ${file}: ${e.message}\n`);
+      }
+    }
+  }
+
   process.stderr.write(
-    `[knowledge] Loaded: ${kb.patterns.length} patterns, ${kb.rules.length} rules, ` +
-    `${kb.safety.constraints.length} safety constraints\n`
+    `[knowledge] Loaded: ${kb.patterns.length} patterns, ${kb.surfaces.length} surfaces, ` +
+    `${kb.rules.length} rules, ${kb.safety.constraints.length} safety constraints\n`
   );
 
   return kb;

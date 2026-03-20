@@ -1,0 +1,37 @@
+id: ClinicalAssessment
+type: surface
+user_type: [coordinator, clinician]
+
+intent: >
+  A surface for administering or recording a standardised clinical screening
+  instrument (PHQ-9, GAD-7, SDOH, CAGE, etc.) against a patient.
+  Captures verbatim instrument questions, computes a total score, classifies
+  severity, and logs the completed assessment.
+
+what_it_omits:
+  - Interpretation or clinical advice beyond score classification
+  - Comparison to prior assessments (use a trend surface for that)
+  - Free-text narrative — structured response options only
+
+empty_state_meaning: >
+  No answers recorded yet. Progress indicator in the submit bar shows 0/N answered.
+
+ordering: >
+  Questions presented in the instrument's canonical order — never reordered
+  or grouped differently, as clinical validity depends on standardised presentation.
+
+actions:
+  - label: "Record Assessment"
+    stage: submit bar
+    constraint: disabled until all questions answered — partial records are not valid
+  - label: "Clear"
+    stage: submit bar
+    constraint: resets all answers and patient identity, no confirmation needed
+
+never:
+  - Paraphrase or shorten instrument question text (safety rule 14)
+  - Enable submit on a partial response
+  - Show score or severity until at least one answer is recorded
+  - Omit a safety flag (e.g. Review badge) when a self-harm indicator question
+    receives any non-zero answer
+  - Navigate away on submit — show inline success state with score and severity

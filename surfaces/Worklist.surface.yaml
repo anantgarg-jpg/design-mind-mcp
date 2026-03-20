@@ -1,0 +1,39 @@
+id: Worklist
+type: surface
+user_type: [coordinator]
+
+intent: >
+  Shows the coordinator's prioritised patient panel for the current day.
+  Not all patients — only those requiring coordinator-driven action right now.
+  The worklist is the coordinator's primary working surface, not a reporting view.
+
+what_it_omits:
+  - Patients with no open care gaps or tasks
+  - Completed and closed items from previous sessions
+  - Administrative or billing data
+  - Clinical notes and diagnoses
+
+empty_state_meaning: >
+  The coordinator's panel is clear. This is a positive clinical signal —
+  not an error, not "no data found". Copy should reflect that.
+
+ordering: >
+  By clinical urgency: risk tier first, then gap severity, then task due date.
+  Never alphabetical. Never recency. Order encodes priority.
+
+actions:
+  - label: "Close Gap"
+    stage: any row
+    constraint: one step, no confirmation required
+  - label: "Complete Task"
+    stage: any task row
+    constraint: one step, no confirmation required
+  - label: "Schedule"
+    stage: care gap rows only
+    constraint: opens scheduling flow, does not navigate away from surface
+
+never:
+  - Navigate away from the worklist surface on a row action
+  - Show a patient count as a headline metric (implies quota, not care)
+  - Use "No results" as an empty state — it is clinically misleading
+  - Allow bulk selection without explicit confirmation (safety rule 12)

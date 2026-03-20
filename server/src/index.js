@@ -120,6 +120,11 @@ const TOOLS = [
           type: 'string',
           description: 'A short descriptive name for the pattern (e.g. "BulkActionToolbar").',
         },
+        type: {
+          type: 'string',
+          enum: ['decision', 'composition', 'surface'],
+          description: 'Genome hierarchy level. "decision" = a component that exists because of a rule. "composition" = a governed combination of decisions (e.g. a card row). "surface" = a full artifact with workflow intent (e.g. a worklist, an assessment form).',
+        },
         description: {
           type: 'string',
           description: 'What the pattern is and what problem it solves.',
@@ -224,7 +229,7 @@ async function handleToolCall(toolName, toolArgs) {
 
   switch (toolName) {
     case 'consult_before_build':
-      return await consultBeforeBuild(toolArgs, kb, patternIndex, ruleIndex);
+      return await consultBeforeBuild(toolArgs, kb, patternIndex, ruleIndex, kb.surfaces);
 
     case 'review_output':
       return await reviewOutput(toolArgs, kb, patternIndex);

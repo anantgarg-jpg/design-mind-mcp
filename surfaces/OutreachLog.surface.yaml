@@ -1,0 +1,30 @@
+id: OutreachLog
+type: surface
+user_type: [coordinator]
+
+intent: >
+  Chronological read-only audit of all outreach activity across the coordinator's
+  patient panel in the last 24 hours. This is an observation surface, not an
+  action surface. Coordinators use it to review what happened, not to do things.
+
+what_it_omits:
+  - Outreach older than 24 hours (use reporting for historical views)
+  - Any action that modifies an existing log entry
+  - Patient clinical data beyond name and related care gap
+
+empty_state_meaning: >
+  No outreach has been logged in the last 24 hours. Honest one-liner only —
+  no illustration, no call to action.
+
+ordering: >
+  Reverse chronological — most recent first. Never filtered by default.
+
+actions:
+  - label: none (read-only surface)
+    stage: n/a
+    constraint: rows are clickable to open the message thread drawer, not to edit
+
+never:
+  - Allow editing or deleting a log entry
+  - Show a "Log Outreach" button inside this surface (use New Intake tab instead)
+  - Paginate — show all 24h records in a single scrollable list

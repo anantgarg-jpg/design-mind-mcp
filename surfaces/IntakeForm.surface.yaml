@@ -1,0 +1,33 @@
+id: IntakeForm
+type: surface
+user_type: [coordinator]
+
+intent: >
+  A coordinator-facing form to log a completed or attempted outreach contact.
+  Single-purpose: capture one outreach event against one patient and submit.
+  Not a multi-record entry surface.
+
+what_it_omits:
+  - Bulk outreach logging
+  - Patient clinical data beyond identity and care gap reference
+  - Scheduling or calendar integration
+
+empty_state_meaning: >
+  The form is blank and ready for a new entry. No message needed.
+
+ordering: >
+  Fields ordered: patient identity → outreach details → log details.
+  Identity first because the coordinator must confirm who before logging what.
+
+actions:
+  - label: "Log Outreach"
+    stage: submit bar
+    constraint: disabled until all required fields are complete
+  - label: "Clear"
+    stage: submit bar
+    constraint: resets form to empty state, no confirmation needed
+
+never:
+  - Submit partial records silently
+  - Auto-populate patient identity from a previous entry without explicit confirmation
+  - Navigate away on submit — show inline success state and offer "Log another"

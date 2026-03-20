@@ -1,0 +1,31 @@
+id: Today
+type: surface
+user_type: [coordinator]
+
+intent: >
+  The coordinator's daily summary view. A curated snapshot of what matters today —
+  not everything, not a dashboard. Designed to orient the coordinator at the start
+  of a session and surface the highest-priority items requiring attention.
+
+what_it_omits:
+  - Resolved and completed items
+  - Metrics and aggregate counts as the primary content
+  - Navigation or settings chrome
+
+empty_state_meaning: >
+  No priority items today. Positive signal — the coordinator's panel is clear.
+  Never "no data available."
+
+ordering: >
+  Critical alerts first, then high-urgency care gaps, then tasks due today.
+  Section order is fixed — never user-configurable on this surface.
+
+actions:
+  - label: contextual per item type
+    stage: inline on each item
+    constraint: quick actions only — no multi-step flows initiated from Today
+
+never:
+  - Show a comprehensive list of all patients — this is a priority surface, not a list
+  - Use count-based headline metrics as the primary content (e.g. "12 gaps open")
+  - Allow configuration or customisation of the Today view layout
