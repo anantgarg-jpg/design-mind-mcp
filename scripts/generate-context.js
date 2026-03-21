@@ -269,9 +269,13 @@ if (criticPrompt) {
 
 const output = lines.join('\n');
 
-// Write dated snapshot only (YYYY-MM-DD)
-const date          = new Date().toISOString().split('T')[0];
-const versionedName = `project-context-full-${date}.md`;
+// Write versioned snapshot (v1, v2, v3 …)
+const existing = readdirSync(ROOT)
+  .map(f => f.match(/^project-context-full-v(\d+)\.md$/))
+  .filter(Boolean)
+  .map(m => parseInt(m[1], 10));
+const nextVersion  = existing.length > 0 ? Math.max(...existing) + 1 : 1;
+const versionedName = `project-context-full-v${nextVersion}.md`;
 const versionedPath = join(ROOT, versionedName);
 
 writeFileSync(versionedPath, output, 'utf-8');
