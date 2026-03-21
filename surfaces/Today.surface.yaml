@@ -8,9 +8,12 @@ intent: >
   of a session and surface the highest-priority items requiring attention.
 
 what_it_omits:
-  - Resolved and completed items
-  - Metrics and aggregate counts as the primary content
-  - Navigation or settings chrome
+  - item: Resolved and completed items
+    reason: "Today is a priority surface. Completed work is noise — it distracts from what still needs action. Historical views belong in reporting."
+  - item: Metrics and aggregate counts as the primary content
+    reason: "Counts imply quota. This surface is about clinical priority, not volume. A coordinator should act on items, not manage a number."
+  - item: Navigation or settings chrome
+    reason: "The shell handles navigation. Embedding nav chrome inside Today violates the 3-panel shell rule and creates ambiguous wayfinding."
 
 empty_state_meaning: >
   No priority items today. Positive signal — the coordinator's panel is clear.

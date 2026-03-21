@@ -51,6 +51,26 @@ CANDIDATE_PATTERNS:
   [If NOVEL contains something worth promoting, name it here
    with a one-line description. This feeds the ratification queue.]
 
+COPY_VIOLATIONS:
+  [List any violations of copy-voice.md rules found in the generated output.
+   Each item: { rule, found, correction }
+     rule: the specific copy-voice rule violated
+           (e.g. "empty-state-vague", "confirmation-are-you-sure", "label-gerund-tense")
+     found: the exact string from the generated output that violates it
+     correction: the corrected version following copy-voice.md
+
+   Rules to check:
+   - Tone: never cute ("All caught up!"), apologetic ("We're sorry"), or vague ("Something went wrong")
+   - Labels: imperative present tense ("Acknowledge" not "Acknowledging")
+   - Confirmations: [Consequence statement]. [Action instruction]. Never "Are you sure?"
+   - Empty states: honest and specific ("No open care gaps for this patient" not "No results found")
+   - Error messages: what happened + what to do (never "Something went wrong. Please try again.")
+   - Dates: MMM D, YYYY ("Jan 5, 2025" not "01/05/2025")
+   - Clinical quantities: always numerals ("3 patients" not "three patients")
+   - Entity names: use canonical names from ontology/entities.yaml
+
+   Empty array if none found. This section is ALWAYS present in every review response.]
+
 CONFIDENCE: [0.0–1.0 — your assessment of genome compliance]
 ```
 

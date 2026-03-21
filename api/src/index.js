@@ -198,6 +198,24 @@ async function handleRequest(req, res) {
     const slug = nameLower.replace(/[^a-z0-9]+/g, '-').substring(0, 30);
     const candidate_id = `${ts}-${slug}`;
 
+    // Design Mind improvement: Change 3 — candidate decay tracking
+    const today = new Date().toISOString().substring(0, 10);
+    const submittingProject = body.submitted_by || 'unknown';
+
+    // Build reporting_projects: merge existing reporters + this one
+    const existingProjects = matches.length > 0
+      ? (matches[matches.length - 1].reporting_projects || [])
+      : [];
+    const projectIdx = existingProjects.findIndex(p => p.project_id === submittingProject);
+    let reporting_projects;
+    if (projectIdx >= 0) {
+      reporting_projects = existingProjects.map((p, i) =>
+        i === projectIdx ? { ...p, last_active: today } : p
+      );
+    } else {
+      reporting_projects = [...existingProjects, { project_id: submittingProject, last_active: today }];
+    }
+
     const record = {
       candidate_id,
       pattern_name:                     body.pattern_name,
@@ -206,9 +224,11 @@ async function handleRequest(req, res) {
       why_existing_patterns_didnt_fit:  body.why_existing_patterns_didnt_fit,
       ontology_refs:                    body.ontology_refs || [],
       implementation_ref:               body.implementation_ref || null,
-      submitted_by:                     body.submitted_by || null,
+      submitted_by:                     submittingProject,
       submitted_at:                     new Date().toISOString(),
       frequency_count,
+      frequency:                        frequency_count,
+      reporting_projects,
       status,
     };
 

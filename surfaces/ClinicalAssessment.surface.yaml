@@ -9,9 +9,12 @@ intent: >
   severity, and logs the completed assessment.
 
 what_it_omits:
-  - Interpretation or clinical advice beyond score classification
-  - Comparison to prior assessments (use a trend surface for that)
-  - Free-text narrative — structured response options only
+  - item: Interpretation or clinical advice beyond score classification
+    reason: "Clinical interpretation requires licensed clinical judgment. This surface is used by coordinators as well as clinicians — generating advice here could constitute an unlicensed clinical recommendation. Score + severity classification is the boundary."
+  - item: Comparison to prior assessments
+    reason: "Trend analysis requires temporal context and a different visual model. Mixing it into the entry surface creates cognitive load during administration and risks the coordinator treating prior scores as a target rather than focusing on the current response."
+  - item: Free-text narrative responses
+    reason: "Standardised instruments have validated, structured response options. Allowing free text breaks clinical validity — scores would not be comparable across administrations or patients."
 
 empty_state_meaning: >
   No answers recorded yet. Progress indicator in the submit bar shows 0/N answered.

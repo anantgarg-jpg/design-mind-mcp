@@ -8,10 +8,14 @@ intent: >
   The worklist is the coordinator's primary working surface, not a reporting view.
 
 what_it_omits:
-  - Patients with no open care gaps or tasks
-  - Completed and closed items from previous sessions
-  - Administrative or billing data
-  - Clinical notes and diagnoses
+  - item: Patients with no open care gaps or tasks
+    reason: "This is an action surface. Showing patients with nothing to do creates false urgency and obscures who needs attention."
+  - item: Completed and closed items from previous sessions
+    reason: "Closed items are historical record. The worklist is about today's work. Mixing closed items in degrades scannability."
+  - item: Administrative or billing data
+    reason: "Different role, different surface. Billing belongs to RCM workflows with separate access controls. Mixing it here creates compliance risk."
+  - item: Clinical notes and diagnoses
+    reason: "Unstructured clinical data requires clinical context to interpret safely. The worklist is a coordinator action surface — clinical depth belongs in PatientDetail."
 
 empty_state_meaning: >
   The coordinator's panel is clear. This is a positive clinical signal —

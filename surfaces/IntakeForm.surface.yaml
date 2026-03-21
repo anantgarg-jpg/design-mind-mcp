@@ -8,9 +8,12 @@ intent: >
   Not a multi-record entry surface.
 
 what_it_omits:
-  - Bulk outreach logging
-  - Patient clinical data beyond identity and care gap reference
-  - Scheduling or calendar integration
+  - item: Bulk outreach logging
+    reason: "This is a single-record entry surface. Bulk operations require a different interaction model with safety constraints (rule 12) — attempting bulk entry here would bypass per-record confirmation."
+  - item: Patient clinical data beyond identity and care gap reference
+    reason: "The coordinator needs to know who they contacted and why — not full clinical history. Exposing clinical data on an entry form creates HIPAA surface area without functional value."
+  - item: Scheduling or calendar integration
+    reason: "Scheduling is a separate workflow with its own surface and state machine. Embedding it here conflates two distinct intents and increases form complexity without serving the primary logging goal."
 
 empty_state_meaning: >
   The form is blank and ready for a new entry. No message needed.

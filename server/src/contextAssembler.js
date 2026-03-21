@@ -39,6 +39,37 @@ function structuralBoost(patternComponentType, queryComponentType) {
   return related.includes(patternComponentType) ? 0.35 : 0;
 }
 
+// Design Mind improvement: Change 2 — two-stage ranking using structural_family
+// Maps incoming component_type to expected structural_family values for re-ranking.
+// Close matches get a small boost; clear mismatches get a penalty.
+const FAMILY_MAP = {
+  row:    ['actionable-list-row', 'readonly-list-row', 'log-entry-row'],
+  card:   ['actionable-list-row', 'stat-metric-card', 'inline-chat-card'],
+  banner: ['severity-alert-banner', 'resolvable-banner'],
+  badge:  ['status-indicator'],
+  header: ['patient-context-header'],
+  stat:   ['stat-metric-card'],
+  chip:   ['quick-action-chip'],
+  form:   ['assessment-form'],
+  list:   ['actionable-list-row', 'readonly-list-row'],
+  table:  ['readonly-list-row', 'actionable-list-row'],
+  modal:  ['confirmation-dialog'],
+  panel:  ['patient-context-header', 'assessment-form'],
+};
+
+function familyRankScore(patternStructuralFamily, queryComponentType) {
+  if (!patternStructuralFamily || !queryComponentType) return 0;
+  const expected = FAMILY_MAP[queryComponentType] || [];
+  if (expected.length === 0) return 0;
+  if (expected[0] === patternStructuralFamily) return 0.2;        // primary match
+  if (expected.includes(patternStructuralFamily)) return 0.05;    // secondary match
+  // Clear mismatch: family is in another type's primary slot
+  for (const [, families] of Object.entries(FAMILY_MAP)) {
+    if (families[0] === patternStructuralFamily) return -0.1;     // wrong family's primary
+  }
+  return 0;
+}
+
 // Set to true by index.js after confirming the vector store has been seeded
 let _useVectorStore = false;
 export function setUseVectorStore(val) { _useVectorStore = val; }
@@ -114,6 +145,81 @@ function getSafetyConstraintsInScope(intent, componentType, domain, kb) {
     rule: c.text,
     applies_because: inferAppliesBecause(c, intentLower, componentType),
   }));
+}
+
+// Design Mind improvement: Change 1 — safety blocking vs confidence gating
+// Detects which hard constraints are structurally likely to be violated based
+// on component_type + domain + intent. Returns violation objects, NOT all constraints.
+// Empty array = no pre-emptive block. Non-empty = block: true in response.
+function detectSafetyViolations(intent, componentType, domain, kb) {
+  const violations = [];
+  const allConstraints = kb.safety.constraints || [];
+  const intentLower = (intent + ' ' + domain).toLowerCase();
+
+  for (const c of allConstraints) {
+    const id = c.id;
+
+    // Constraints 1–4: severity color rules
+    // Flag only when the component explicitly renders clinical severity levels
+    if (id <= 4) {
+      if (intentLower.includes('critical') || intentLower.includes('severity') ||
+          intentLower.includes('high severity') || intentLower.includes('alert') ||
+          componentType === 'banner') {
+        violations.push({ constraint_id: id, rule: c.text,
+          risk: 'Severity color tokens must be used exactly — no custom colors, no hex overrides.' });
+      }
+      continue;
+    }
+
+    // Constraints 5–7: alert dismissal
+    // Flag when the component has alert dismiss/acknowledge interactions
+    if (id <= 7) {
+      if (intentLower.includes('alert') || intentLower.includes('dismiss') ||
+          intentLower.includes('acknowledge') || intentLower.includes('escalat') ||
+          componentType === 'banner') {
+        violations.push({ constraint_id: id, rule: c.text,
+          risk: 'Alert dismissal rules apply — Critical alerts must not have a Dismiss control.' });
+      }
+      continue;
+    }
+
+    // Constraints 8–10: patient identity
+    // Flag only when the component explicitly renders individual patient identity fields.
+    // A count/metric card does not display names/MRN/DOB — don't block.
+    if (id <= 10) {
+      if (intentLower.includes('mrn') || intentLower.includes('date of birth') ||
+          intentLower.includes('patient name') || intentLower.includes('patient identity') ||
+          intentLower.includes('patient detail') || intentLower.includes('patient profile') ||
+          componentType === 'header') {
+        violations.push({ constraint_id: id, rule: c.text,
+          risk: 'Patient identity display rules apply — name format, MRN label, DOB format.' });
+      }
+      continue;
+    }
+
+    // Constraints 11–12: confirmation for destructive/bulk actions
+    if (id <= 12) {
+      if (intentLower.includes('delete') || intentLower.includes('remov') ||
+          intentLower.includes('bulk') || intentLower.includes('modif') ||
+          intentLower.includes('edit') || intentLower.includes('destructive')) {
+        violations.push({ constraint_id: id, rule: c.text,
+          risk: 'Destructive or bulk action requires explicit confirmation with consequence statement.' });
+      }
+      continue;
+    }
+
+    // Constraints 13–14: terminology
+    // Flag for clinical domains where forbidden terms or code paraphrasing are likely
+    if (domain === 'clinical-alerts' || domain === 'patient-data' || domain === 'care-gaps' ||
+        intentLower.includes('diagnos') || intentLower.includes('medicat') ||
+        intentLower.includes('clinical code') || intentLower.includes('label') ||
+        intentLower.includes('copy') || intentLower.includes('text')) {
+      violations.push({ constraint_id: id, rule: c.text,
+        risk: 'Clinical terminology rules apply — forbidden terms and canonical code display.' });
+    }
+  }
+
+  return violations;
 }
 
 function inferAppliesBecause(constraint, intentLower, componentType) {
@@ -238,13 +344,25 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
   // ── Vector search (Qdrant semantic or TF-IDF fallback) ──────────────────────
   const patternResults = await queryPatterns(searchText, 8, patternIndex);
 
-  // Apply structural boost and re-rank
+  // Design Mind improvement: Change 2 — two-stage ranking
+  // Stage 1: component_type structural boost (existing)
+  // Stage 2: structural_family re-rank using FAMILY_MAP (new)
+  // Raw scores and adjusted scores both preserved for _debug (Change 6)
   const boostedResults = patternResults
-    .map(r => ({
-      ...r,
-      score: r.score + structuralBoost(r.metadata?.component_type, component_type),
-      structurally_matched: structuralBoost(r.metadata?.component_type, component_type) > 0,
-    }))
+    .map(r => {
+      const raw_score = r.score;
+      const stage1    = structuralBoost(r.metadata?.component_type, component_type);
+      const stage2    = familyRankScore(r.metadata?.structural_family, component_type);
+      const adjusted_score = raw_score + stage1 + stage2;
+      return {
+        ...r,
+        raw_score,
+        adjusted_score,
+        score: adjusted_score,
+        structurally_matched: stage1 > 0 || stage2 > 0,
+        family_match: stage2 > 0,
+      };
+    })
     .sort((a, b) => b.score - a.score)
     .slice(0, 5);
 
@@ -339,6 +457,13 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
     intent_description, component_type, domain, kb
   );
 
+  // Design Mind improvement: Change 1 — safety blocking vs confidence gating
+  // safety_violations: constraints structurally likely to be violated → causes block: true
+  // coverage_gap: confidence < 0.6 → warning only, never blocks
+  const safetyViolations = detectSafetyViolations(
+    intent_description, component_type, domain, kb
+  );
+
   // ── Confidence score ────────────────────────────────────────────────────────
   // Vector store: cosine similarity 0.0–1.0, good match ~0.70+
   // TF-IDF: naturally tops out ~0.5–0.6, scaled by /0.55 so ~0.5 maps to ~0.9
@@ -346,6 +471,8 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
   const confidence = _useVectorStore
     ? parseFloat(Math.min(topPatternScore, 1.0).toFixed(4))
     : parseFloat(Math.min(topPatternScore / 0.55, 1.0).toFixed(4));
+
+  const coverageGap = confidence < 0.6;
 
   // ── Gap detection ───────────────────────────────────────────────────────────
   // Vector store: low match < 0.45 cosine. TF-IDF: low match < 0.25 raw.
@@ -366,7 +493,11 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
   const surface = surfaceMatch ? {
     id:                surfaceMatch.surface.id,
     intent:            surfaceMatch.surface.intent || '',
-    what_it_omits:     surfaceMatch.surface.what_it_omits || [],
+    what_it_omits:     (surfaceMatch.surface.what_it_omits || []).map(entry =>
+      typeof entry === 'string'
+        ? { item: entry, reason: null }
+        : { item: entry.item, reason: entry.reason || null }
+    ),
     empty_state_meaning: surfaceMatch.surface.empty_state_meaning || '',
     ordering:          surfaceMatch.surface.ordering || '',
     actions:           surfaceMatch.surface.actions || [],
@@ -377,7 +508,30 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
   // ── Episodic memory — similar past builds ───────────────────────────────────
   const similarBuilds = loadSimilarBuilds(kb.basePath, searchText);
 
-  return {
+  // Design Mind improvement: Change 6 — _debug field (only when DEBUG_CONTEXT=true)
+  // Captures ranking internals, rule inclusion/exclusion, surface match, episodic query.
+  // Never emitted in production (empty object when env var is not set).
+  const allRuleIds = (kb.rules || []).map(r => r.id);
+  const includedRuleIds = ruleResults.map(r => r.id);
+  const excludedRuleIds = allRuleIds.filter(id => !includedRuleIds.includes(id));
+
+  const debugField = process.env.DEBUG_CONTEXT === 'true' ? {
+    patterns_retrieved: boostedResults.map(r => ({
+      id: r.id,
+      raw_score: parseFloat((r.raw_score || 0).toFixed(4)),
+      adjusted_score: parseFloat((r.adjusted_score || r.score).toFixed(4)),
+      family_match: r.family_match || false,
+    })),
+    rules_included: includedRuleIds,
+    rules_excluded: excludedRuleIds,
+    rules_excluded_reason: excludedRuleIds.map(id => `${id}: not in top-3 for this query`),
+    surface_matched: surfaceMatch ? surfaceMatch.surface.id : null,
+    episodic_query: searchText.substring(0, 80),
+    episodic_hits: similarBuilds.length,
+  } : {};
+
+  // ── Assemble response — block if safety violations detected ─────────────────
+  const response = {
     surface,
     structural_guidance: structuralGuidance,
     patterns,
@@ -386,11 +540,99 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
     safety_constraints: safetyConstraints,
     similar_builds: similarBuilds,
     confidence,
+    safety_violations: safetyViolations,
+    coverage_gap: coverageGap,
     gaps,
+    _debug: debugField,
   };
+
+  if (safetyViolations.length > 0) {
+    response.block = true;
+    response.block_reason =
+      `${safetyViolations.length} hard constraint(s) are structurally likely to be violated for this ` +
+      `component_type="${component_type}" + domain="${domain}" combination. ` +
+      `Address the safety_violations before generating: ` +
+      safetyViolations.map(v => `[C${v.constraint_id}] ${v.risk}`).join(' | ');
+  }
+
+  if (coverageGap) {
+    response.coverage_warning =
+      'Genome has low coverage for this component type. Proceed carefully and call report_pattern if you invent new structure.';
+  }
+
+  return response;
 }
 
 // ── TOOL 2: review_output ─────────────────────────────────────────────────────
+
+// Design Mind improvement: Change 4 — copy-voice.md checks
+// copy-voice.md is loaded into kb.ontology['copy-voice'] as raw text by knowledge.js.
+// It is NOT passed as a separate arg — it is always available via kb.
+// The checks below run in reviewOutput and populate copy_violations in the response.
+// agents/critic/system-prompt.md has a parallel COPY_VIOLATIONS section added.
+const COPY_VOICE_CHECKS = [
+  {
+    rule: 'tone-cute-or-casual',
+    pattern: /all caught up|looks like you('re| are)|nothing to see here|hooray|yay[^a-z]|great job/i,
+    correction: 'Use honest, specific copy. E.g. "No open care gaps for this patient" not "All caught up!"',
+  },
+  {
+    rule: 'tone-apologetic',
+    pattern: /we('re| are) sorry|sorry,?\s+(something|we|our)/i,
+    correction: 'State what happened and what to do. Never apologize. E.g. "Patient record could not be saved. Check your connection and try again."',
+  },
+  {
+    rule: 'vague-error-message',
+    pattern: /something went wrong|something happened(?! to the patient)/i,
+    correction: 'Error messages must state what happened + what to do. "Patient record could not be saved. Check your connection and try again."',
+  },
+  {
+    rule: 'confirmation-are-you-sure',
+    pattern: /are you sure/i,
+    correction: 'Confirmation dialogs must use: [Consequence statement]. [Action instruction]. Never "Are you sure?"',
+  },
+  {
+    rule: 'label-gerund-tense',
+    pattern: /"(Acknowledging|Escalating|Dismissing|Completing|Assigning|Deleting|Submitting|Saving|Updating|Closing)"/,
+    correction: 'Labels use imperative present tense: "Acknowledge" not "Acknowledging". See copy-voice.md.',
+  },
+  {
+    rule: 'empty-state-vague',
+    pattern: /no (items|results|data|records) (found|available|here)|nothing to (show|display|find)/i,
+    correction: 'Empty states must be specific: "No open care gaps for this patient" not "No results found".',
+  },
+  {
+    rule: 'date-format-numeric',
+    pattern: /\b\d{2}\/\d{2}\/\d{4}\b/,
+    correction: 'Use MMM D, YYYY format for display dates: "Jan 5, 2025" not "01/05/2025". See copy-voice.md.',
+  },
+  {
+    rule: 'written-out-clinical-number',
+    pattern: /\b(one|two|three|four|five|six|seven|eight|nine|ten)\s+(patient|alert|task|gap|record)/i,
+    correction: 'Use numerals for all clinical quantities: "3 patients" not "three patients". See copy-voice.md.',
+  },
+];
+
+function checkCopyVoice(code) {
+  const violations = [];
+  // Strip comments and import paths to avoid false positives on developer copy
+  const stripped = code
+    .replace(/\/\/[^\n]*/g, '')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/import\s+.*from\s+["'][^"']*["']/g, '');
+
+  for (const check of COPY_VOICE_CHECKS) {
+    const match = stripped.match(check.pattern);
+    if (match) {
+      violations.push({
+        rule: check.rule,
+        found: match[0],
+        correction: check.correction,
+      });
+    }
+  }
+  return violations;
+}
 
 // Hard constraint violation detectors
 const HARD_CONSTRAINT_CHECKS = [
@@ -554,12 +796,15 @@ export async function reviewOutput(params, kb, patternIndex) {
   const candidatePatterns = [];
 
   // ── Hard constraint violation checks ────────────────────────────────────────
+  // Design Mind improvement: Change 1 — safety_block: true on hard-constraint fixes
+  // These items must be addressed before output is considered shippable.
   for (const check of HARD_CONSTRAINT_CHECKS) {
     if (check.check(code)) {
       fix.push({
         problem: check.problem,
         rule_violated: check.rule_violated,
         correction: check.correction,
+        safety_block: true,
       });
     }
   }
@@ -609,10 +854,14 @@ export async function reviewOutput(params, kb, patternIndex) {
     });
   }
 
+  // Design Mind improvement: Change 4 — copy-voice violations (always present, may be empty)
+  const copyViolations = checkCopyVoice(code);
+
   // ── Overall compliance score ─────────────────────────────────────────────────
   let compliance = 1.0;
-  compliance -= fix.length * 0.15;       // each fix deducts 15%
-  compliance -= borderline.length * 0.05; // each borderline deducts 5%
+  compliance -= fix.length * 0.15;             // each fix deducts 15%
+  compliance -= borderline.length * 0.05;       // each borderline deducts 5%
+  compliance -= copyViolations.length * 0.05;   // each copy violation deducts 5%
   compliance = Math.max(0, Math.min(1, compliance));
 
   return {
@@ -626,6 +875,7 @@ export async function reviewOutput(params, kb, patternIndex) {
         : 'Low resemblance to existing patterns — review against genome before promoting',
     }] : [],
     fix,
+    copy_violations: copyViolations,
     candidate_patterns: candidatePatterns,
     confidence: parseFloat(compliance.toFixed(4)),
   };
@@ -755,6 +1005,10 @@ function localFallback(params, basePath, reason) {
                : 'logged';
   const candidateId = generateCandidateId(pattern_name);
 
+  // Design Mind improvement: Change 3 — candidate decay tracking
+  const projectId = process.env.DESIGN_MIND_PROJECT || basePath.split('/').pop() || 'unknown';
+  const today = new Date().toISOString().substring(0, 10); // YYYY-MM-DD
+
   const yamlContent = [
     `# Design Mind Pattern Candidate`,
     `# Generated: ${new Date().toISOString()}`,
@@ -764,7 +1018,12 @@ function localFallback(params, basePath, reason) {
     `candidate_id: "${candidateId}"`,
     `pattern_name: "${pattern_name}"`,
     `status: ${status}`,
+    `frequency: ${frequencyCount}`,
     `frequency_count: ${frequencyCount}`,
+    ``,
+    `reporting_projects:`,
+    `  - project_id: "${projectId}"`,
+    `    last_active: "${today}"`,
     ``,
     `description: >`,
     `  ${description.replace(/\n/g, '\n  ')}`,

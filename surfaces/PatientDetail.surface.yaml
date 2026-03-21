@@ -8,10 +8,14 @@ intent: >
   Everything shown should connect to a possible next step.
 
 what_it_omits:
-  - Historical closed gaps (unless explicitly surfaced in audit mode)
-  - Billing and coding data
-  - Raw lab values without clinical context
-  - Unstructured notes
+  - item: Historical closed gaps (unless explicitly surfaced in audit mode)
+    reason: "Closed gaps are audit record, not action items. Showing them by default inflates the list and obscures what still needs intervention. Audit mode is a deliberate opt-in."
+  - item: Billing and coding data
+    reason: "Billing is handled by a separate team with different access controls. Exposing it here creates HIPAA surface area without clinical value for the coordinator/clinician role."
+  - item: Raw lab values without clinical context
+    reason: "A lab value alone is uninterpretable and potentially alarming without reference range and clinical narrative. Showing raw values without context violates the principle that everything shown should connect to a possible next step."
+  - item: Unstructured notes
+    reason: "Free-text clinical notes require medical training to interpret safely. This surface serves coordinators who need structured, actionable data — not freeform narrative."
 
 empty_state_meaning: >
   No open care gaps or tasks means this patient's panel is currently clear.

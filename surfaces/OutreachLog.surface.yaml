@@ -8,9 +8,12 @@ intent: >
   action surface. Coordinators use it to review what happened, not to do things.
 
 what_it_omits:
-  - Outreach older than 24 hours (use reporting for historical views)
-  - Any action that modifies an existing log entry
-  - Patient clinical data beyond name and related care gap
+  - item: Outreach older than 24 hours (use reporting for historical views)
+    reason: "This surface is a shift-level review tool, not a historical ledger. 24h scope keeps the view relevant to the current coordinator session. Older records belong in a reporting surface."
+  - item: Any action that modifies an existing log entry
+    reason: "Outreach logs are audit records. Mutability would compromise their integrity as a compliance trail. Edits and corrections must go through a formal amendment process outside this surface."
+  - item: Patient clinical data beyond name and related care gap
+    reason: "This is an outreach surface, not a clinical record. Showing clinical data here would require the same access controls as PatientDetail — a different surface with different intent."
 
 empty_state_meaning: >
   No outreach has been logged in the last 24 hours. Honest one-liner only —
