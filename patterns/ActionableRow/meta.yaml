@@ -1,0 +1,101 @@
+id: ActionableRow
+status: active
+component_type: row
+structural_family: actionable-list-row
+confidence: 0.95
+version: 1.0.0
+introduced: refactor-v1
+last_evolved: refactor-v1
+
+summary: >
+  The single actionable unit for any entity that appears in a list and needs
+  a primary action, optional secondary actions, and status display. Covers
+  care gaps, tasks, protocols, assessments, patients — anything that follows
+  the "scan → act" coordinator workflow. Two layout variants share identical
+  interaction invariants: row (border-l-2 accent stripe, border-b divider)
+  and card (rounded-lg border, standalone shadow).
+
+  Rule: use ActionableRow. Do NOT create a new pattern just because the entity
+  domain changes. New pattern only when the STRUCTURE changes — different
+  interaction model, different layout container, different slot arrangement.
+
+when:
+  - displaying any entity in a list where the user can take a primary action
+  - worklist rows: care gaps, tasks, protocols, assessments
+  - variant="row" when rows live inside a shared container (bg-card rounded-lg border)
+  - variant="card" when each row is a standalone card (its own border + shadow)
+
+not_when:
+  - summary counts or metrics → use StatCard
+  - patient identity header → use PatientContextHeader
+  - clinical alert requiring immediate acknowledgment → use ClinicalAlertBanner
+  - read-only display with no actions (no primaryAction, no onExpand) — just use a plain div
+
+variants:
+  - id: row
+    description: >
+      Default. Used when rows share a container (bg-card rounded-lg border overflow-hidden).
+      Has a colored left border stripe (accent prop) and a bottom border divider.
+      last:border-0 removes the final divider automatically.
+    invariants:
+      - "flex items-start gap-3 px-4 py-3.5 border-b border-border/40 last:border-0 bg-card border-l-2 transition-colors hover:bg-muted/60"
+      - "accent stripe: border-l-2 border-{warning|accent|success|border}"
+    slots:
+      - title (required)
+      - label (optional monospace badge above title)
+      - contextLabel (optional patient name when not in patient-scoped view)
+      - status (optional StatusBadge)
+      - meta[] (icon + text pairs, up to ~3)
+      - primaryAction (right-aligned button)
+      - secondaryActions (MoreHorizontal dropdown)
+      - onExpand (chevron that opens detail panel)
+
+  - id: card
+    description: >
+      Used when each row is a standalone card. No shared container.
+      Has its own border, rounded corners, and shadow.
+    invariants:
+      - "flex items-start justify-between gap-4 p-4 bg-card border border-border/60 rounded-lg shadow-card hover:shadow-card-hover transition-shadow"
+    slots:
+      - title (required)
+      - label (optional monospace badge above title)
+      - contextLabel (optional patient name)
+      - status (optional StatusBadge)
+      - meta[] (icon + text pairs)
+      - primaryAction (right-aligned button)
+      - secondaryActions (MoreHorizontal dropdown)
+      - onExpand (not typically used in card variant)
+
+variation_rule: >
+  Slots are free — fill them with any label, icon, domain text, or token.
+  Slot content is NOT a new pattern. A new pattern is only warranted when
+  the STRUCTURE changes: different container type, different interaction model
+  (e.g., drag-and-drop, multi-select, inline edit), different slot arrangement,
+  or a layout that cannot be expressed as row or card variant.
+
+props:
+  variant: '"row" | "card" — default "row"'
+  title: "string — primary label (required)"
+  titleMono: "boolean — renders title in monospace (for codes like PHQ-9)"
+  label: "string — small badge above title (e.g. measure code HBD)"
+  labelMono: "boolean — renders label in monospace"
+  contextLabel: "string — patient name when outside patient-scoped view"
+  status: "StatusKey — passed to StatusBadge"
+  accent: '"warning" | "accent" | "success" | "none" — row stripe color'
+  meta: "MetaItem[] — [{icon?, text, urgent?, success?}]"
+  primaryAction: "{ label: string; onClick: () => void }"
+  secondaryActions: "SecondaryAction[] — rendered in MoreHorizontal dropdown"
+  onExpand: "() => void — shows ChevronRight button"
+  onRowClick: "() => void — makes full row clickable (e.g., open tab)"
+  dimmed: "boolean — opacity-50, no actions, no hover"
+
+ontology_refs:
+  entities: [CareGap, Task, CareProtocol, Assessment, Patient]
+  states: [CareGapStatus, TaskStatus, ProtocolStatus]
+  actions: [CloseGap, Complete, Activate, View, Assign, AddNote, Exclude, StartAssessment]
+
+embedding_hint: >
+  actionable row card list worklist care gap task protocol assessment
+  coordinator close gap complete assign exclude add note overdue status
+  accent stripe variant row card entity action unit scan act workflow
+  patient name context label meta icon primary action secondary dropdown

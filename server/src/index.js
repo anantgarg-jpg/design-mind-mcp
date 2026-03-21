@@ -65,7 +65,9 @@ const TOOLS = [
     description:
       'Call this before generating any UI component or surface. Returns the most relevant patterns, ' +
       'rules, ontology references, and safety constraints for your stated intent. ' +
-      'Use the returned context to guide generation — do not build from scratch.',
+      'Use the returned context to guide generation — do not build from scratch. ' +
+      'Key principle: if the returned pattern covers your intent via slot variation (different label, ' +
+      'domain, icon, entity type), USE that pattern — do not create a new one.',
     inputSchema: {
       type: 'object',
       required: ['intent_description', 'component_type', 'domain', 'user_type'],
@@ -85,7 +87,7 @@ const TOOLS = [
         domain: {
           type: 'string',
           enum: ['clinical-alerts', 'patient-data', 'care-gaps', 'tasks',
-                 'navigation', 'data-display', 'forms', 'admin', 'other'],
+                 'care-protocols', 'assessments', 'navigation', 'data-display', 'forms', 'admin', 'other'],
           description: 'The functional domain this component belongs to.',
         },
         user_type: {
@@ -127,8 +129,12 @@ const TOOLS = [
   {
     name: 'report_pattern',
     description:
-      'Call when you have built something novel that the genome does not cover. ' +
-      'This logs the pattern to the candidates queue for human ratification.',
+      'Call ONLY when the STRUCTURE of the UI changes — new interaction model, different layout ' +
+      'container, different slot arrangement, or a layout that cannot be expressed as an existing ' +
+      'pattern variant. Do NOT call when only slot content changes (different label, domain, icon, ' +
+      'token, or entity type). Changing what data fills a slot is free variation, not a new pattern. ' +
+      'The single threshold question: "Am I changing structure or content?" Content = do not call. ' +
+      'Structure = call this tool and log the candidate for human ratification.',
     inputSchema: {
       type: 'object',
       required: ['pattern_name', 'description', 'intent_it_serves', 'why_existing_patterns_didnt_fit'],

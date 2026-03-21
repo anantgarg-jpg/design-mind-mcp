@@ -180,6 +180,12 @@ export function loadKnowledge(basePath) {
         const metaContent = readFileSync(metaPath, 'utf-8');
         const meta = parseYaml(metaContent);
 
+        // Skip deprecated patterns — they are replaced by their deprecated_by successor
+        if (meta.status === 'deprecated') {
+          process.stderr.write(`[knowledge]   skip (deprecated): ${meta.id || patternName}\n`);
+          continue;
+        }
+
         meta._patternName = patternName;
         meta._metaRaw = metaContent;
 
