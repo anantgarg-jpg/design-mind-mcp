@@ -560,7 +560,7 @@ export async function reviewOutput(params, kb, patternIndex) {
   if (/font-family|fontFamily/i.test(code)) {
     borderline.push({
       observation: 'font-family is being set explicitly in a component',
-      tension: 'styling-tokens rule: never set font-family in components — all text inherits Nunito Sans from root',
+      tension: 'styling-tokens rule: never set font-family in components — all text inherits DM Sans from root',
       recommendation: 'Remove the font-family declaration. Components inherit from globals.css.',
     });
   }

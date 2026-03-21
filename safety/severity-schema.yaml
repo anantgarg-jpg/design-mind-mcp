@@ -30,7 +30,7 @@ severity_levels:
   high:
     mds_token: "--alert"                         # MDS Orange — NOT the same as the Alert entity
     mds_token_light: "--alert-light"             # #FFF2DB
-    hex_reference: "#9A4700"                     # WCAG AA accessible foreground
+    hex_reference: "#B24D00"                     # WCAG AA accessible foreground
     tailwind_equivalent: "text-alert"
     bg_class: "bg-[var(--alert-light)]"
     text_class: "text-alert"
@@ -46,7 +46,7 @@ severity_levels:
   medium:
     mds_token: "--warning"
     mds_token_light: "--warning-light"           # #FFF9E5
-    hex_reference: "#7A5400"                     # WCAG AA accessible foreground
+    hex_reference: "#AD8200"                     # WCAG AA accessible foreground
     tailwind_equivalent: "text-warning"
     bg_class: "bg-[var(--warning-light)]"
     text_class: "text-warning"

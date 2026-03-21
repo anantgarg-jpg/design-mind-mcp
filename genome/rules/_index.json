@@ -1,7 +1,7 @@
 {
-  "version": "1.2.0",
+  "version": "1.3.0",
   "generated": "seed-v0",
-  "last_updated": "mds-token-integration",
+  "last_updated": "styling-tokens-v2-expansion",
   "rules": {
     "shell-layout": {
       "file": "genome/rules/shell-layout.rule.md",
@@ -42,9 +42,9 @@
       "confidence": 0.97,
       "status": "active",
       "ratified_by": "design-leadership",
-      "mutation_count": 0,
-      "last_challenged": null,
-      "note": "Added after theme.css (MDS tokens) was provided. Supersedes hardcoded Tailwind color usage. Load this rule for ANY styling decision."
+      "mutation_count": 1,
+      "last_challenged": "v2-expansion",
+      "note": "v2.0.0 — expanded from color-only tokens to full styling system: typography (DM Sans), spacing (4px grid), border-radius, elevation, z-index, motion. Colors updated to MDS Updated Colors Pallet. Single comprehensive file. Load this rule for ANY styling decision."
     }
   },
   "patterns": {
@@ -116,7 +116,7 @@
   },
   "notes": {
     "token_file": "theme.css",
-    "font": "Nunito Sans via --font-sans",
+    "font": "DM Sans via --font-sans, DM Mono via --font-mono",
     "critical_disambiguation": "--alert token = MDS Orange = High severity. NOT the Alert clinical entity.",
     "destructive_dual_use": "--destructive = delete actions AND Critical severity \u2014 same color, both are highest-stakes."
   }
