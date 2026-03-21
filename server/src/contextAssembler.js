@@ -248,7 +248,25 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
     .sort((a, b) => b.score - a.score)
     .slice(0, 5);
 
-  const ruleResults = await queryRules(searchText, 2, ruleIndex);
+  let ruleResults = await queryRules(searchText, 3, ruleIndex);
+
+  // styling-tokens applies to every component — always include it regardless
+  // of query relevance so the model always has the token reference.
+  // Also enrich any result's metadata with the full kb.rules entry (which
+  // carries the raw field) since the TF-IDF / vector store payloads strip it.
+  const enriched = new Map(kb.rules.map(r => [r.id, r]));
+  const hasTokenRule = ruleResults.some(r => r.id === 'styling-tokens');
+  if (!hasTokenRule) {
+    const tokenRule = enriched.get('styling-tokens');
+    if (tokenRule) {
+      ruleResults = [...ruleResults, { id: tokenRule.id, score: 1.0, metadata: tokenRule }];
+    }
+  }
+  // Merge raw (and any other fields stripped by the index) back into each result
+  ruleResults = ruleResults.map(r => ({
+    ...r,
+    metadata: { ...enriched.get(r.id), ...r.metadata },
+  }));
 
   // ── Pattern results ─────────────────────────────────────────────────────────
   const patterns = boostedResults.map(r => ({
@@ -294,12 +312,23 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
   }
 
   // ── Rule results ────────────────────────────────────────────────────────────
-  const rules = ruleResults.map(r => ({
-    rule_id: r.id,
-    summary: [r.metadata.when, r.metadata.use].filter(Boolean).join(' | ').substring(0, 300),
-    applies_because: `Applies to: ${r.metadata.applies_to || 'this component type'}`,
-    confidence: r.metadata.confidence || 0.9,
-  }));
+  const rules = ruleResults.map(r => {
+    // A rule is "structured" when both WHEN and USE sections were parsed —
+    // those two fields together give a meaningful summary. If USE is empty the
+    // rule uses free-form markdown (e.g. styling-tokens v2 token tables) and
+    // the structured summary is unreliable; return the full raw content instead
+    // so the model sees the actual token maps / prose.
+    const hasStructured = !!(r.metadata.when && r.metadata.use);
+    const content = hasStructured
+      ? { summary: [r.metadata.when, r.metadata.use].join(' | ').substring(0, 300) }
+      : { full_content: r.metadata.raw || '' };
+    return {
+      rule_id: r.id,
+      ...content,
+      applies_because: `Applies to: ${r.metadata.applies_to || 'this component type'}`,
+      confidence: r.metadata.confidence || 0.9,
+    };
+  });
 
   // ── Ontology refs (from top matched pattern) ────────────────────────────────
   const topPatternRefs = boostedResults[0]?.metadata?.ontology_refs || {};
