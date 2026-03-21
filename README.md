@@ -29,7 +29,7 @@ The Design Mind organises knowledge at four levels:
 |-------|----------|-----------------|
 | **Tokens** | `genome/rules/styling-tokens.rule.md` | Colors, typography, spacing — the visual primitives |
 | **Decisions** | `patterns/*/meta.yaml` | Atomic UI choices that exist because of a rule (e.g. StatusBadge, ClinicalAlertBanner) |
-| **Compositions** | `patterns/*/meta.yaml` | Governed combinations of decisions (e.g. CareGapCard, TaskActionRow) |
+| **Compositions** | `patterns/*/meta.yaml` | Governed combinations of decisions (e.g. ActionableRow, PatientContextHeader) |
 | **Surfaces** | `surfaces/*.surface.yaml` | Full artifacts with workflow intent — encodes *why* a surface exists, what it omits, ordering logic, available actions, and hard "never" rules |
 
 ---
@@ -92,7 +92,7 @@ Without this step the server falls back to TF-IDF search — still useful, just 
 |------|-------------|
 | `consult_before_build` | Before generating any UI component — returns surface spec, patterns, rules, ontology refs, and safety constraints |
 | `review_output` | After generating UI — returns a `fix` array to address |
-| `report_pattern` | When you build something novel not covered by the genome |
+| `report_pattern` | Only when the **structure** changes — new interaction model, different layout container, different slot arrangement. Do not call when only slot content changes (label, domain, icon, entity type) |
 
 ### `consult_before_build` response
 
@@ -188,7 +188,30 @@ Each ratified pattern lives in `patterns/<PatternName>/`:
 
 ```
 meta.yaml       — id, summary, when, not_when, because, confidence
-component.tsx   — reference implementation
+component.tsx   — reference implementation (optional — some patterns are genome-only)
 ```
 
 Candidate patterns waiting for ratification are in `patterns/_candidates/`.
+
+### Pattern variation rule
+
+Patterns have **invariants** (the container, layout, interaction model — never change) and **slots** (title, label, meta items, actions — fill freely per domain).
+
+**The single threshold question: "Am I changing structure or content?"**
+
+- Changing slot content (different label, entity type, icon, token) → use the existing pattern as-is. Do not call `report_pattern`.
+- Changing structure (new layout, new interaction model, new slot arrangement) → call `report_pattern` to log a candidate.
+
+This keeps the genome lean. Four domain-named patterns (CareGapCard, CareGapRow, TaskActionRow, TaskRow) were correctly collapsed into one structural pattern (ActionableRow with `variant="row"` and `variant="card"`).
+
+### Current patterns
+
+| Pattern | Type | Use for |
+|---------|------|---------|
+| `ActionableRow` | composition | Any entity in a list that needs a primary action — care gaps, tasks, protocols, assessments. `variant="row"` inside a shared container; `variant="card"` as standalone cards |
+| `StatusBadge` | decision | Any entity status display |
+| `ClinicalAlertBanner` | decision | Clinical alerts requiring immediate acknowledgment |
+| `PatientContextHeader` | composition | Patient identity at the top of any patient-scoped surface |
+| `StatCard` | decision | Summary metric or count display |
+| `PatientRow` | composition | Patient in a population list |
+| `SectionHeader` | decision | Section label with optional count and action |
