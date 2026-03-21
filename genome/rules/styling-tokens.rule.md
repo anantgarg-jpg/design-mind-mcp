@@ -175,31 +175,33 @@ Low clinical severity. Never swap them.
 
 Font: DM Sans via --font-sans (root). Mono: DM Mono via --font-mono.
 
-  LEVEL          CLASS                              SIZE   WEIGHT   LH    WHEN
-  ─────────────  ─────────────────────────────────  ─────  ───────  ────  ────────────────────────
-  display        text-2xl font-bold                 24px   700      32px  Stat values, hero metrics
-  h1             text-xl font-semibold              20px   600      28px  Page/artifact titles
-  h2             text-lg font-semibold              18px   600      28px  Section titles within artifacts
-  h3             text-base font-semibold            16px   600      24px  Card titles, dialog titles
-  h4             text-sm font-semibold              14px   600      20px  Sub-section headers
-  body           text-sm font-normal                14px   400      20px  Default body text
-  body-medium    text-sm font-medium                14px   500      20px  Row titles, emphasis text
-  label          text-xs font-semibold uppercase    12px   600      16px  Section headers (+ tracking-wider)
-  caption        text-xs font-normal                12px   400      16px  Meta text, timestamps, hints
-  mono           font-mono text-xs                  12px   400      16px  MRN, measure codes, IDs (DM Mono)
+  CATEGORY     VARIANT    CLASS                          SIZE   WEIGHT      LH    WHEN
+  ───────────  ─────────  ─────────────────────────────  ─────  ──────────  ────  ──────────────────────────────
+  title        default    text-base font-bold            16px   700         24px  Card titles, dialog titles
+  title        medium     text-xl font-semibold          20px   600         32px  Section titles within artifacts
+  title        large      text-[28px] font-normal        28px   400         40px  Page/artifact titles
+  title        x-large    text-[32px] font-semibold      32px   600         48px  Stat values, hero metrics
+  title        xx-large   text-[40px] font-normal        40px   400         48px  Display, large hero metrics
+  body         default    text-sm font-normal            14px   400/600/700 20px  Default body text
+  body         large      text-base font-normal          16px   400/600     24px  Large body text, emphasis
+  body         small      text-xs font-semibold          12px   600/700     16px  Meta text, timestamps, hints
+  subheading   default    text-xs font-semibold          12px   600         24px  Section headers
+  link         default    text-sm font-normal            14px   400         20px  Inline links
+  label        default    text-sm font-semibold          14px   600         16px  Form labels, interactive labels
+  mono         default    font-mono text-xs              12px   400         16px  Unique identifiers & codes (DM Mono)
 
 WEIGHT RULES:
-  - font-bold (700): display metrics only — stat cards, KPIs
-  - font-semibold (600): headings, emphasis labels, active nav states
-  - font-medium (500): row titles, interactive element labels, badge text
-  - font-normal (400): body text, meta text, everything else
+  - font-bold (700): title-default, body emphasis
+  - font-semibold (600): title-medium, title-x-large, subheading, label, body emphasis
+  - font-normal (400): title-large, title-xx-large, body default, links
   - Never use font-thin, font-light, or font-black — insufficient contrast
     under cognitive load
 
 FONT RULES:
   - All text inherits font-sans from root — never set font-family inline
-  - font-mono (DM Mono) permitted only for: MRN, measure codes, system IDs,
-    timestamps, and clinical identifiers needing fixed-width rendering
+  - font-mono (DM Mono) permitted only for: unique identifiers & codes,
+    system-generated values, and fixed-width data
+  - Never use font-mono in key-value pairs
   - Never use system-ui, Arial, Inter, Nunito Sans, or any other font family
 
 # ── SPACING SYSTEM ───────────────────────────────────────────────────────────
