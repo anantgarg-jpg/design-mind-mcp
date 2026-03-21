@@ -23,6 +23,13 @@ const STATUS_CONFIG = {
   high:        { label: "High",        classes: "bg-[var(--alert-light)] text-alert border border-alert/30" },
   medium:      { label: "Medium",      classes: "bg-[var(--warning-light)] text-warning border border-warning/30" },
   low:         { label: "Low",         classes: "bg-accent text-accent-foreground border border-accent-foreground/20" },
+
+  // Protocol / program-level statuses
+  active:      { label: "Active",      classes: "bg-success/10 text-success border border-success/30" },
+  draft:       { label: "Draft",       classes: "bg-accent text-accent-foreground border border-accent-foreground/20" },
+  inactive:    { label: "Inactive",    classes: "bg-muted text-muted-foreground border border-border" },
+  archived:    { label: "Archived",    classes: "bg-muted text-muted-foreground border border-border" },
+  coming_soon: { label: "Coming soon", classes: "bg-muted text-muted-foreground border border-border" },
 } as const
 
 export type StatusKey = keyof typeof STATUS_CONFIG
