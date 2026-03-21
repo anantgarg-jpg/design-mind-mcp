@@ -3080,9 +3080,12 @@ intent: >
   severity, and logs the completed assessment.
 
 what_it_omits:
-  - Interpretation or clinical advice beyond score classification
-  - Comparison to prior assessments (use a trend surface for that)
-  - Free-text narrative — structured response options only
+  - item: Interpretation or clinical advice beyond score classification
+    reason: "Clinical interpretation requires licensed clinical judgment. This surface is used by coordinators as well as clinicians — generating advice here could constitute an unlicensed clinical recommendation. Score + severity classification is the boundary."
+  - item: Comparison to prior assessments
+    reason: "Trend analysis requires temporal context and a different visual model. Mixing it into the entry surface creates cognitive load during administration and risks the coordinator treating prior scores as a target rather than focusing on the current response."
+  - item: Free-text narrative responses
+    reason: "Standardised instruments have validated, structured response options. Allowing free text breaks clinical validity — scores would not be comparable across administrations or patients."
 
 empty_state_meaning: >
   No answers recorded yet. Progress indicator in the submit bar shows 0/N answered.
@@ -3120,9 +3123,12 @@ intent: >
   Not a multi-record entry surface.
 
 what_it_omits:
-  - Bulk outreach logging
-  - Patient clinical data beyond identity and care gap reference
-  - Scheduling or calendar integration
+  - item: Bulk outreach logging
+    reason: "This is a single-record entry surface. Bulk operations require a different interaction model with safety constraints (rule 12) — attempting bulk entry here would bypass per-record confirmation."
+  - item: Patient clinical data beyond identity and care gap reference
+    reason: "The coordinator needs to know who they contacted and why — not full clinical history. Exposing clinical data on an entry form creates HIPAA surface area without functional value."
+  - item: Scheduling or calendar integration
+    reason: "Scheduling is a separate workflow with its own surface and state machine. Embedding it here conflates two distinct intents and increases form complexity without serving the primary logging goal."
 
 empty_state_meaning: >
   The form is blank and ready for a new entry. No message needed.
@@ -3157,9 +3163,12 @@ intent: >
   action surface. Coordinators use it to review what happened, not to do things.
 
 what_it_omits:
-  - Outreach older than 24 hours (use reporting for historical views)
-  - Any action that modifies an existing log entry
-  - Patient clinical data beyond name and related care gap
+  - item: Outreach older than 24 hours (use reporting for historical views)
+    reason: "This surface is a shift-level review tool, not a historical ledger. 24h scope keeps the view relevant to the current coordinator session. Older records belong in a reporting surface."
+  - item: Any action that modifies an existing log entry
+    reason: "Outreach logs are audit records. Mutability would compromise their integrity as a compliance trail. Edits and corrections must go through a formal amendment process outside this surface."
+  - item: Patient clinical data beyond name and related care gap
+    reason: "This is an outreach surface, not a clinical record. Showing clinical data here would require the same access controls as PatientDetail — a different surface with different intent."
 
 empty_state_meaning: >
   No outreach has been logged in the last 24 hours. Honest one-liner only —
@@ -3191,10 +3200,14 @@ intent: >
   Everything shown should connect to a possible next step.
 
 what_it_omits:
-  - Historical closed gaps (unless explicitly surfaced in audit mode)
-  - Billing and coding data
-  - Raw lab values without clinical context
-  - Unstructured notes
+  - item: Historical closed gaps (unless explicitly surfaced in audit mode)
+    reason: "Closed gaps are audit record, not action items. Showing them by default inflates the list and obscures what still needs intervention. Audit mode is a deliberate opt-in."
+  - item: Billing and coding data
+    reason: "Billing is handled by a separate team with different access controls. Exposing it here creates HIPAA surface area without clinical value for the coordinator/clinician role."
+  - item: Raw lab values without clinical context
+    reason: "A lab value alone is uninterpretable and potentially alarming without reference range and clinical narrative. Showing raw values without context violates the principle that everything shown should connect to a possible next step."
+  - item: Unstructured notes
+    reason: "Free-text clinical notes require medical training to interpret safely. This surface serves coordinators who need structured, actionable data — not freeform narrative."
 
 empty_state_meaning: >
   No open care gaps or tasks means this patient's panel is currently clear.
@@ -3234,9 +3247,12 @@ intent: >
   of a session and surface the highest-priority items requiring attention.
 
 what_it_omits:
-  - Resolved and completed items
-  - Metrics and aggregate counts as the primary content
-  - Navigation or settings chrome
+  - item: Resolved and completed items
+    reason: "Today is a priority surface. Completed work is noise — it distracts from what still needs action. Historical views belong in reporting."
+  - item: Metrics and aggregate counts as the primary content
+    reason: "Counts imply quota. This surface is about clinical priority, not volume. A coordinator should act on items, not manage a number."
+  - item: Navigation or settings chrome
+    reason: "The shell handles navigation. Embedding nav chrome inside Today violates the 3-panel shell rule and creates ambiguous wayfinding."
 
 empty_state_meaning: >
   No priority items today. Positive signal — the coordinator's panel is clear.
@@ -3269,10 +3285,14 @@ intent: >
   The worklist is the coordinator's primary working surface, not a reporting view.
 
 what_it_omits:
-  - Patients with no open care gaps or tasks
-  - Completed and closed items from previous sessions
-  - Administrative or billing data
-  - Clinical notes and diagnoses
+  - item: Patients with no open care gaps or tasks
+    reason: "This is an action surface. Showing patients with nothing to do creates false urgency and obscures who needs attention."
+  - item: Completed and closed items from previous sessions
+    reason: "Closed items are historical record. The worklist is about today's work. Mixing closed items in degrades scannability."
+  - item: Administrative or billing data
+    reason: "Different role, different surface. Billing belongs to RCM workflows with separate access controls. Mixing it here creates compliance risk."
+  - item: Clinical notes and diagnoses
+    reason: "Unstructured clinical data requires clinical context to interpret safely. The worklist is a coordinator action surface — clinical depth belongs in PatientDetail."
 
 empty_state_meaning: >
   The coordinator's panel is clear. This is a positive clinical signal —
