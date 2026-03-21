@@ -268,12 +268,17 @@ if (criticPrompt) {
 // ── Write output ──────────────────────────────────────────────────────────────
 
 const output = lines.join('\n');
-const outPath = join(ROOT, 'project-context-full.md');
-writeFileSync(outPath, output, 'utf-8');
+
+// Write dated snapshot only (YYYY-MM-DD)
+const date          = new Date().toISOString().split('T')[0];
+const versionedName = `project-context-full-${date}.md`;
+const versionedPath = join(ROOT, versionedName);
+
+writeFileSync(versionedPath, output, 'utf-8');
 
 const lineCount = output.split('\n').length;
 const sizeKb    = (Buffer.byteLength(output) / 1024).toFixed(1);
-console.log(`✓ project-context-full.md written — ${lineCount} lines, ${sizeKb} KB`);
+console.log(`✓ ${versionedName} written — ${lineCount} lines, ${sizeKb} KB`);
 console.log(`  Patterns: ${patterns.length} ratified, ${candidates.length} candidates`);
 console.log(`  Surfaces: ${surfaces.length}`);
 console.log(`  Rules: ${ruleFiles.length} active`);
