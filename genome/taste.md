@@ -1,79 +1,150 @@
-# Aesthetic identity
+# taste.md
 
-## Who this product is for
-
-This platform serves four people simultaneously: the clinician making
-a decision under time pressure, the care coordinator managing a list
-of a hundred patients, the patient trying to understand what their
-care team is telling them, and the administrator who needs a clear
-operational picture.
-
-These four people have different mental models, different contexts,
-and different stakes. But they share one thing: they are all trusting
-this platform with something important.
-
-That trust is the product. Not the features. Not the UI. The trust.
+> Good interface design feels inevitable — like every element is in the only place it could be.
+> That feeling doesn't come from minimalism or maximalism. It comes from rigor.
 
 ---
 
-## What we believe aesthetically
+## Design Dials
 
-**Reduce, never add.**
-When two solutions exist, the one that asks less of the user is always
-right. Cognitive load is a clinical risk. Every pixel that doesn't
-serve the current task is a pixel that could be a distraction at the
-wrong moment.
+Three dials govern the character of every interface. The baselines below are the default for all generations — do not deviate without reason. If the user asks for more creativity, more exploration, or something that feels fresh, turn the dials up. If they feel the output is too different from the current interface or too experimental, dial it back. Otherwise, hold the baselines.
 
-**Confidence before delight.**
-A clinician should be able to read any surface in under 3 seconds.
-Delight in this product is the absence of friction — not animation,
-not color, not clever copy. The moment a user feels the product is
-trying to entertain them, they lose trust that it is trying to help them.
+### Design Variance · Baseline: 4
+*1 = Perfect symmetry, predictable grids. 10 = Asymmetric, art-directed, unexpected.*
 
-**Severity is sacred.**
-Color carries clinical meaning in this product. Red means danger.
-Amber means elevated risk. These are not aesthetic choices. They are
-clinical communication. They are never used decoratively, never
-softened for brand reasons, never overridden by marketing needs.
+| Range | Character | When to use |
+|---|---|---|
+| 1–3 | **Rigid structure.** Equal columns, symmetrical grids, zero surprises. Predictability is the feature. | Data tables, forms, settings panels. Anywhere the user is scanning for specific values. Symmetry here isn't boring — it makes rows and columns machine-readable by humans. |
+| 4–6 | **Structured and composed.** Strong grid alignment, even column distributions, clear spatial logic — but with considered variation in content hierarchy, section rhythm, and component arrangement within the grid. No asymmetric column ratios, no offset alignments, no varied card sizes. | Dashboards, list views, detail screens, multi-panel layouts. The vast majority of product screens live here. The grid stays clean; the interest comes from typographic hierarchy and content organization, not layout tricks. |
+| 7–9 | **Intentionally asymmetric.** Uneven column ratios (7/5, 8/4), offset alignments, varied card sizes, fractional grid columns, deliberate whitespace imbalance. | Use sparingly. Feature introduction screens, first-run experiences, or moments where a specific content block deserves disproportionate visual weight. The layout is making an argument — it's saying "look here first." If that argument isn't clear, drop back to 4–6. |
+| 10 | **Art-directed.** Masonry, overlapping elements, dramatic negative space. Every screen feels like someone *designed* it, not assembled it. | Almost never in a product context. Reserve for highly singular moments — an annual review visualization, a showcase screen — where the content is simple enough to survive an unconventional layout. |
 
-**One voice, everywhere.**
-A clinician who uses the dashboard, reads a generated summary, and
-asks the Claude interface a question should feel they are talking to
-the same system. Same terminology. Same hierarchy. Same tone.
-Inconsistency between surfaces is a form of lying.
+**The rule:** Variance should be invisible to the user. High variance doesn't mean chaotic — it means the layout feels composed rather than generated. If someone notices the layout is unusual, dial it back.
 
-**Earn every pixel.**
-Nothing appears on screen that does not serve the current task.
-No empty state illustrations that make a zero-result list feel like
-a celebration. No loading spinners that are interesting to watch.
-No success animations that congratulate the user for completing a
-workflow. Do the work. Get out of the way.
+### Motion Intensity · Baseline: 3
+*1 = Static, no movement. 10 = Cinematic, physics-driven choreography.*
+
+The baseline is deliberately low. Motion in a product used daily becomes invisible at best and irritating at worst. The bar for exceeding level 2 is high — the motion must solve a real orientation or comprehension problem that static UI cannot.
+
+| Range | Character | When to use |
+|---|---|---|
+| 1–2 | **Near-static.** Hover and focus state changes only. Panel open/close transitions at 150ms or less. Nothing that loops, nothing that staggers, nothing that draws attention to the interface itself. | The default for all product screens. Forms, tables, dashboards, detail views, settings. Motion is invisible infrastructure — it confirms that a click registered and that a panel came from somewhere. That's it. |
+| 3–4 | **Subtle orientation.** Smooth layout shifts when content changes. Fade transitions between views. Micro-feedback on interactive elements (a button press, a toggle switch). Still no choreography — individual elements transition, but nothing is sequenced. | Screens with meaningful state changes: filtering a list, switching tabs, expanding a section. The motion answers "what just changed?" without calling attention to itself. Only reach for this when a hard cut between states would feel jarring or disorienting. |
+| 5–6 | **Guided motion.** Sequenced reveals, staggered list entrances, transitions that guide the eye through a multi-step change. Motion becomes part of how the user reads the screen. | First-run experiences, onboarding flows, or screens where the user is encountering a complex layout for the first time and the motion helps them parse the structure. This level requires a clear justification — "it looks nicer" is not sufficient. |
+| 7–10 | **Choreographed.** Spring physics, scroll-driven sequences, orchestrated multi-element entrances. Motion is part of the narrative. | Feature showcases, demo modes, or singular product moments where the interface is *presenting* information rather than being worked in. Performance must stay flawless — spectacle at 30fps is worse than stillness. |
+
+**The rule:** Motion at every level must answer "where did this come from?" or "what just changed?" If it doesn't orient the user in space or state, it's decoration regardless of how good it looks.
+
+### Visual Density · Baseline: 6
+*1 = Art gallery, maximum breathing room. 10 = Cockpit, every pixel carries data.*
+
+| Range | Character | When to use |
+|---|---|---|
+| 1–3 | **Spacious and focused.** Generous whitespace, large type, single focus per viewport. The content is sparse by nature — let it breathe. | Confirmation screens, empty states, error recovery, single-decision moments. Screens where the user needs to absorb one idea or make one choice. Space signals that the system is patient. |
+| 4–5 | **Comfortable reading density.** Clear grouping through space. Nothing feels cramped or empty. A natural rhythm between content blocks. | Settings, profile screens, onboarding steps, detail views with narrative content. Screens where the user is reading and configuring, not scanning volume. |
+| 6–7 | **Productive density.** Tighter spacing, more information per viewport. Hierarchy is critical — density without structure is chaos. This is the working range for screens where throughput matters. | Dashboards, list views, multi-panel layouts, workflow screens. The screen has multiple data types, actions, and status indicators coexisting. Every spacing token earns its keep. |
+| 8–9 | **Compact and utilitarian.** Reduced padding, compact row heights, monospace numbers in data columns. Dividers and borders become essential structural tools — `divide-y` and 1px separators replace whitespace-based grouping. | Data tables, monitoring views, admin consoles, audit logs — any screen where the volume of information is the point. The user's task is to scan, compare, or process at speed. |
+| 10 | **Maximum throughput.** Every spacing token at its minimum. Information per pixel is the priority. | Only when the screen's purpose is real-time monitoring or high-volume data processing, and the user's entire workflow depends on seeing everything at once. This only works with ironclad typographic hierarchy. |
+
+**The rule:** Density should match the demand the screen places on the user — how much do they need to see simultaneously to do their job? Screens that demand comparison, monitoring, or rapid scanning earn high density. Screens that demand comprehension, decision-making, or focus earn lower density. Never be dense to seem "professional" — be dense because the task demands throughput.
+
+### Reading the Room
+
+The baselines are **(4, 3, 6)** — structured layout, subtle motion, productive density. This is the gravity center. Every deviation needs a reason.
+
+Adjust when context demands it:
+
+- *How much data is on this screen?* More data → higher density, lower motion, lower variance. The data is the design.
+- *Is this screen used once or a hundred times?* Repeated-use screens → hold baselines or go lower. The user builds spatial memory; surprises become annoyances.
+- *Is the user making a high-stakes decision?* If yes → hold motion at baseline, keep density matched to the information they need, keep variance low. Calm and clarity above all.
+- *Is this a moment of first impression or orientation?* Onboarding, first-run, feature introduction → variance and motion can push up modestly (5–6 range). Pull back to baseline the moment the user starts working.
+
+When the dials conflict with each other, **density wins** — the amount of information on screen should always dictate how much room there is for layout play and motion.
 
 ---
 
-## What we do not do
+## Typography
 
-We do not use trends. A design pattern that became popular because
-it works well in consumer apps is not automatically right for clinical
-workflows. We evaluate everything against the question: does this help
-a person under cognitive load make a better decision?
+How text is set determines whether a screen feels considered or careless. Typography isn't the only tool — but it's the one that fails loudest when neglected.
 
-We do not prioritize visual differentiation between products.
-The platform family should feel like one system, not a portfolio of
-distinct products. Differentiation is in the data and the workflows,
-not in the interface chrome.
-
-We do not hide complexity. If a clinical situation is complex, the
-interface reflects that complexity honestly. Simplifying the UI does
-not simplify the underlying situation. We simplify navigation and
-reduce decisions — we do not pretend hard things are easy.
+- **Hierarchy is the work.** Size, weight, and spacing contrasts should carry much of the visual structure. If you're reaching for borders, background fills, or dividers to create separation, check whether the type hierarchy could do the job first.
+- **Two weights can do what five colors can't.** A semibold heading against a regular-weight body creates instant scanability. Overusing color for emphasis is a sign that the typographic hierarchy is underbuilt.
+- **Numbers earn emphasis contextually.** When numbers are the primary content — metrics, totals, scores — give them tabular figures, proper alignment, and breathing room. When they're supporting detail alongside text, they don't need special treatment. Let the screen's purpose decide.
+- **Use the defined text styles.** Typefaces and text styles are predefined in the design tokens. Use those — don't pick new typefaces or invent custom styles. The consistency of the system depends on every screen drawing from the same typographic palette.
 
 ---
 
-## The test for every design decision
+## Color with Purpose
 
-Ask: if a clinician is mid-workflow, slightly stressed, and sees this
-for the first time — can they act correctly in under 3 seconds?
+Color is a language. Every hue in the interface is a word — use too many and the sentence is noise. Color tokens are defined both semantically and as raw values — use only those. Do not introduce colors outside the token system.
 
-If yes: ship it.
-If no: reduce it.
+- **Neutral at rest, saturated with intent.** The base UI should live in a restrained palette — considered neutrals, subtle surface shifts for depth. Saturated color enters only when it carries meaning: status, interaction, emphasis.
+- **Surfaces create depth.** Use the existing card styles and shadow utilities from shadcn/Tailwind to establish spatial relationships between content layers. A flat card, a bordered card, and an elevated card each communicate something different about the content's relationship to its surroundings.
+- **Stay within the token system.** Semantic tokens (background, foreground, muted, accent, destructive, etc.) exist for a reason — they encode meaning that raw hex values don't. Using tokens consistently is how the interface stays coherent across dozens of screens built at different times.
+
+---
+
+## Space as Architecture
+
+Whitespace isn't the absence of design. It's the most powerful structural element available.
+
+- **Spacing creates grouping.** Related elements sit close; unrelated elements breathe apart. If spacing is doing its job, visible dividers become redundant. The Gestalt principle of proximity is the most underused tool in interface design.
+- **Rhythm over randomness.** Consistent spacing tokens — applied religiously — create the subconscious feeling of "one system." Irregular spacing, even by 4px, registers as carelessness.
+- **Density is a choice, not an accident.** Some interfaces need to be dense — dashboards, data tables, professional tools. That's fine. Dense and organized feels calm. Dense and unstructured feels chaotic. The difference is the spatial system.
+- **Let content breathe at the page level.** Max-widths, proportional margins, and intentional negative space at the macro level separate polished products from ones that feel like they're trying to fill every available pixel.
+
+---
+
+## Motion with Meaning
+
+Animation is not personality. It's spatial communication.
+
+- **Transitions answer "where."** Where did this element come from? Where did it go? Where am I now? If an animation doesn't orient the user in space or state, it's decoration.
+- **Speed is a feature.** 120–200ms for micro-interactions. 200–350ms for layout shifts. Anything that makes the user wait for an animation to finish is borrowing time they didn't offer. Err on the side of too fast.
+- **Easing conveys physics.** Ease-out for entrances (arriving and settling), ease-in for exits (accelerating away), ease-in-out for repositions. Linear motion feels robotic. Spring physics feel alive but should be used sparingly — bounciness is a strong flavor.
+- **No gratuitous motion.** No loading spinners designed to entertain. No success confetti. Skeleton screens are fine as loading placeholders, but they should be simple and structural — not shimmer animations performing busyness. If the system is working, the result is the reward.
+
+---
+
+## Layout and Composition
+
+**Grids are freedom, not constraint.** A strong grid system makes every placement decision faster and every result more cohesive.
+
+- **Predictable regions, surprising content.** Users should always know where to look for navigation, primary content, and supporting context. Within those predictable zones, the content itself can be rich and varied.
+- **Alignment is non-negotiable.** Every element should sit on a grid line or be deliberately offset from one. Approximate alignment is worse than no grid at all — it creates a feeling of "almost right" that's more distracting than chaos.
+- **Responsive design preserves hierarchy, not just layout.** Focus on web viewports — ensure layouts adapt gracefully across common desktop and laptop screen widths. Reflowing content without re-prioritizing is a missed opportunity. What's most important at a wide viewport should still be most prominent at a narrow one.
+
+---
+
+## Craft and Polish
+
+The difference between good and great is in the details no one consciously notices.
+
+- **Icon consistency.** Same stroke weight, same optical size, same style across every icon in the system. Mixing outlined and filled styles, or varying visual weight, creates subtle discord.
+- **Border radius consistency.** Radii are defined in the token system. Use them consistently — mixing values across a screen reads as indecisive, even if no one can pinpoint why.
+- **Shadows and elevation with intent.** Elevation tokens are defined in the system. Every use of a shadow should have a clear reason — distinguishing a floating element from the surface beneath it, signalling interactivity, or creating visual grouping. Arbitrary shadows are visual noise.
+- **Pixel-level precision.** Subpixel alignment, consistent padding, optical centering of icons within buttons. These things are invisible when right and quietly wrong when not. Sweat them.
+
+---
+
+## What We Never Do
+
+- **Chase trends.** No glassmorphism-of-the-year, no bouncy micro-interactions borrowed from consumer apps, no aesthetic choices driven by what's popular on Dribbble. Timelessness over trendiness.
+- **Decorate without purpose.** Every visual element — illustration, gradient, shadow, animation — must have a reason beyond "it felt empty." If it doesn't inform, orient, or clarify, it doesn't belong.
+- **Break consistency for novelty.** One screen that looks different from the rest undermines the entire system. Coherence is more important than any individual screen looking impressive.
+- **Sacrifice clarity for aesthetics.** If a design choice makes something beautiful but harder to understand, the design choice is wrong.
+
+---
+
+## The Test
+
+Two questions. Both must pass.
+
+> **1. Can someone arrive at this screen and know what to do?**
+> Not in zero seconds. Not after reading a manual. Just — does the hierarchy, layout, and labeling make the next action obvious without effort?
+
+> **2. Could this screen sit next to any other screen in the product and feel like it belongs?**
+> Same spatial rhythm, same typographic voice, same surfaces, same restraint. If it looks like a different product built it, it's not ready.
+
+> **Both yes** → Ship it.
+> **Either no** → Identify what's breaking — clarity or coherence — and fix that, not everything.
