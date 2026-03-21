@@ -12,37 +12,47 @@ what do they need to know to do it well?
 ## Principles
 
 **1. Action over information.**
-Surfaces are organized around what a user needs to do, not what the
-system knows. Information is shown in service of a decision — never
-as an end in itself.
+Surfaces are organised by what the user needs to do, not what the
+system knows. Detail is revealed only when it serves a decision —
+never by default.
 
-**2. Context always visible.**
-A care coordinator managing 200 patients and a clinician reviewing
-one patient mid-appointment are both using this platform. The current
-patient context — who this is about, what their risk level is, what
-is urgent — is always visible and never requires navigation to find.
+**2. The right context, at the right moment.**
+Every surface knows where it sits in the user's workflow and surfaces
+only what's relevant to that moment — except where suppressing
+information could cause harm. Context shapes what appears; consequence
+determines what persists. Not everything at once — just enough to act
+with confidence.
 
-**3. Status is never ambiguous.**
-Every entity in the system has a status. That status is displayed
-consistently, uses the canonical vocabulary from the ontology, and
-means exactly one thing across every surface and every user type.
+**3. One concept, one source of truth.**
+The system has one ontology — every concept exists once, with a single
+authoritative definition. No synonyms that quietly point to different
+things, no parallel hierarchies that drift apart. Consistency lives
+in the model.
 
-**4. The conversational layer is not separate.**
-The Claude interface is not a chatbot bolted onto a dashboard. It
-is a first-class surface that draws from the same ontology, the same
-patterns, and the same design values as every other surface. A user
-who switches between the dashboard and the Claude interface should
-not need to re-orient.
+**4. Speak the user's language.**
+The same underlying concept is expressed in the language most natural
+to its audience. The system's internal vocabulary never leaks to the
+surface. Labels, units, and phrasing adapt to context so that every
+user reads the interface as if it were built for them.
 
-**5. Oversight scales with stakes.**
-Low-stakes actions (viewing, filtering, exporting) require zero
-confirmation. High-stakes actions (modifying a care plan, dismissing
-a critical alert, bulk-editing patient records) require explicit
-confirmation scaled to the consequence. The platform models the
-stakes of every action.
+**5. Confirmation proportional to consequence.**
+Routine actions require no friction. Actions with meaningful
+consequences — those that are broad, irreversible, or affect others —
+earn explicit confirmation. The interface doesn't cry wolf.
 
-**6. Generated content is held to the same standard.**
-Dynamically generated summaries, reports, and alerts follow the same
-hierarchy, terminology, and visual language as designed surfaces. The
-user should never be able to tell the difference between a designed
-screen and a generated one — because there isn't one.
+**6. Most consequential information carries the most weight.**
+Visual hierarchy follows consequence, not data structure. The
+information that most affects the next decision is the most prominent.
+Status and risk before detail, actions before records. Density is
+earned by relevance, not inherited from the schema.
+
+**7. Generated and designed are indistinguishable.**
+AI-generated content earns its place on screen by meeting the same
+standard as anything hand-crafted — same hierarchy, same language,
+same visual logic. Output is never a second-class citizen.
+
+**8. Honest about uncertainty.**
+When the system doesn't know, it says so — clearly and without
+deflection. Confidence is expressed proportionally to evidence. Users
+are never misled into false certainty by silence, vague language, or
+a design that hides gaps.
