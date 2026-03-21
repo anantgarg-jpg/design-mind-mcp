@@ -267,10 +267,14 @@ export function loadKnowledge(basePath) {
         const content = readFileSync(join(surfacesDir, file), 'utf-8');
         const parsed = parseYaml(content);
         // Build embedding input from intent + what_it_omits + never fields
+        // what_it_omits entries may be plain strings (legacy) or {item, reason} objects (v2)
+        const omitsText = Array.isArray(parsed.what_it_omits)
+          ? parsed.what_it_omits.map(e => (typeof e === 'string' ? e : `${e.item || ''} ${e.reason || ''}`)).join(' ')
+          : '';
         parsed.embedding_input = [
           parsed.id || '',
           parsed.intent || '',
-          Array.isArray(parsed.what_it_omits) ? parsed.what_it_omits.join(' ') : '',
+          omitsText,
           Array.isArray(parsed.never) ? parsed.never.join(' ') : '',
           Array.isArray(parsed.user_type) ? parsed.user_type.join(' ') : '',
         ].join(' ');

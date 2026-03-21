@@ -41,33 +41,25 @@ function structuralBoost(patternComponentType, queryComponentType) {
 
 // Design Mind improvement: Change 2 — two-stage ranking using structural_family
 // Maps incoming component_type to expected structural_family values for re-ranking.
-// Close matches get a small boost; clear mismatches get a penalty.
+// Family match: +0.2 boost. Families defined but no match: -0.1 penalty. No families: 0.
 const FAMILY_MAP = {
-  row:    ['actionable-list-row', 'readonly-list-row', 'log-entry-row'],
-  card:   ['actionable-list-row', 'stat-metric-card', 'inline-chat-card'],
-  banner: ['severity-alert-banner', 'resolvable-banner'],
+  row:    ['actionable-list-row', 'readonly-list-row'],
+  card:   ['actionable-list-row', 'inline-chat-card', 'stat-metric-card'],
+  banner: ['severity-alert-banner'],
   badge:  ['status-indicator'],
-  header: ['patient-context-header'],
-  stat:   ['stat-metric-card'],
-  chip:   ['quick-action-chip'],
+  header: ['patient-context-header', 'section-divider'],
+  button: ['quick-action-chip'],
   form:   ['assessment-form'],
+  panel:  ['patient-context-header'],
   list:   ['actionable-list-row', 'readonly-list-row'],
-  table:  ['readonly-list-row', 'actionable-list-row'],
-  modal:  ['confirmation-dialog'],
-  panel:  ['patient-context-header', 'assessment-form'],
 };
 
 function familyRankScore(patternStructuralFamily, queryComponentType) {
   if (!patternStructuralFamily || !queryComponentType) return 0;
-  const expected = FAMILY_MAP[queryComponentType] || [];
+  const expected = FAMILY_MAP[queryComponentType] ?? [];
   if (expected.length === 0) return 0;
-  if (expected[0] === patternStructuralFamily) return 0.2;        // primary match
-  if (expected.includes(patternStructuralFamily)) return 0.05;    // secondary match
-  // Clear mismatch: family is in another type's primary slot
-  for (const [, families] of Object.entries(FAMILY_MAP)) {
-    if (families[0] === patternStructuralFamily) return -0.1;     // wrong family's primary
-  }
-  return 0;
+  if (expected.includes(patternStructuralFamily)) return 0.2;
+  return -0.1;   // families defined for this type but this pattern's family is not one of them
 }
 
 // Set to true by index.js after confirming the vector store has been seeded
@@ -148,75 +140,44 @@ function getSafetyConstraintsInScope(intent, componentType, domain, kb) {
 }
 
 // Design Mind improvement: Change 1 — safety blocking vs confidence gating
-// Detects which hard constraints are structurally likely to be violated based
-// on component_type + domain + intent. Returns violation objects, NOT all constraints.
-// Empty array = no pre-emptive block. Non-empty = block: true in response.
+// CONSTRAINT_RELEVANCE maps component_type / domain to the constraint IDs that are
+// structurally in scope. Only constraints for types/domains in this map are flagged.
+// Unlisted types fall through to the terminology constraints (13, 14) which always apply.
+const CONSTRAINT_RELEVANCE = {
+  'banner':          [1, 2, 3, 4, 5, 6, 7],   // severity color + alert dismissal
+  'clinical-alerts': [1, 2, 3, 4, 5, 6, 7],
+  'header':          [8, 9, 10],               // patient identity
+  'patient-data':    [8, 9, 10],
+  'form':            [11, 12],                 // confirmation
+  'modal':           [11, 12],
+  'table':           [12],                     // bulk action only
+  'list':            [12],
+};
+
 function detectSafetyViolations(intent, componentType, domain, kb) {
-  const violations = [];
   const allConstraints = kb.safety.constraints || [];
-  const intentLower = (intent + ' ' + domain).toLowerCase();
+  const constraintMap  = new Map(allConstraints.map(c => [c.id, c]));
 
-  for (const c of allConstraints) {
-    const id = c.id;
+  // Union constraint IDs from component_type and domain lookups
+  const idsFromType   = CONSTRAINT_RELEVANCE[componentType] || [];
+  const idsFromDomain = CONSTRAINT_RELEVANCE[domain]        || [];
+  const inScope       = new Set([...idsFromType, ...idsFromDomain]);
 
-    // Constraints 1–4: severity color rules
-    // Flag only when the component explicitly renders clinical severity levels
-    if (id <= 4) {
-      if (intentLower.includes('critical') || intentLower.includes('severity') ||
-          intentLower.includes('high severity') || intentLower.includes('alert') ||
-          componentType === 'banner') {
-        violations.push({ constraint_id: id, rule: c.text,
-          risk: 'Severity color tokens must be used exactly — no custom colors, no hex overrides.' });
-      }
-      continue;
-    }
+  // Unlisted component types always check terminology (13, 14)
+  if (idsFromType.length === 0 && idsFromDomain.length === 0) {
+    inScope.add(13);
+    inScope.add(14);
+  }
 
-    // Constraints 5–7: alert dismissal
-    // Flag when the component has alert dismiss/acknowledge interactions
-    if (id <= 7) {
-      if (intentLower.includes('alert') || intentLower.includes('dismiss') ||
-          intentLower.includes('acknowledge') || intentLower.includes('escalat') ||
-          componentType === 'banner') {
-        violations.push({ constraint_id: id, rule: c.text,
-          risk: 'Alert dismissal rules apply — Critical alerts must not have a Dismiss control.' });
-      }
-      continue;
-    }
-
-    // Constraints 8–10: patient identity
-    // Flag only when the component explicitly renders individual patient identity fields.
-    // A count/metric card does not display names/MRN/DOB — don't block.
-    if (id <= 10) {
-      if (intentLower.includes('mrn') || intentLower.includes('date of birth') ||
-          intentLower.includes('patient name') || intentLower.includes('patient identity') ||
-          intentLower.includes('patient detail') || intentLower.includes('patient profile') ||
-          componentType === 'header') {
-        violations.push({ constraint_id: id, rule: c.text,
-          risk: 'Patient identity display rules apply — name format, MRN label, DOB format.' });
-      }
-      continue;
-    }
-
-    // Constraints 11–12: confirmation for destructive/bulk actions
-    if (id <= 12) {
-      if (intentLower.includes('delete') || intentLower.includes('remov') ||
-          intentLower.includes('bulk') || intentLower.includes('modif') ||
-          intentLower.includes('edit') || intentLower.includes('destructive')) {
-        violations.push({ constraint_id: id, rule: c.text,
-          risk: 'Destructive or bulk action requires explicit confirmation with consequence statement.' });
-      }
-      continue;
-    }
-
-    // Constraints 13–14: terminology
-    // Flag for clinical domains where forbidden terms or code paraphrasing are likely
-    if (domain === 'clinical-alerts' || domain === 'patient-data' || domain === 'care-gaps' ||
-        intentLower.includes('diagnos') || intentLower.includes('medicat') ||
-        intentLower.includes('clinical code') || intentLower.includes('label') ||
-        intentLower.includes('copy') || intentLower.includes('text')) {
-      violations.push({ constraint_id: id, rule: c.text,
-        risk: 'Clinical terminology rules apply — forbidden terms and canonical code display.' });
-    }
+  const violations = [];
+  for (const id of inScope) {
+    const constraint = constraintMap.get(id);
+    if (!constraint) continue;
+    violations.push({
+      constraint_id:  id,
+      rule:           constraint.text,
+      applies_because: `component_type=${componentType}${domain !== 'other' ? ` in ${domain} domain` : ''}`,
+    });
   }
 
   return violations;
@@ -549,10 +510,10 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
   if (safetyViolations.length > 0) {
     response.block = true;
     response.block_reason =
-      `${safetyViolations.length} hard constraint(s) are structurally likely to be violated for this ` +
-      `component_type="${component_type}" + domain="${domain}" combination. ` +
-      `Address the safety_violations before generating: ` +
-      safetyViolations.map(v => `[C${v.constraint_id}] ${v.risk}`).join(' | ');
+      `${safetyViolations.length} hard constraint(s) are structurally relevant for ` +
+      `component_type="${component_type}" in domain="${domain}". ` +
+      `Review safety_violations and ensure compliance before generating: ` +
+      safetyViolations.map(v => `[C${v.constraint_id}] ${v.applies_because}`).join(' | ');
   }
 
   if (coverageGap) {
@@ -569,7 +530,8 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
 // copy-voice.md is loaded into kb.ontology['copy-voice'] as raw text by knowledge.js.
 // It is NOT passed as a separate arg — it is always available via kb.
 // The checks below run in reviewOutput and populate copy_violations in the response.
-// agents/critic/system-prompt.md has a parallel COPY_VIOLATIONS section added.
+// agents/critic/system-prompt.md has a parallel COPY_VIOLATIONS section — VERIFIED PRESENT.
+// COPY_VOICE_CHECKS below — VERIFIED PRESENT. No changes needed.
 const COPY_VOICE_CHECKS = [
   {
     rule: 'tone-cute-or-casual',

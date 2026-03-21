@@ -30,7 +30,7 @@ function parseField(content, field) {
   return match ? match[1].trim() : null;
 }
 
-function parseInt(content, field) {
+function parseIntField(content, field) {
   const val = parseField(content, field);
   return val ? parseInt(val, 10) : null;
 }
@@ -64,7 +64,7 @@ function readCandidates() {
       try {
         const content = readFileSync(join(CANDIDATES_DIR, f), 'utf-8');
         const patternName = parseField(content, 'pattern_name');
-        const frequency   = parseInt(content, 'frequency') ?? parseInt(content, 'frequency_count') ?? 1;
+        const frequency   = parseIntField(content, 'frequency') ?? parseIntField(content, 'frequency_count') ?? 1;
         const projects    = parseReportingProjects(content);
 
         // Fallback: if no reporting_projects block, use submitted_by + generated date from filename
