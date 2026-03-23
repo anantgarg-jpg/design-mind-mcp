@@ -7,70 +7,66 @@
 
 ## Severity color rules
 
-1. The color red (--severity-critical, hex #DC2626 ± 10% lightness)
-   is reserved exclusively for Critical severity clinical alerts.
-   It may not be used for: brand elements, CTAs, hover states,
-   success states, decorative elements, or any non-clinical signal.
+1. `--severity-critical` is reserved exclusively for Critical severity alerts and Alert-type CTAs
+   that are part of a critical alert component. It may not be used for: brand elements,
+   general CTAs, hover states, success states, or decorative elements.
 
-2. Amber (--severity-high, hex #D97706 ± 10% lightness) is reserved
-   for High severity alerts and Overdue status indicators only.
+2. `--severity-high` is reserved for High severity alerts and Overdue status indicators only.
 
-3. Green (--status-success) is used for Completed and Closed states.
-   It is never used for promotional content or marketing copy.
+3. `--status-success` is used for success, Completed, and Closed states. It may only appear
+   in a CTA when that CTA is within a success toast or confirmation message. It is not used
+   for decorative or neutral UI elements.
 
-4. Severity colors are never overridden by theme customization,
-   white-label configuration, or per-product styling.
+4. Severity colors are never overridden by theme customization, white-label configuration,
+   or per-block, per-artifact, or per-surface styling.
 
 ---
 
 ## Alert dismissal rules
 
-5. Critical severity alerts cannot be dismissed. The only permitted
-   actions are: Acknowledge, Escalate. Any UI that renders a
-   "Dismiss" or "Close" control for a Critical alert is non-compliant.
+5. Critical severity alerts cannot be dismissed. The only permitted actions are Acknowledge
+   and Escalate — these are intents, not required copy. Any UI that renders a dismiss or
+   close control for a Critical alert is non-compliant.
 
-6. High severity alerts cannot be dismissed without a documented reason.
-   A reason selector is required before the dismiss action completes.
-
-7. Acknowledgment of Critical or High alerts always creates an audit
-   log entry. This entry cannot be suppressed or deferred.
+6. High severity alert dismissal behavior is use-case defined but must be intentional
+   and reversible.
 
 ---
 
 ## Patient identity rules
 
-8. Patient name is always displayed as: Last, First (formal display)
-   or First Last (conversational display). Never First name only
-   in clinical contexts. Middle name is optional.
+7. Patient name is always displayed as: Last, First (formal display) or First Last
+   (conversational display). Never first name only. Middle name is optional. When a patient
+   name appears within a sentence, First Last is used even in formal display contexts.
 
-9. MRN (Medical Record Number) is always labeled "MRN" — never
-   "ID", "Patient ID", "Record #", or any other label.
-
-10. Date of birth is always displayed in full (MMM D, YYYY).
-    Never abbreviated to age alone in clinical contexts.
-    Age may be shown alongside DOB but never replaces it.
+8. Date of birth is always displayed as MM/DD/YYYY. MM/DD/YY may be used only when space
+   is critically constrained. Age may be shown alongside DOB but never replaces it.
 
 ---
 
-## Confirmation rules
+## Confirmation and destructive action rules
 
-11. Any action that modifies or deletes clinical record data requires
-    an explicit confirmation step with a consequence statement.
-    "Are you sure?" alone is never sufficient.
-
-12. Bulk actions affecting more than 10 patient records require a
-    typed confirmation string (not just a button click).
+9. Any modification or deletion of data requires an explicit confirmation step.
+   Delete actions must use destructive tokens.
 
 ---
 
-## Terminology rules
+## Data display rules
 
-13. The following terms are forbidden in all UI copy:
-    - "Normal" (use specific clinical values or "Within range")
-    - "Fine" (too casual for clinical communication)
-    - "Don't worry" (dismisses clinical concern)
-    - "Unfortunately" (adds emotional weight to factual statements)
+10. Empty or null data fields must never appear blank. A consistent placeholder —
+    such as "—" or "Not recorded" — must be shown. Blank space in a data field
+    can be misread as a cleared or zero value.
 
-14. Diagnoses, medications, and clinical codes are never paraphrased
-    or simplified in data display. Show the canonical clinical term.
-    Plain language explanations may be shown alongside, never instead.
+11. Timestamps must always display an absolute date and time. Relative formats
+    (e.g. "2 hours ago", "Yesterday") may be shown alongside but never replace
+    the absolute value.
+
+---
+
+## Interactive state rules
+
+12. Any surface containing data entry must warn the user before navigating away
+    with unsaved changes. Silent discard is not permitted.
+
+13. Form and input error states must use the designated error token. `--severity-critical`
+    must not be used for routine validation errors.
