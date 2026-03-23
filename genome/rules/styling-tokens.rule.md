@@ -229,7 +229,7 @@ COMPONENT SPACING CONVENTIONS:
   Button groups:          gap-2 (8px) between buttons, gap-1.5 (6px) for icon buttons
 
   See data-density.rule.md for 32px compact row height default.
-  See shell-layout.rule.md for panel dimensions — agents do not control those.
+  See interface-guidelines.rule.md for shell authoring contract — agents do not control the shell.
 
 FLEX/GRID GAP CONVENTIONS:
   gap-1   (4px)   icon + text inside a single element

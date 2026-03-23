@@ -788,7 +788,7 @@ export async function reviewOutput(params, kb, patternIndex) {
   if (/breadcrumb|back.button|backButton|<nav/i.test(code)) {
     borderline.push({
       observation: 'Navigation element (breadcrumb/back button) detected inside artifact content',
-      tension: 'shell-layout rule: artifacts in Panel 3 should not have their own navigation chrome',
+      tension: 'interface-guidelines rule: artifacts should not have their own navigation chrome',
       recommendation: 'Remove navigation elements from the artifact — Panel 1/tab close (×) handles navigation.',
     });
   }
