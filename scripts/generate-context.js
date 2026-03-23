@@ -62,10 +62,10 @@ const copyVoice      = read(join(ROOT, 'ontology/copy-voice.md'));
 const hardConstraints  = read(join(ROOT, 'safety/hard-constraints.md'));
 const severitySchema   = read(join(ROOT, 'safety/severity-schema.yaml'));
 
-// ── Load patterns ─────────────────────────────────────────────────────────────
+// ── Load blocks ───────────────────────────────────────────────────────────────
 
 function loadPatterns() {
-  const patternsDir = join(ROOT, 'patterns');
+  const patternsDir = join(ROOT, 'blocks');
   const entries = readdirSync(patternsDir, { withFileTypes: true });
   const patterns = [];
 
@@ -80,7 +80,7 @@ function loadPatterns() {
 }
 
 function loadCandidates() {
-  const candidatesDir = join(ROOT, 'patterns/_candidates');
+  const candidatesDir = join(ROOT, 'blocks/_candidates');
   if (!existsSync(candidatesDir)) return [];
   return readdirSync(candidatesDir)
     .filter(f => f.endsWith('.yaml'))
@@ -145,11 +145,11 @@ Tech stack: Node.js 18+, ES modules, dual stdio/HTTP+SSE transport, Railway depl
 // ── MCP tools ─────────────────────────────────────────────────────────────────
 lines.push(section('MCP Tools'));
 lines.push(`Three tools exposed by the server:\n`);
-lines.push(`**\`consult_before_build\`** — Call BEFORE generating any UI. Required: \`intent_description\`, \`component_type\`, \`domain\`, \`user_type\`. Returns: surface spec, structural guidance (dominant pattern family + invariants), top 5 patterns ranked by relevance, applicable genome rules (styling-tokens always included), ontology refs, all safety constraints with \`applies_because\`, episodic similar builds, confidence score (0.0–1.0), and gap flags.\n`);
-lines.push(`**\`review_output\`** — Call AFTER generating UI. Takes \`generated_output\` (code) + \`original_intent\`. Returns: \`honored\` (what followed the genome), \`borderline\` (defensible but not clearly right), \`novel\` (invented patterns with taste assessment), \`fix\` (violations with correction guidance), \`copy_violations\` (copy-voice.md breaches), \`confidence\` score. Auto-checks: hardcoded hex colors, Tailwind default color classes, Critical alert dismiss buttons, patient first-name-only, forbidden clinical terms, copy voice violations (see COPY_VOICE_CHECKS in contextAssembler.js).\n`);
-lines.push(`**\`report_pattern\`** — Call ONLY when UI STRUCTURE changes (new layout, new interaction model, new slot arrangement). NOT when slot content changes (label, domain, icon, entity type). Submits to hosted API → Slack → human ratification. Falls back to \`patterns/_candidates/\` YAML. 3+ reports across projects = \`ready_for_ratification\`.
+lines.push(`**\`consult_before_build\`** — Call BEFORE generating any UI. Required: \`intent_description\`, \`component_type\`, \`domain\`, \`user_type\`. Returns: surface spec, structural guidance (dominant block family + invariants), top 5 blocks ranked by relevance, applicable genome rules (styling-tokens always included), ontology refs, all safety constraints with \`applies_because\`, episodic similar builds, confidence score (0.0–1.0), and gap flags.\n`);
+lines.push(`**\`review_output\`** — Call AFTER generating UI. Takes \`generated_output\` (code) + \`original_intent\`. Returns: \`honored\` (what followed the genome), \`borderline\` (defensible but not clearly right), \`novel\` (invented blocks with taste assessment), \`fix\` (violations with correction guidance), \`copy_violations\` (copy-voice.md breaches), \`confidence\` score. Auto-checks: hardcoded hex colors, Tailwind default color classes, Critical alert dismiss buttons, patient first-name-only, forbidden clinical terms, copy voice violations (see COPY_VOICE_CHECKS in contextAssembler.js).\n`);
+lines.push(`**\`report_pattern\`** — Call ONLY when UI STRUCTURE changes (new layout, new interaction model, new slot arrangement). NOT when slot content changes (label, domain, icon, entity type). Submits to hosted API → Slack → human ratification. Falls back to \`blocks/_candidates/\` YAML. 3+ reports across projects = \`ready_for_ratification\`.
 
-**Pattern variation rule:** "Am I changing structure or content?" Content changes → use existing pattern. Structure changes → call \`report_pattern\`.`);
+**Block variation rule:** "Am I changing structure or content?" Content changes → use existing block. Structure changes → call \`report_pattern\`.`);
 
 if (tools.length > 0) {
   lines.push(`\n### Tool schemas\n`);
@@ -163,8 +163,7 @@ lines.push(section('Genome hierarchy'));
 lines.push(`| Level | Location | Encodes |
 |-------|----------|---------|
 | **Tokens** | \`genome/rules/styling-tokens.rule.md\` | MDS colors, DM Sans, 4px grid, elevation, z-index, motion |
-| **Decisions** | \`patterns/*/meta.yaml\` | Atomic UI choices (StatusBadge, ClinicalAlertBanner, StatCard, SectionHeader) |
-| **Compositions** | \`patterns/*/meta.yaml\` | Governed combinations (ActionableRow, PatientContextHeader, PatientRow) |
+| **Blocks** | \`blocks/*/meta.yaml\` | Reusable structures with product decisions — from status badge to form layout |
 | **Surfaces** | \`surfaces/*.surface.yaml\` | Full artifacts: intent, omissions, ordering, actions, hard never rules |`);
 
 if (rulesIndex) {
@@ -225,9 +224,9 @@ if (copyVoice) {
   lines.push(copyVoice);
 }
 
-// ── Patterns ──────────────────────────────────────────────────────────────────
-lines.push(section('Patterns — ratified'));
-lines.push(`${patterns.length} ratified patterns:\n`);
+// ── Blocks ────────────────────────────────────────────────────────────────────
+lines.push(section('Blocks — ratified'));
+lines.push(`${patterns.length} ratified blocks:\n`);
 lines.push(patterns.map(p => `- **${p.name}**`).join('\n'));
 
 for (const pattern of patterns) {
@@ -240,7 +239,7 @@ for (const pattern of patterns) {
 
 // ── Candidates ────────────────────────────────────────────────────────────────
 if (candidates.length > 0) {
-  lines.push(section('Patterns — candidates (awaiting ratification)'));
+  lines.push(section('Blocks — candidates (awaiting ratification)'));
   for (const c of candidates) {
     lines.push(`- **${c.name}**${c.date ? ` — ${c.date}` : ''} (\`${c.file}\`)`);
   }
@@ -283,6 +282,6 @@ writeFileSync(versionedPath, output, 'utf-8');
 const lineCount = output.split('\n').length;
 const sizeKb    = (Buffer.byteLength(output) / 1024).toFixed(1);
 console.log(`✓ ${versionedName} written — ${lineCount} lines, ${sizeKb} KB`);
-console.log(`  Patterns: ${patterns.length} ratified, ${candidates.length} candidates`);
+console.log(`  Blocks: ${patterns.length} ratified, ${candidates.length} candidates`);
 console.log(`  Surfaces: ${surfaces.length}`);
 console.log(`  Rules: ${ruleFiles.length} active`);

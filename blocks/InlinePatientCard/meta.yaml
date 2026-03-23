@@ -1,6 +1,7 @@
 id: InlinePatientCard
 status: active
 component_type: card
+level: domain
 structural_family: inline-chat-card
 family_invariants:
   - "Only rendered inside Panel 2 chat context — never standalone"

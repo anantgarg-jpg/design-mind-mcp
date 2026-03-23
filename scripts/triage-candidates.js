@@ -4,7 +4,7 @@
  *
  * Design Mind improvement: Change 3 — candidate decay on orphaned context
  *
- * Reads all files in patterns/_candidates/, applies decay rules, and reports
+ * Reads all files in blocks/_candidates/, applies decay rules, and reports
  * what's ready for ratification vs. what should be archived.
  *
  * Rules:
@@ -21,7 +21,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
-const CANDIDATES_DIR = join(ROOT, 'patterns', '_candidates');
+const CANDIDATES_DIR = join(ROOT, 'blocks', '_candidates');
 const ARCHIVED_DIR   = join(CANDIDATES_DIR, '_archived');
 const DECAY_DAYS     = 60;
 

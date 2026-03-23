@@ -13,7 +13,7 @@ server/      — MCP stdio server (the Claude Code tool)
 api/         — Hosted candidate submission API
 genome/      — Rules, taste, and principles
 ontology/    — Canonical entity names, actions, states, copy voice
-patterns/    — Ratified UI patterns (meta.yaml + component.tsx)
+blocks/      — Ratified UI blocks (meta.yaml + component.tsx)
 surfaces/    — Surface specs (workflow intent for full artifacts)
 safety/      — Hard constraints and severity schema
 memory/      — Episodic build log
@@ -23,13 +23,12 @@ memory/      — Episodic build log
 
 ## Genome hierarchy
 
-The Design Mind organises knowledge at four levels:
+The Design Mind organises knowledge at three levels:
 
 | Level | Location | What it encodes |
 |-------|----------|-----------------|
 | **Tokens** | `genome/rules/styling-tokens.rule.md` | Colors, typography, spacing — the visual primitives |
-| **Decisions** | `patterns/*/meta.yaml` | Atomic UI choices that exist because of a rule (e.g. StatusBadge, ClinicalAlertBanner) |
-| **Compositions** | `patterns/*/meta.yaml` | Governed combinations of decisions (e.g. ActionableRow, PatientContextHeader) |
+| **Blocks** | `blocks/*/meta.yaml` | Reusable UI structures with product decisions baked in — from status badge to form layout. Three sub-levels: `primitive` (single-purpose), `composite` (assembles primitives), `domain` (product-specific) |
 | **Surfaces** | `surfaces/*.surface.yaml` | Full artifacts with workflow intent — encodes *why* a surface exists, what it omits, ordering logic, available actions, and hard "never" rules |
 
 ---
@@ -90,7 +89,7 @@ Without this step the server falls back to TF-IDF search — still useful, just 
 
 | Tool | When to call |
 |------|-------------|
-| `consult_before_build` | Before generating any UI component — returns surface spec, patterns, rules, ontology refs, and safety constraints |
+| `consult_before_build` | Before generating any UI component — returns surface spec, blocks, rules, ontology refs, and safety constraints |
 | `review_output` | After generating UI — returns a `fix` array to address |
 | `report_pattern` | Only when the **structure** changes — new interaction model, different layout container, different slot arrangement. Do not call when only slot content changes (label, domain, icon, entity type) |
 
@@ -98,19 +97,20 @@ Without this step the server falls back to TF-IDF search — still useful, just 
 
 Returns a JSON object with:
 - `surface` — matching surface spec if one exists (intent, omissions, ordering, actions, never rules)
-- `patterns` — most relevant ratified patterns ranked by similarity
+- `blocks` — most relevant ratified blocks ranked by similarity
 - `rules` — applicable genome rules
 - `ontology` — relevant entity/action/state references
 - `safety` — hard constraints that apply
 
 ### `report_pattern` types
 
-The `type` field classifies where in the genome hierarchy the pattern belongs:
+The `type` field classifies where in the genome hierarchy the block belongs:
 
 | Type | Meaning |
 |------|---------|
-| `decision` | An atomic component that exists because of a rule |
-| `composition` | A governed combination of decisions |
+| `primitive` | A small, single-purpose block (e.g. StatusBadge, StatCard) |
+| `composite` | A block that assembles primitives (e.g. ActionableRow, PatientContextHeader) |
+| `domain` | A product-specific block tied to a workflow (e.g. ChatQuickActionChip, SdohAssessmentTab) |
 | `surface` | A full artifact with workflow intent |
 
 ---
@@ -162,7 +162,7 @@ cd api && node src/index.js
 | `SLACK_WEBHOOK_URL` | — | Optional Slack webhook for candidate notifications |
 | `DESIGN_MIND_PROJECT` | (dirname) | Project name attached to candidate submissions |
 
-If the API is unreachable, `report_pattern` falls back to writing the candidate locally to `patterns/_candidates/`.
+If the API is unreachable, `report_pattern` falls back to writing the candidate locally to `blocks/_candidates/`.
 
 **Deduplication:** Candidates are compared using composite similarity across name, description, and intent. Submissions above a 0.2 similarity threshold increment a frequency counter rather than creating a duplicate. At 3+ reports from separate projects a candidate is flagged `ready_for_ratification`.
 
@@ -175,43 +175,47 @@ Any consumer project
   → calls report_pattern
   → POST /candidates to hosted API
   → Maintainer gets Slack notification
-  → Maintainer reviews, promotes to patterns/ or surfaces/
+  → Maintainer reviews, promotes to blocks/ or surfaces/
   → npm run seed:vectors to re-index
   → All consumers pick it up automatically
 ```
 
 ---
 
-## Pattern structure
+## Block structure
 
-Each ratified pattern lives in `patterns/<PatternName>/`:
+Each ratified block lives in `blocks/<BlockName>/`:
 
 ```
-meta.yaml       — id, summary, when, not_when, because, confidence
-component.tsx   — reference implementation (optional — some patterns are genome-only)
+meta.yaml       — id, summary, level, when, not_when, because, confidence
+component.tsx   — reference implementation (optional — some blocks are genome-only)
 ```
 
-Candidate patterns waiting for ratification are in `patterns/_candidates/`.
+Candidate blocks waiting for ratification are in `blocks/_candidates/`.
 
-### Pattern variation rule
+### Block variation rule
 
-Patterns have **invariants** (the container, layout, interaction model — never change) and **slots** (title, label, meta items, actions — fill freely per domain).
+Blocks have **invariants** (the container, layout, interaction model — never change) and **slots** (title, label, meta items, actions — fill freely per domain).
 
 **The single threshold question: "Am I changing structure or content?"**
 
-- Changing slot content (different label, entity type, icon, token) → use the existing pattern as-is. Do not call `report_pattern`.
+- Changing slot content (different label, entity type, icon, token) → use the existing block as-is. Do not call `report_pattern`.
 - Changing structure (new layout, new interaction model, new slot arrangement) → call `report_pattern` to log a candidate.
 
-This keeps the genome lean. Four domain-named patterns (CareGapCard, CareGapRow, TaskActionRow, TaskRow) were correctly collapsed into one structural pattern (ActionableRow with `variant="row"` and `variant="card"`).
+This keeps the genome lean. Four domain-named patterns (CareGapCard, CareGapRow, TaskActionRow, TaskRow) were correctly collapsed into one structural block (ActionableRow with `variant="row"` and `variant="card"`).
 
-### Current patterns
+### Current blocks
 
-| Pattern | Type | Use for |
-|---------|------|---------|
-| `ActionableRow` | composition | Any entity in a list that needs a primary action — care gaps, tasks, protocols, assessments. `variant="row"` inside a shared container; `variant="card"` as standalone cards |
-| `StatusBadge` | decision | Any entity status display |
-| `ClinicalAlertBanner` | decision | Clinical alerts requiring immediate acknowledgment |
-| `PatientContextHeader` | composition | Patient identity at the top of any patient-scoped surface |
-| `StatCard` | decision | Summary metric or count display |
-| `PatientRow` | composition | Patient in a population list |
-| `SectionHeader` | decision | Section label with optional count and action |
+| Block | Level | Use for |
+|-------|-------|---------|
+| `ActionableRow` | composite | Any entity in a list that needs a primary action — care gaps, tasks, protocols, assessments. `variant="row"` inside a shared container; `variant="card"` as standalone cards |
+| `StatusBadge` | primitive | Any entity status display |
+| `ClinicalAlertBanner` | composite | Clinical alerts requiring immediate acknowledgment |
+| `PatientContextHeader` | composite | Patient identity at the top of any patient-scoped surface |
+| `StatCard` | primitive | Summary metric or count display |
+| `PatientRow` | composite | Patient in a population list |
+| `SectionHeader` | primitive | Section label with optional count and action |
+| `ChatQuickActionChip` | domain | Quick action chips in the chat interface |
+| `InlinePatientCard` | domain | Compact patient identity inline in chat or detail views |
+| `OutreachLogRow` | domain | Single outreach attempt in an outreach log |
+| `SdohAssessmentTab` | domain | SDOH assessment question group tab |

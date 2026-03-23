@@ -38,38 +38,91 @@
       "note": "v2.0.0 — expanded from color-only tokens to full styling system: typography (DM Sans), spacing (4px grid), border-radius, elevation, z-index, motion. Colors updated to MDS Updated Colors Pallet. Single comprehensive file. Load this rule for ANY styling decision."
     }
   },
-  "patterns": {
+  "blocks": {
     "StatusBadge": {
-      "file": "patterns/StatusBadge/meta.yaml",
+      "file": "blocks/StatusBadge/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.95,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "SectionHeader": {
+      "file": "blocks/SectionHeader/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.90,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "StatCard": {
+      "file": "blocks/StatCard/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.88,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "ActionableRow": {
+      "file": "blocks/ActionableRow/meta.yaml",
+      "level": "composite",
       "confidence": 0.95,
       "status": "active",
       "renders_total": 0,
       "override_rate": 0.0
     },
     "ClinicalAlertBanner": {
-      "file": "patterns/ClinicalAlertBanner/meta.yaml",
-      "confidence": 0.93,
+      "file": "blocks/ClinicalAlertBanner/meta.yaml",
+      "level": "composite",
+      "confidence": 0.80,
       "status": "active",
       "renders_total": 0,
       "override_rate": 0.0
     },
     "PatientContextHeader": {
-      "file": "patterns/PatientContextHeader/meta.yaml",
-      "confidence": 0.9,
+      "file": "blocks/PatientContextHeader/meta.yaml",
+      "level": "composite",
+      "confidence": 0.90,
       "status": "active",
       "renders_total": 0,
       "override_rate": 0.0
     },
-    "CareGapCard": {
-      "file": "patterns/CareGapCard/meta.yaml",
-      "confidence": 0.88,
+    "PatientRow": {
+      "file": "blocks/PatientRow/meta.yaml",
+      "level": "composite",
+      "confidence": 0.92,
       "status": "active",
       "renders_total": 0,
       "override_rate": 0.0
     },
-    "TaskActionRow": {
-      "file": "patterns/TaskActionRow/meta.yaml",
-      "confidence": 0.87,
+    "ChatQuickActionChip": {
+      "file": "blocks/ChatQuickActionChip/meta.yaml",
+      "level": "domain",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "InlinePatientCard": {
+      "file": "blocks/InlinePatientCard/meta.yaml",
+      "level": "domain",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "OutreachLogRow": {
+      "file": "blocks/OutreachLogRow/meta.yaml",
+      "level": "domain",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "SdohAssessmentTab": {
+      "file": "blocks/SdohAssessmentTab/meta.yaml",
+      "level": "domain",
+      "confidence": 0.85,
       "status": "active",
       "renders_total": 0,
       "override_rate": 0.0

@@ -41,7 +41,7 @@ input:
 output:
   candidate_id:
     type: string
-    description: ID assigned to this candidate in patterns/_candidates/
+    description: ID assigned to this candidate in blocks/_candidates/
 
   similar_candidates:
     type: array

@@ -1,6 +1,7 @@
 id: SectionHeader
 status: active
 component_type: other
+level: primitive
 structural_family: section-divider
 family_invariants:
   - "Typography: text-xs font-semibold uppercase tracking-wider text-muted-foreground"

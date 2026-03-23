@@ -1,0 +1,27 @@
+id: SectionMessage
+status: placeholder
+component_type: banner
+level: primitive
+structural_family: section-organiser
+confidence: 0.0
+version: 0.0.0
+
+summary: >
+  Placeholder — not yet ratified. Inline informational, warning, or success
+  message block within page content. Distinct from ClinicalAlertBanner
+  (clinical safety interrupts) — this is for non-urgent contextual messaging
+  embedded in a surface section.
+
+when:
+  - displaying non-urgent contextual information within a section
+  - surfacing a passive system notice that doesn't require immediate action
+  - empty-state guidance or inline onboarding hints
+
+not_when:
+  - clinical alert requiring acknowledgment — use ClinicalAlertBanner
+  - transient feedback after an action — use Toast
+  - inline field validation — use FormFieldError
+
+embedding_hint: >
+  section message info banner inline notice contextual hint empty state
+  guidance non-urgent passive system message onboarding surface content

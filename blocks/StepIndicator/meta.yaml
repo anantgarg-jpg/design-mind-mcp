@@ -1,0 +1,27 @@
+id: StepIndicator
+status: placeholder
+component_type: other
+level: primitive
+structural_family: section-organiser
+confidence: 0.0
+version: 0.0.0
+
+summary: >
+  Placeholder — not yet ratified. Horizontal or vertical progress indicator
+  for multi-step flows. Shows current step, completed steps, and remaining
+  steps. Used in intake forms, enrollment flows, and structured assessments
+  with more than 2 stages.
+
+when:
+  - multi-step form or workflow with 3+ discrete stages
+  - user needs orientation within a sequential process
+  - progress through a clinical assessment or intake flow
+
+not_when:
+  - single-step form — no step indicator needed
+  - non-sequential content (tabs are not steps)
+  - fewer than 3 steps — inline labeling is sufficient
+
+embedding_hint: >
+  step indicator progress stepper multi-step form flow intake enrollment
+  assessment stages current step completed remaining sequential wizard

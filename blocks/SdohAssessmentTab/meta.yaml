@@ -1,6 +1,7 @@
 id: SdohAssessmentTab
 status: active
 component_type: form
+level: domain
 structural_family: assessment-form
 family_invariants:
   - "Instrument questions are verbatim — never paraphrased or shortened (safety rule 14)"

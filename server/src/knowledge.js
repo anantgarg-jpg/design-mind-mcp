@@ -165,9 +165,9 @@ export function loadKnowledge(basePath) {
     }
   }
 
-  // ── Patterns ───────────────────────────────────────────────────────────────
-  process.stderr.write('[knowledge] Loading patterns...\n');
-  const patternsDir = join(basePath, 'patterns');
+  // ── Blocks ─────────────────────────────────────────────────────────────────
+  process.stderr.write('[knowledge] Loading blocks...\n');
+  const patternsDir = join(basePath, 'blocks');
   if (existsSync(patternsDir)) {
     for (const patternName of readdirSync(patternsDir)) {
       if (patternName.startsWith('_')) continue; // skip _candidates

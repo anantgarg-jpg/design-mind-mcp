@@ -734,7 +734,7 @@ function checkHonored(code, patternResults, kb) {
   if (patternResults.length > 0 && patternResults[0].score > 0.4) {
     honored.push({
       observation: `Matches established pattern: ${patternResults[0].id} (similarity: ${patternResults[0].score.toFixed(2)})`,
-      rule_or_pattern_ref: `patterns/${patternResults[0].id}/meta.yaml`,
+      rule_or_pattern_ref: `blocks/${patternResults[0].id}/meta.yaml`,
     });
   }
 
@@ -944,7 +944,7 @@ function localFallback(params, basePath, reason) {
     ontology_refs = [],
   } = params;
 
-  const candidatesDir = join(basePath, 'patterns', '_candidates');
+  const candidatesDir = join(basePath, 'blocks', '_candidates');
   if (!existsSync(candidatesDir)) mkdirSync(candidatesDir, { recursive: true });
 
   const existing = loadExistingCandidates(candidatesDir);
@@ -1011,7 +1011,7 @@ function localFallback(params, basePath, reason) {
     `# Instructions for human ratification:`,
     `# 1. Review the description and intent`,
     `# 2. Check similar_candidates — merge if duplicate`,
-    `# 3. If valid: create patterns/${pattern_name}/ with meta.yaml and component.tsx`,
+    `# 3. If valid: create blocks/${pattern_name}/ with meta.yaml and component.tsx`,
     `# 4. Run: node server/src/seed.js to re-index`,
   ].join('\n');
 

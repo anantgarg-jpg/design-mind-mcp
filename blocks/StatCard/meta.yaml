@@ -1,6 +1,7 @@
 id: StatCard
 status: active
 component_type: card
+level: primitive
 structural_family: stat-metric-card
 family_invariants:
   - "Label: text-xs font-semibold uppercase tracking-wide text-muted-foreground"

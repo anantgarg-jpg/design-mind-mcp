@@ -1,6 +1,7 @@
 id: StatusBadge
 status: active
 component_type: badge
+level: primitive
 structural_family: status-indicator
 family_invariants:
   - "Label text from ontology/states.yaml canonical_name only — never custom text"

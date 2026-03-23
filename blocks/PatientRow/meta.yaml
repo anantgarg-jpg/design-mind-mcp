@@ -1,6 +1,7 @@
 id: PatientRow
 status: active
 component_type: row
+level: composite
 structural_family: actionable-list-row
 family_invariants:
   - "Layout: flex items-start gap-3 px-4 py-3.5"

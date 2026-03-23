@@ -1,0 +1,27 @@
+id: Toolbar
+status: placeholder
+component_type: other
+level: primitive
+structural_family: section-organiser
+confidence: 0.0
+version: 0.0.0
+
+summary: >
+  Placeholder — not yet ratified. Horizontal strip of filter controls,
+  search input, and/or bulk actions placed above a list or table. Distinct
+  from SectionHeader — Toolbar is interactive and scoped to controlling a
+  specific content area.
+
+when:
+  - above a list or table that needs filtering, searching, or sorting
+  - bulk actions apply to multiple selected items in a list
+  - surface needs a search input + filter chip row
+
+not_when:
+  - page-level navigation — use shell navigation components
+  - single section label with count — use SectionHeader
+  - no interactive controls needed — use SectionHeader instead
+
+embedding_hint: >
+  toolbar filter search sort bulk action chips controls list table
+  worklist input coordinator filter row above content interactive

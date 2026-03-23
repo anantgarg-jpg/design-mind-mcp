@@ -63,11 +63,11 @@ const TOOLS = [
   {
     name: 'consult_before_build',
     description:
-      'Call this before generating any UI component or surface. Returns the most relevant patterns, ' +
+      'Call this before generating any UI component or surface. Returns the most relevant blocks, ' +
       'rules, ontology references, and safety constraints for your stated intent. ' +
       'Use the returned context to guide generation — do not build from scratch. ' +
-      'Key principle: if the returned pattern covers your intent via slot variation (different label, ' +
-      'domain, icon, entity type), USE that pattern — do not create a new one.',
+      'Key principle: if the returned block covers your intent via slot variation (different label, ' +
+      'domain, icon, entity type), USE that block — do not create a new one.',
     inputSchema: {
       type: 'object',
       required: ['intent_description', 'component_type', 'domain', 'user_type'],
@@ -106,7 +106,7 @@ const TOOLS = [
     name: 'review_output',
     description:
       'Call this after generating UI to get structured feedback. Returns what honored the genome, ' +
-      'what was borderline, what needs fixing, and any novel patterns to report.',
+      'what was borderline, what needs fixing, and any novel blocks to report.',
     inputSchema: {
       type: 'object',
       required: ['generated_output', 'original_intent'],
@@ -131,8 +131,8 @@ const TOOLS = [
     description:
       'Call ONLY when the STRUCTURE of the UI changes — new interaction model, different layout ' +
       'container, different slot arrangement, or a layout that cannot be expressed as an existing ' +
-      'pattern variant. Do NOT call when only slot content changes (different label, domain, icon, ' +
-      'token, or entity type). Changing what data fills a slot is free variation, not a new pattern. ' +
+      'block variant. Do NOT call when only slot content changes (different label, domain, icon, ' +
+      'token, or entity type). Changing what data fills a slot is free variation, not a new block. ' +
       'The single threshold question: "Am I changing structure or content?" Content = do not call. ' +
       'Structure = call this tool and log the candidate for human ratification.',
     inputSchema: {
@@ -141,20 +141,20 @@ const TOOLS = [
       properties: {
         pattern_name: {
           type: 'string',
-          description: 'A short descriptive name for the pattern (e.g. "BulkActionToolbar").',
+          description: 'A short descriptive name for the block (e.g. "BulkActionToolbar").',
         },
         type: {
           type: 'string',
-          enum: ['decision', 'composition', 'surface'],
-          description: 'Genome hierarchy level.',
+          enum: ['primitive', 'composite', 'domain', 'surface'],
+          description: 'Block level (primitive / composite / domain) or surface.',
         },
         description: {
           type: 'string',
-          description: 'What the pattern is and what problem it solves.',
+          description: 'What the block is and what problem it solves.',
         },
         intent_it_serves: {
           type: 'string',
-          description: 'The user intent or job-to-be-done this pattern addresses.',
+          description: 'The user intent or job-to-be-done this block addresses.',
         },
         implementation_ref: {
           type: 'string',
@@ -167,7 +167,7 @@ const TOOLS = [
         ontology_refs: {
           type: 'array',
           items: { type: 'string' },
-          description: 'Entities, states, or actions from the ontology this pattern touches.',
+          description: 'Entities, states, or actions from the ontology this block touches.',
         },
       },
     },
@@ -186,7 +186,7 @@ async function initialize() {
 
   kb = loadKnowledge(BASE_PATH);
 
-  const patternIndexPath = join(INDEX_DIR, 'patterns.json');
+  const patternIndexPath = join(INDEX_DIR, 'blocks.json');
   const ruleIndexPath    = join(INDEX_DIR, 'rules.json');
 
   const cachedPatterns = loadIndex(patternIndexPath);

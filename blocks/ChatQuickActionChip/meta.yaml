@@ -1,6 +1,7 @@
 id: ChatQuickActionChip
 status: active
 component_type: button
+level: domain
 structural_family: quick-action-chip
 family_invariants:
   - "Shape: rounded-full border border-border/70 hover:border-primary/50 shadow-card"

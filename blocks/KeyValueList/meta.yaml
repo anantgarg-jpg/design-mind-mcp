@@ -1,0 +1,26 @@
+id: KeyValueList
+status: placeholder
+component_type: list
+level: primitive
+structural_family: readonly-list-row
+confidence: 0.0
+version: 0.0.0
+
+summary: >
+  Placeholder — not yet ratified. A read-only list of labeled field/value
+  pairs used for displaying entity details. Covers patient demographics,
+  care team info, and similar structured data in detail panels.
+
+when:
+  - displaying a set of labeled fields for a single entity
+  - detail panel or summary section with no actions per row
+  - structured metadata that benefits from label/value alignment
+
+not_when:
+  - actionable list rows — use ActionableRow
+  - tabular data with multiple entities — use a table or list of rows
+  - single metric — use StatCard
+
+embedding_hint: >
+  key value list label field detail panel read only metadata entity
+  demographics care team structured data name value pairs summary

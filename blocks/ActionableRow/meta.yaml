@@ -1,6 +1,7 @@
 id: ActionableRow
 status: active
 component_type: row
+level: composite
 structural_family: actionable-list-row
 confidence: 0.95
 version: 1.0.0

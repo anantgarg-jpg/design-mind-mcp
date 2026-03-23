@@ -1,6 +1,7 @@
 id: PatientContextHeader
 status: active
 component_type: header
+level: composite
 structural_family: patient-context-header
 family_invariants:
   - "Layout: flex items-center justify-between gap-4 px-6 py-4 bg-card border-b border-border"
