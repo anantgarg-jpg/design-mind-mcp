@@ -1854,7 +1854,7 @@ Two questions. Both must pass.
 # Hard constraints
 # These rules are authored by clinical SMEs and design leadership.
 # No agent — including the Design Mind — can propose mutations to this file.
-# Changes require explicit approval from clinical leadership + a human commit.
+# Changes require explicit approval from design leadership + a human commit.
 
 ---
 
@@ -1982,15 +1982,19 @@ Two questions. Both must pass.
 
 22. When a Block composes another Block, the consuming Block must not pass className overrides that conflict with any CSS property listed in the composed Block's family_invariants. Only additive classes — positioning, sizing, spacing, and layout — are permitted on a child Block. To change an invariant property, the source Block's meta.yaml and component must be updated directly, only when the change is justified by a new design requirement.
 
+23. When a primitive or composite Block's component or meta.yaml is modified, all consuming Blocks and surfaces that import or compose that Block must be reviewed and updated to reflect the change. No upstream change may be committed without verifying downstream consumers remain compliant.
+
 ---
 
 ## Safety — severity schema
 
 ```yaml
+# No agent — including the Design Mind — can propose mutations to this file.
+# Changes require explicit approval from design leadership + a human commit.
 # Severity schema — machine-readable
 # Single source of truth for severity rendering across all surfaces.
 # Updated to use design tokens from theme.css.
-# Referenced by: AlertBanner/meta.yaml, StatusBadge/meta.yaml,
+# Referenced by: AlertBanner/meta.yaml, Badge/meta.yaml,
 # runtime generation layer, conversational layer.
 
 # IMPORTANT NAMING NOTE:
@@ -2002,10 +2006,10 @@ Two questions. Both must pass.
 severity_levels:
   critical:
     token: "--destructive"
-    token_light: null                            # no --destructive-light defined — use inline bg
-    hex_reference: "#D62400"                     # Red — WCAG AA on white
+    token_light: "--destructive-light"               # #FFF2F0
+    hex_reference: "#D62400"                         # Red — WCAG AA on white
     tailwind_equivalent: "text-destructive"
-    bg_class: "bg-destructive/10"                # 10% opacity destructive for banner bg
+    bg_class: "bg-[var(--destructive-light)]"
     text_class: "text-destructive"
     border_class: "border-destructive/30"
     solid_class: "bg-destructive text-destructive-foreground"
@@ -2017,12 +2021,12 @@ severity_levels:
     sla_hours: 1
 
   high:
-    token: "--alert"                              # Orange — NOT the same as the Alert entity
-    token_light: "--alert-light"                 # #FFF2DB
-    hex_reference: "#B24D00"                     # WCAG AA accessible foreground
-    tailwind_equivalent: "text-alert"
+    token: "--alert"                                  # Orange — NOT the same as the Alert entity
+    token_light: "--alert-light"                     # #FFF3E6
+    hex_reference: "#944A00"                         # --alert-text — WCAG AA accessible foreground
+    tailwind_equivalent: "text-alert-text"
     bg_class: "bg-[var(--alert-light)]"
-    text_class: "text-alert"
+    text_class: "text-alert-text"
     border_class: "border-alert/30"
     solid_class: "bg-alert text-alert-foreground"
     icon: "alert-triangle"
@@ -2034,11 +2038,11 @@ severity_levels:
 
   medium:
     token: "--warning"
-    token_light: "--warning-light"               # #FFF9E5
-    hex_reference: "#AD8200"                     # WCAG AA accessible foreground
-    tailwind_equivalent: "text-warning"
+    token_light: "--warning-light"                   # #FFF8E6
+    hex_reference: "#5C4403"                         # --warning-text — WCAG AA accessible foreground
+    tailwind_equivalent: "text-warning-text"
     bg_class: "bg-[var(--warning-light)]"
-    text_class: "text-warning"
+    text_class: "text-warning-text"
     border_class: "border-warning/30"
     solid_class: "bg-warning text-warning-foreground"
     icon: "alert-circle"
@@ -2049,8 +2053,8 @@ severity_levels:
 
   low:
     token: "--accent"
-    token_light: "--accent"                      # accent is already the light bg
-    hex_reference: "#0051AD"                     # accent-foreground — WCAG AA
+    token_light: "--accent"                          # #E8F1FD — accent is already the light bg
+    hex_reference: "#003374"                         # --accent-foreground — WCAG AA
     tailwind_equivalent: "text-accent-foreground"
     bg_class: "bg-accent"
     text_class: "text-accent-foreground"
