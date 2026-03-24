@@ -34,6 +34,8 @@ variants:
   success: success green — positive outcomes
 
 key_rules:
+  - uses Card block as container — elevation controlled via elevation prop
+  - "elevation: flat (default) on white surfaces, sm on bg-muted/bg-background grey surfaces, md for onboarding/expressive"
   - value always uses tabular-nums for alignment
   - label always uppercase tracking-wide (wayfinding, not a headline)
   - max 4 StatCards in a single row for readability

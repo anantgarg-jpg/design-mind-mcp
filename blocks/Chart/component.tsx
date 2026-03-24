@@ -1,5 +1,6 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
+import { Card } from "@blocks/Card/component"
 import {
   ChartConfig,
   ChartContainer,
@@ -15,7 +16,7 @@ import {
 // Safety:   safety/hard-constraints.md rules 19, 20
 //
 // INVARIANTS (meta.yaml):
-//   Container: rounded-lg border border-border/40 bg-card p-4 shadow-sm
+//   Container: Card block with elevation prop — no local card styling
 //   Labels/axes: text-sm text-muted-foreground
 //   Responsive width via ChartContainer
 
@@ -26,6 +27,8 @@ interface ChartFrameProps {
   description?: string
   /** Recharts chart config mapping series keys to labels and colors */
   config: ChartConfig
+  /** Shadow elevation */
+  elevation?: "flat" | "sm" | "md"
   /** Chart height in pixels */
   height?: number
   /** Recharts chart elements (e.g., BarChart, LineChart with children) */
@@ -37,17 +40,13 @@ export function ChartFrame({
   title,
   description,
   config,
+  elevation = "flat",
   height = 300,
   children,
   className,
 }: ChartFrameProps) {
   return (
-    <div
-      className={cn(
-        "rounded-lg border border-border/40 bg-card p-4 shadow-sm",
-        className
-      )}
-    >
+    <Card elevation={elevation} className={className}>
       {(title || description) && (
         <div className="mb-4 flex flex-col gap-1">
           {title && (
@@ -62,7 +61,7 @@ export function ChartFrame({
       <ChartContainer config={config} className="w-full" style={{ height }}>
         {children}
       </ChartContainer>
-    </div>
+    </Card>
   )
 }
 

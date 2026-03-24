@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils"
+import { Card } from "@blocks/Card/component"
 
 // ── Genome sources ────────────────────────────────────────────────────────────
 // Block:    blocks/StatCard/meta.yaml
@@ -10,6 +11,8 @@ import { cn } from "@/lib/utils"
 //   Label: text-sm (12px) font-semibold uppercase tracking-wide text-muted-foreground
 //   Value: text-2xl font-semibold tabular-nums leading-none
 //   Max 4 StatCards per row.
+//
+// Container: Card block with elevation prop — no local card styling.
 //
 // Variant tokens map to semantic colors — never use Tailwind default colors.
 //   urgent  → --destructive (Critical severity / highest-stakes data)
@@ -32,6 +35,7 @@ interface StatCardProps {
   // subtitle: supporting context — shown only when it adds meaning to the value
   subtitle?: string
   variant?: StatVariant
+  elevation?: "flat" | "sm" | "md"
   // onClick: makes the entire card interactive; hover state activates automatically
   onClick?: () => void
   className?: string
@@ -42,35 +46,31 @@ export function StatCard({
   value,
   subtitle,
   variant = "default",
+  elevation = "flat",
   onClick,
   className,
 }: StatCardProps) {
   const v = VARIANT_CONFIG[variant]
 
   return (
-    <div
-      role={onClick ? "button" : undefined}
-      tabIndex={onClick ? 0 : undefined}
+    <Card
+      elevation={elevation}
       onClick={onClick}
-      onKeyDown={onClick ? (e) => e.key === "Enter" && onClick() : undefined}
-      className={cn(
-        "flex flex-col gap-1 p-4 bg-card rounded-lg border border-border/40 shadow-sm",
-        "transition-colors",
-        onClick && "cursor-pointer hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        className
-      )}
+      className={className}
     >
-      <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-        {label}
-      </p>
-      <p className={cn("text-2xl font-semibold tabular-nums leading-none", v.valueClass)}>
-        {value}
-      </p>
-      {subtitle && (
-        <p className={cn("text-sm leading-tight", v.subtitleClass)}>
-          {subtitle}
+      <div className="flex flex-col gap-1">
+        <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+          {label}
         </p>
-      )}
-    </div>
+        <p className={cn("text-2xl font-semibold tabular-nums leading-none", v.valueClass)}>
+          {value}
+        </p>
+        {subtitle && (
+          <p className={cn("text-sm leading-tight", v.subtitleClass)}>
+            {subtitle}
+          </p>
+        )}
+      </div>
+    </Card>
   )
 }
