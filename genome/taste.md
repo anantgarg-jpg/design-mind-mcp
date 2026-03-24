@@ -11,7 +11,7 @@ The product's visual character is flat, restrained, and border-driven. Surfaces 
 
 **The principles:**
 
-- **Flat by default.** Shadows exist only for elements that genuinely float above the page — dropdowns, modals, tooltips, popovers. Everything anchored to the page (cards, buttons, inputs, rows, headers, banners) uses borders or background color shifts for separation. No element earns a shadow just by being a container.
+- **Flat by default, with contextual card elevation.** Shadows exist for elements that genuinely float above the page — dropdowns, modals, tooltips, popovers — and for cards that sit on a tinted/muted background where border alone doesn't provide enough separation. Buttons, inputs, rows, headers, and banners are always flat. Cards on white backgrounds stay border-driven; cards on grey/muted surfaces get `shadow-sm`; cards in expressive/onboarding flows may use `shadow-md`.
 - **Borders over shadows.** A 1px border in `border-border` communicates "this is a region" without adding visual weight. When even a border feels heavy, use a background contrast shift (e.g., `bg-card` on `bg-background`). Reserve visible borders for edges that need structural definition.
 - **No decorative chrome.** No gradients, inner highlights, colored glows, or inset shadows. No border-bottom tricks to simulate depth. If an element looks "designed," it's probably over-styled. The interface should feel engineered.
 - **Color enters with purpose.** The resting UI is almost entirely neutral. Saturated color appears only when it carries meaning: status indicators, active/selected states, primary actions, destructive intent, or semantic feedback. Color used decoratively dilutes the meaning of color used semantically.
@@ -95,7 +95,7 @@ How text is set determines whether a screen feels considered or careless. Typogr
 Color is a language. Every hue in the interface is a word — use too many and the sentence is noise. Color tokens are defined both semantically and as raw values — use only those. Do not introduce colors outside the token system.
 
 - **Neutral at rest, saturated with intent.** The base UI lives in a restrained neutral palette — whites, light greys, subtle borders. Saturated color enters only when it carries meaning: status, interaction state, primary actions, destructive intent. A screen at rest should be almost entirely monochromatic.
-- **Surfaces separate through contrast, not elevation.** Use background color differences (`bg-card` on `bg-background`, `bg-muted` for inset regions) and thin borders to define content regions. Do not use shadows to separate anchored surfaces — shadows are reserved for floating layers only.
+- **Surfaces separate through contrast, not elevation.** Use background color differences (`bg-card` on `bg-background`, `bg-muted` for inset regions) and thin borders to define content regions. Shadows are reserved for floating layers and for cards on muted/tinted backgrounds where border alone lacks sufficient contrast.
 - **State changes through opacity.** Hover, selected, and active states use background opacity shifts on the base color (`foreground/[0.04]` for hover, `foreground/[0.08]` for active, `primary/10` for selected). This keeps state feedback subtle and consistent across every element without introducing new colors.
 - **Stay within the token system.** Semantic tokens (background, foreground, muted, accent, destructive, etc.) exist for a reason — they encode meaning that raw hex values don't. Using tokens consistently is how the interface stays coherent across dozens of screens built at different times.
 
@@ -143,7 +143,7 @@ The difference between good and great is in the details no one consciously notic
 
 - **Icon consistency.** Same stroke weight, same optical size, same style across every icon in the system. Mixing outlined and filled styles, or varying visual weight, creates subtle discord.
 - **Border radius consistency.** Radii are defined in the token system. Use them consistently — mixing values across a screen reads as indecisive, even if no one can pinpoint why.
-- **Flatness is a craft decision.** Shadows are reserved for floating layers (dropdowns, modals, tooltips). Every other element — cards, buttons, inputs, banners, rows — relies on borders and background contrast. If you reach for a shadow on an anchored element, stop and use a border instead. The product's visual identity is flat and border-driven; shadows break that identity.
+- **Flatness is a craft decision.** Shadows are reserved for floating layers (dropdowns, modals, tooltips) and cards on muted/tinted backgrounds. Buttons, inputs, banners, and rows always rely on borders and background contrast. If you reach for a shadow on a non-card anchored element, stop and use a border instead. The product's visual identity is flat and border-driven; shadows are contextual, not decorative.
 - **Pixel-level precision.** Subpixel alignment, consistent padding, optical centering of icons within buttons. These things are invisible when right and quietly wrong when not. Sweat them.
 - **List scanability test.** In any list or table, cover the leftmost column and check: can you still read each remaining column as a vertical stripe? If column edges waver across rows, the layout fails the scanability test regardless of how individual rows look in isolation.
 

@@ -54,9 +54,9 @@ export function StatCard({
       onClick={onClick}
       onKeyDown={onClick ? (e) => e.key === "Enter" && onClick() : undefined}
       className={cn(
-        "flex flex-col gap-1 p-4 bg-card rounded-lg border border-border/40 shadow-card",
-        "transition-shadow",
-        onClick && "cursor-pointer hover:shadow-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "flex flex-col gap-1 p-4 bg-card rounded-lg border border-border/40 shadow-sm",
+        "transition-colors",
+        onClick && "cursor-pointer hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         className
       )}
     >

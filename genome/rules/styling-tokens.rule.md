@@ -417,21 +417,26 @@ NEVER:
 
 # ── ELEVATION & SHADOWS ──────────────────────────────────────────────────────
 
-FLAT BY DEFAULT. The product's visual identity is flat and border-driven.
-Shadows exist only for elements that genuinely float above the page.
-Everything anchored to the page uses borders or background contrast
-for separation — never shadows.
+FLAT BY DEFAULT — WITH CONTEXTUAL CARD ELEVATION.
+The product's visual identity is flat and border-driven.
+Shadows exist for elements that genuinely float above the page,
+AND for cards that sit on a tinted/muted background where border
+alone doesn't provide enough separation.
 
   LEVEL         CLASS               WHEN
   ────────────  ──────────────────  ────────────────────────────────────────
-  flat          (no shadow)         THE DEFAULT. Cards, buttons, inputs, rows,
+  flat          (no shadow)         THE DEFAULT. Buttons, inputs, rows,
                                     headers, banners, list items, all controls
+  card-raised   shadow-sm           Cards on bg-muted or bg-background when
+                                    the parent surface is tinted/grey
+  card-express  shadow-md           Cards in onboarding/expressive flows
+                                    needing stronger visual presence
   dropdown      shadow-md           Dropdowns, popovers, context menus
   dialog        shadow-lg           Modals, dialogs, command palette
   tooltip       shadow-sm           Tooltips
 
 WHAT IS ALWAYS FLAT (no shadow, no exceptions):
-  - Cards at rest — use border border-border, not shadow
+  - Cards on bg-background (white-on-white) — use border border-border
   - Buttons and interactive controls — always flat
   - Inputs, selects, textareas — border only
   - Rows in lists — border-b or background alternation
@@ -440,11 +445,23 @@ WHAT IS ALWAYS FLAT (no shadow, no exceptions):
   - Sidebar content — sidebar tokens handle surface treatment
   - Any element inside a card — shadows never nest
 
+WHEN CARDS GET shadow-sm:
+  - Card (bg-card) sits on a muted/grey parent (bg-muted, bg-background
+    with a tinted page wrapper, or any non-white surface)
+  - The shadow replaces the border — do NOT combine shadow-sm + border
+  - Maximum card shadow is shadow-sm for standard layouts
+
+WHEN CARDS GET shadow-md:
+  - Expressive / onboarding flows where cards need stronger visual presence
+  - Still never shadow-lg or higher — those stay reserved for dialogs
+
 HOW TO SEPARATE WITHOUT SHADOW:
   - Border: border border-border (1px, subtle grey) for structural edges
   - Background contrast: bg-card on bg-background for content regions
   - Inset background: bg-muted for nested/secondary regions
   - Dividers: border-b border-border between stacked items
+  - Contextual shadow: shadow-sm on bg-card when parent is bg-muted
+    (prefer this over border when the card needs visual lift)
 
 NEVER:
   - Stack shadows (a floating element inside another floating element)
@@ -452,9 +469,8 @@ NEVER:
   - Add shadow to severity indicators — severity communicates via color, not depth
   - Use box-shadow for non-elevation purposes (glow effects, colored glows,
     inner highlights, inset shadows for depth simulation)
-  - Add shadow to cards, buttons, inputs, or any anchored element
-  - Use hover shadow transitions (shadow-card → shadow-card-hover) — use
-    background color shift for hover instead
+  - Add shadow to buttons, inputs, or non-card anchored elements
+  - Use hover shadow transitions — use background color shift for hover instead
 
 # ── Z-INDEX LAYERING ─────────────────────────────────────────────────────────
 
@@ -518,7 +534,7 @@ TAILWIND CLASSES:
 
 WHAT TRANSITIONS:
   - Row hover background:   hover:bg-muted/60 transition-colors
-  - Card hover shadow:      hover:shadow-card-hover transition-shadow
+  - Card hover background:  hover:bg-accent/50 transition-colors
   - Button reveal on hover: opacity-0 group-hover:opacity-100 transition-opacity
   - Focus ring appearance:  ring-ring transition (handled by component library)
 
@@ -563,7 +579,7 @@ ALWAYS:
   - Use text-muted-foreground for secondary, hint, and label text
   - Use the typography scale levels defined above — don't invent sizes
   - Use the spacing system — all spacing multiples of 4px
-  - Use shadow-card for cards, no shadow for rows
+  - Use contextual shadow for cards (shadow-sm on muted bg, shadow-md for expressive), no shadow for rows
   - Use specific transition classes (transition-colors, -opacity, -shadow)
 
 # ── STATE FEEDBACK PATTERNS ──────────────────────────────────────────────────
@@ -578,7 +594,7 @@ Interactive elements follow a consistent state feedback language:
   selected   Primary-tinted background              bg-primary/10 or bg-accent
   disabled   50% opacity, no pointer events          disabled:opacity-50 disabled:pointer-events-none
 
-  NEVER use shadow changes for hover feedback (no shadow-card → shadow-card-hover).
+  NEVER use shadow changes for hover feedback — use background color shift instead.
   NEVER use translate-y for press feedback — use scale instead.
   NEVER use color darkening as the sole press signal — always include scale.
   NEVER use gradients, glows, or inner highlights for any state.
@@ -593,7 +609,7 @@ NEVER:
   - Use a color that "looks like" a severity color for non-severity purposes
   - Use font-thin, font-light, or font-black
   - Use rounded-2xl or larger radius values
-  - Use shadow on anchored elements (cards, buttons, inputs, rows, headers)
+  - Use shadow on non-card anchored elements (buttons, inputs, rows, headers)
   - Use shadow-xl or shadow-2xl
   - Use transition-all — specify exact properties
   - Use transition-shadow — the product does not animate shadows

@@ -4,7 +4,8 @@ component_type: layout
 level: primitive
 structural_family: content-container
 family_invariants:
-  - "rounded-lg border border-border/40 bg-card shadow-card"
+  - "rounded-lg border border-border/40 bg-card"
+  - "shadow-sm when on muted/tinted background, no shadow on white background"
   - "p-4 content padding"
 confidence: 0.85
 version: 1.0.0
@@ -25,13 +26,18 @@ not_when:
   - full-width page sections without visual boundaries
 
 variants:
-  default: static content container at rest
-  interactive: hover shadow elevation for clickable cards
+  flat: no shadow, border-driven — default for white-on-white layouts
+  shadow-sm: raised card — for muted/tinted parent backgrounds
+  shadow-md: expressive card — for onboarding/highlight flows
+  interactive: clickable card with hover, active, focus, selected, and disabled states
 
 key_rules:
-  - shadow-card at rest, shadow-card-hover on interactive variants
+  - elevation prop controls shadow — flat (default), sm (raised), md (expressive)
+  - hover uses bg-foreground/[0.04], active adds scale-[0.97] + bg-foreground/[0.08]
+  - selected state uses bg-primary/10 border-primary/30
+  - disabled state uses opacity-50 pointer-events-none
   - no nested cards
-  - use for grouping related content
+  - never use shadow transitions for hover — background color shift only
 
 embedding_hint: >
   card container surface panel tile group

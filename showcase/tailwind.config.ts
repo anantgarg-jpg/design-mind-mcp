@@ -23,6 +23,7 @@ const config: Config = {
   			border: 'rgb(var(--border) / <alpha-value>)',
   			input: 'rgb(var(--input) / <alpha-value>)',
   			ring: 'rgb(var(--ring) / <alpha-value>)',
+			'ring-destructive': 'rgb(var(--ring-destructive) / <alpha-value>)',
   			primary: {
   				DEFAULT: 'rgb(var(--primary) / <alpha-value>)',
   				foreground: 'rgb(var(--primary-foreground) / <alpha-value>)'
@@ -33,15 +34,18 @@ const config: Config = {
   			},
   			success: {
   				DEFAULT: 'rgb(var(--success) / <alpha-value>)',
-  				foreground: 'rgb(var(--success-foreground) / <alpha-value>)'
+  				foreground: 'rgb(var(--success-foreground) / <alpha-value>)',
+  				text: 'rgb(var(--success-text) / <alpha-value>)'
   			},
   			warning: {
   				DEFAULT: 'rgb(var(--warning) / <alpha-value>)',
-  				foreground: 'rgb(var(--warning-foreground) / <alpha-value>)'
+  				foreground: 'rgb(var(--warning-foreground) / <alpha-value>)',
+  				text: 'rgb(var(--warning-text) / <alpha-value>)'
   			},
   			alert: {
   				DEFAULT: 'rgb(var(--alert) / <alpha-value>)',
-  				foreground: 'rgb(var(--alert-foreground) / <alpha-value>)'
+  				foreground: 'rgb(var(--alert-foreground) / <alpha-value>)',
+  				text: 'rgb(var(--alert-text) / <alpha-value>)'
   			},
   			accent: {
   				DEFAULT: 'rgb(var(--accent) / <alpha-value>)',
@@ -80,8 +84,8 @@ const config: Config = {
   			]
   		},
   		boxShadow: {
-  			card: '0 1px 3px rgb(0 0 0 / 0.06), 0 1px 2px rgb(0 0 0 / 0.04)',
-  			'card-hover': '0 4px 6px rgb(0 0 0 / 0.07), 0 2px 4px rgb(0 0 0 / 0.05)'
+  			sm: 'rgba(99, 99, 99, 0.2) 0px 2px 8px 0px',
+  			md: 'rgba(149, 157, 165, 0.2) 0px 8px 24px',
   		},
   		keyframes: {
   			'accordion-down': {

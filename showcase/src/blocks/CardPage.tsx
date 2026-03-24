@@ -13,7 +13,8 @@ export function CardPage() {
       />
 
       <div className="flex flex-col gap-6">
-        <Fixture label="With header, content, and footer">
+        {/* ── Elevation variants ──────────────────────────────── */}
+        <Fixture label="Flat (no shadow — white-on-white)">
           <Card
             title="Patient Summary"
             description="Overview of current care status"
@@ -23,19 +24,74 @@ export function CardPage() {
           </Card>
         </Fixture>
 
-        <Fixture label="Content only">
-          <Card>
-            <p className="text-sm">A minimal card with no header or footer, used for simple content grouping.</p>
-          </Card>
+        <Fixture label="Shadow SM (raised — for muted backgrounds)">
+          <div className="rounded-lg bg-background p-4">
+            <Card
+              elevation="sm"
+              title="Care Gap: HbA1c Screening"
+              description="Last completed 14 months ago"
+            >
+              <p className="text-sm">Patient is overdue for HbA1c lab work. Next eligible date: April 2.</p>
+            </Card>
+          </div>
         </Fixture>
 
-        <Fixture label="Interactive card (clickable)">
+        <Fixture label="Shadow MD (expressive — onboarding flows)">
+          <div className="rounded-lg bg-background p-6">
+            <Card
+              elevation="md"
+              title="Welcome to CareOS"
+              description="Get started in 3 simple steps"
+            >
+              <p className="text-sm">Complete your profile, connect your EHR, and invite your care team.</p>
+            </Card>
+          </div>
+        </Fixture>
+
+        {/* ── Interactive states ──────────────────────────────── */}
+        <Fixture label="Interactive — hover and press">
           <Card
+            elevation="sm"
             title="Protocol: HbA1c Monitoring"
             description="Tap to view details"
             onClick={() => {}}
           >
             <p className="text-sm">12 enrolled patients, 4 pending outreach.</p>
+          </Card>
+        </Fixture>
+
+        <Fixture label="Interactive — focused (tab to see ring)">
+          <Card
+            elevation="sm"
+            title="Protocol: Diabetes Management"
+            description="Use Tab key to focus this card"
+            onClick={() => {}}
+          >
+            <p className="text-sm">8 enrolled patients, 2 pending outreach.</p>
+          </Card>
+        </Fixture>
+
+        <Fixture label="Interactive — selected">
+          <Card
+            elevation="sm"
+            title="Protocol: HbA1c Monitoring"
+            description="Currently selected"
+            onClick={() => {}}
+            selected
+          >
+            <p className="text-sm">12 enrolled patients, 4 pending outreach.</p>
+          </Card>
+        </Fixture>
+
+        <Fixture label="Interactive — disabled">
+          <Card
+            elevation="sm"
+            title="Protocol: Deprecated Workflow"
+            description="This protocol is no longer active"
+            onClick={() => {}}
+            disabled
+          >
+            <p className="text-sm">Archived on March 1. Contact admin to reactivate.</p>
           </Card>
         </Fixture>
       </div>

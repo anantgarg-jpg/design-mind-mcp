@@ -15,7 +15,7 @@ import {
 // Safety:   safety/hard-constraints.md rules 19, 20
 //
 // INVARIANTS (meta.yaml):
-//   Container: rounded-lg border border-border/40 bg-card p-4 shadow-card
+//   Container: rounded-lg border border-border/40 bg-card p-4 shadow-sm
 //   Labels/axes: text-sm text-muted-foreground
 //   Responsive width via ChartContainer
 
@@ -44,7 +44,7 @@ export function ChartFrame({
   return (
     <div
       className={cn(
-        "rounded-lg border border-border/40 bg-card p-4 shadow-card",
+        "rounded-lg border border-border/40 bg-card p-4 shadow-sm",
         className
       )}
     >

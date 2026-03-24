@@ -4,7 +4,7 @@ component_type: data-display
 level: composite
 structural_family: chart-visualization
 family_invariants:
-  - "Container: rounded-lg border border-border/40 bg-card p-4 shadow-card"
+  - "Container: rounded-lg border border-border/40 bg-card p-4 shadow-sm"
   - "Labels and axes: text-sm text-muted-foreground"
   - "Responsive: width 100% via ResponsiveContainer"
 confidence: 0.80

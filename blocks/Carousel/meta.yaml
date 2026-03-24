@@ -5,7 +5,7 @@ level: composite
 structural_family: content-carousel
 family_invariants:
   - "Container: overflow-hidden relative"
-  - "Prev/Next buttons: rounded-full h-8 w-8 border shadow-sm bg-background"
+  - "Prev/Next buttons: rounded-full h-8 w-8 border bg-background"
   - "Items: gap-4 between slides"
 confidence: 0.80
 version: 1.0.0

@@ -4,7 +4,7 @@ component_type: button
 level: domain
 structural_family: quick-action-chip
 family_invariants:
-  - "Shape: rounded-full border border-border/70 hover:border-primary/50 shadow-card"
+  - "Shape: rounded-full border border-border/70 hover:border-primary/50"
   - "Triggers inline card in Panel 2 only — never opens artifact tab"
   - "Read-only triggers — chips never modify data directly"
   - "Maximum ~4 chips in strip before needing command palette"
@@ -17,7 +17,7 @@ summary: >
   A persistent strip of pill-shaped chip buttons rendered above the chat input in
   Panel 2. Each chip is a one-tap shortcut that injects a structured assistant
   response inline in the conversation — no artifact tab is opened. The chip style
-  is rounded-full, border-border/70, hover:border-primary/50, shadow-card. The
+  is rounded-full, border-border/70, hover:border-primary/50. The
   triggered response is an assistant message with a text lead and an InlineCard
   attached below it.
 

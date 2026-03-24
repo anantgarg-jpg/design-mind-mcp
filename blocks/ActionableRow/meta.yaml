@@ -44,7 +44,7 @@ variants:
       - title (required)
       - label (optional monospace badge above title)
       - contextLabel (optional entity name when not in entity-scoped view)
-      - status (optional StatusBadge)
+      - status (optional Badge)
       - meta[] (icon + text pairs, up to ~3)
       - primaryAction (right-aligned button)
       - secondaryActions (MoreHorizontal dropdown)
@@ -55,12 +55,12 @@ variants:
       Used when each row is a standalone card. No shared container.
       Has its own border, rounded corners, and shadow.
     invariants:
-      - "flex items-start justify-between gap-4 p-4 bg-card border border-border/60 rounded-lg shadow-card hover:shadow-card-hover transition-shadow"
+      - "flex items-start justify-between gap-4 p-4 bg-card border border-border/60 rounded-lg shadow-sm hover:bg-accent/50 transition-colors"
     slots:
       - title (required)
       - label (optional monospace badge above title)
       - contextLabel (optional entity name)
-      - status (optional StatusBadge)
+      - status (optional Badge)
       - meta[] (icon + text pairs)
       - primaryAction (right-aligned button)
       - secondaryActions (MoreHorizontal dropdown)
@@ -95,7 +95,7 @@ props:
   label: "string — small badge above title (e.g. measure code HBD)"
   labelMono: "boolean — renders label in monospace"
   contextLabel: "string — entity name when outside entity-scoped view"
-  status: "StatusKey — passed to StatusBadge"
+  status: "StatusKey — passed to Badge"
   accent: '"warning" | "accent" | "success" | "none" — row stripe color'
   meta: "MetaItem[] — [{icon?, text, urgent?, success?}]"
   primaryAction: "{ label: string; onClick: () => void }"

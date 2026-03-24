@@ -8,7 +8,7 @@ status: ratified
 frequency_count: 1
 
 description: >
-  A persistent strip of pill-shaped chip buttons above the chat input in Panel 2. Each chip triggers a structured assistant response inline in the conversation — no artifact tab opened. The response is a typed card (InlineOutreachCard, etc.) rendered inside the assistant message bubble below the reply text. Chip style: rounded-full, border-border/70, hover:border-primary/50, shadow-card. Card style: bg-card border rounded-xl shadow-card with icon rows and a divider footer for metadata.
+  A persistent strip of pill-shaped chip buttons above the chat input in Panel 2. Each chip triggers a structured assistant response inline in the conversation — no artifact tab opened. The response is a typed card (InlineOutreachCard, etc.) rendered inside the assistant message bubble below the reply text. Chip style: rounded-full, border-border/70, hover:border-primary/50, shadow-sm. Card style: bg-card border rounded-xl shadow-sm with icon rows and a divider footer for metadata.
 
 intent_it_serves: >
   Coordinator needs a one-tap shortcut to surface structured clinical data (last outreach, recent task, etc.) inline in the chat without navigating to a new artifact tab or typing a query.
