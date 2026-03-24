@@ -47,6 +47,14 @@ const config: Config = {
           foreground: 'rgb(var(--accent-foreground) / <alpha-value>)',
         },
       },
+      fontSize: {
+        sm: ['0.75rem', { lineHeight: '1rem' }],       // 12px / 16px (body-small)
+        base: ['0.875rem', { lineHeight: '1.25rem' }],  // 14px / 20px (body-default)
+        lg: ['1rem', { lineHeight: '1.5rem' }],          // 16px / 24px (body-large)
+      },
+      fontWeight: {
+        semibold: '500',
+      },
       fontFamily: {
         sans: ['var(--font-sans)'],
         mono: ['var(--font-mono)'],

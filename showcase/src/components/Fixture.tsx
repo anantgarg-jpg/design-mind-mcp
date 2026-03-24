@@ -10,7 +10,7 @@ interface FixtureProps {
 export function Fixture({ label, children, bg = 'bg-card' }: FixtureProps) {
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
         {label}
       </p>
       <div className={cn('rounded-lg border border-border p-4', bg)}>
@@ -39,16 +39,16 @@ export function PageHeader({ name, level, confidence, description }: PageHeaderP
       <div className="flex items-center gap-3 mb-2">
         <h1 className="text-xl font-semibold text-foreground">{name}</h1>
         <span className={cn(
-          'inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full capitalize',
+          'inline-flex items-center text-sm font-semibold px-2 py-0.5 rounded-full capitalize',
           LEVEL_COLORS[level]
         )}>
           {level}
         </span>
-        <span className="text-xs text-muted-foreground font-mono">
+        <span className="text-sm text-muted-foreground font-mono">
           confidence {Math.round(confidence * 100)}%
         </span>
       </div>
-      <p className="text-sm text-muted-foreground max-w-prose">{description}</p>
+      <p className="text-base text-muted-foreground max-w-prose">{description}</p>
     </div>
   )
 }

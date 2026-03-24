@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils"
 // Density:  genome/rules/data-density.rule.md — value scannable at a glance
 //
 // INVARIANTS:
-//   Label: text-xs font-semibold uppercase tracking-wide text-muted-foreground
+//   Label: text-sm (12px) font-semibold uppercase tracking-wide text-muted-foreground
 //   Value: text-2xl font-semibold tabular-nums leading-none
 //   Max 4 StatCards per row.
 //
@@ -60,14 +60,14 @@ export function StatCard({
         className
       )}
     >
-      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+      <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
         {label}
       </p>
       <p className={cn("text-2xl font-semibold tabular-nums leading-none", v.valueClass)}>
         {value}
       </p>
       {subtitle && (
-        <p className={cn("text-xs leading-tight", v.subtitleClass)}>
+        <p className={cn("text-sm leading-tight", v.subtitleClass)}>
           {subtitle}
         </p>
       )}

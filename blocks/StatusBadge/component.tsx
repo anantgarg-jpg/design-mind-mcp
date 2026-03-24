@@ -121,7 +121,7 @@ export function StatusBadge({ status, size = "md", className }: StatusBadgeProps
         `For CareGap open state use "care_gap_open", not "open".`
       )
     }
-    return <span className="text-xs text-muted-foreground">—</span>
+    return <span className="text-sm text-muted-foreground">—</span>
   }
 
   return (
@@ -129,8 +129,11 @@ export function StatusBadge({ status, size = "md", className }: StatusBadgeProps
       role="status"
       aria-label={config.label}
       className={cn(
-        "inline-flex items-center font-medium rounded-full",
-        size === "sm" ? "px-2 py-0.5 text-xs" : "px-2.5 py-0.5 text-xs",
+        "inline-flex items-center rounded-full",
+        // Spacing: py-0.5 (2px) vertical, px-2 (8px) horizontal for both sizes
+        "px-2 py-0.5",
+        // Typography: md = body-default (text-base/14px), sm = body-small (text-sm/12px)
+        size === "sm" ? "text-sm font-semibold" : "text-base font-semibold",
         config.classes,
         className
       )}

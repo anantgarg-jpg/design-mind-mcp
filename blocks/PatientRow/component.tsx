@@ -17,7 +17,7 @@ import { ChevronRight } from "lucide-react"
 //   flex items-center gap-3 px-4 py-3.5
 //   border-b border-border/40 last:border-0 bg-card hover:bg-muted/50
 //   border-l-2: warning for overdue, accent for active, transparent for neutral
-//   Primary action: Button variant="outline" or "default" size="sm" h-7 text-xs
+//   Primary action: Button variant="outline" or "default" size="sm" h-7 text-sm
 //   Risk score: tabular-nums for column alignment across rows
 
 type RiskTier = "high" | "medium" | "low"
@@ -83,14 +83,14 @@ export function PatientRow({
 
   return (
     <div className={cn(
-      "flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 transition-colors cursor-default group",
+      "flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors cursor-default group",
       // Overdue left border accent — amber per meta.yaml key_rules
       isOverdue  ? "border-l-2 border-warning" : "border-l-2 border-transparent",
       className
     )}>
       {/* Avatar */}
       <div className={cn(
-        "w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0",
+        "w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0",
         INITIALS_COLORS[colorIdx]
       )}>
         {initials}
@@ -98,21 +98,21 @@ export function PatientRow({
 
       {/* Name + condition */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-foreground leading-tight">{name}</p>
-        <p className="text-xs text-muted-foreground mt-0.5 truncate">{displayCondition}</p>
+        <p className="text-base font-semibold text-foreground leading-tight">{name}</p>
+        <p className="text-sm text-muted-foreground mt-1 truncate">{displayCondition}</p>
       </div>
 
       {/* Risk score — tabular-nums for column alignment */}
       <div className="flex items-center gap-1 w-16 flex-shrink-0">
-        <span className={cn("text-sm tabular-nums", risk.className)}>{riskScore}</span>
-        {riskTrend === "up"   && <span className="text-destructive text-xs" aria-label="trending up">↑</span>}
-        {riskTrend === "down" && <span className="text-success text-xs"     aria-label="trending down">↓</span>}
+        <span className={cn("text-base tabular-nums", risk.className)}>{riskScore}</span>
+        {riskTrend === "up"   && <span className="text-destructive text-sm" aria-label="trending up">↑</span>}
+        {riskTrend === "down" && <span className="text-success text-sm"     aria-label="trending down">↓</span>}
       </div>
 
       {/* Band */}
       <div className="flex items-center gap-1.5 w-20 flex-shrink-0">
         <span className={cn("w-2 h-2 rounded-full flex-shrink-0", risk.dot)} aria-hidden="true" />
-        <span className="text-xs text-muted-foreground">Band {band}</span>
+        <span className="text-sm text-muted-foreground">Band {band}</span>
       </div>
 
       {/* Primary action — label must be context-specific, never generic "View" */}
@@ -121,7 +121,7 @@ export function PatientRow({
           size="sm"
           variant={primaryActionVariant}
           onClick={onPrimaryAction}
-          className="h-7 text-xs"
+          className="h-7 text-sm"
         >
           {primaryAction}
         </Button>

@@ -85,8 +85,8 @@ export default function App() {
       <aside className="w-56 flex-shrink-0 bg-card border-r border-border flex flex-col overflow-y-auto">
         {/* Logo / title */}
         <div className="px-4 py-4 border-b border-border">
-          <p className="text-xs font-semibold text-foreground tracking-wide">Design Mind</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Block Showcase</p>
+          <p className="text-sm font-semibold text-foreground tracking-wide">Design Mind</p>
+          <p className="text-sm text-muted-foreground mt-0.5">Block Showcase</p>
         </div>
 
         {/* Nav groups */}
@@ -95,7 +95,7 @@ export default function App() {
             const groupBlocks = BLOCKS.filter((b) => b.level === group.level)
             return (
               <div key={group.label} className="mb-4">
-                <p className="px-4 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                <p className="px-4 py-1.5 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
                   {group.label}
                 </p>
                 {groupBlocks.map((block) => (
@@ -103,9 +103,9 @@ export default function App() {
                     key={block.id}
                     onClick={() => setSelected(block.id)}
                     className={cn(
-                      'w-full text-left px-4 py-1.5 text-sm transition-colors flex items-center gap-1.5',
+                      'w-full text-left px-4 py-1.5 text-base transition-colors flex items-center gap-1.5',
                       selected === block.id
-                        ? 'bg-primary/10 text-primary font-medium'
+                        ? 'bg-primary/10 text-primary font-semibold'
                         : block.shell
                         ? 'text-muted-foreground hover:bg-muted hover:text-foreground'
                         : 'text-foreground hover:bg-muted'
@@ -114,7 +114,7 @@ export default function App() {
                     {block.shell && (
                       <span className="text-muted-foreground" aria-hidden="true">·</span>
                     )}
-                    <span className={cn(block.shell && 'text-muted-foreground text-xs')}>
+                    <span className={cn(block.shell && 'text-muted-foreground text-sm')}>
                       {block.label}
                     </span>
                   </button>

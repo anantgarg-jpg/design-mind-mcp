@@ -49,14 +49,14 @@ export function StatusBadgePage() {
         <Fixture label="Size comparison — md vs sm">
           <div className="flex flex-wrap items-center gap-4">
             <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground w-4">md</span>
+              <span className="text-sm text-muted-foreground w-4">md</span>
               <StatusBadge status="in_progress" size="md" />
               <StatusBadge status="critical" size="md" />
               <StatusBadge status="active" size="md" />
             </div>
             <div className="w-px h-4 bg-border" />
             <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground w-4">sm</span>
+              <span className="text-sm text-muted-foreground w-4">sm</span>
               <StatusBadge status="in_progress" size="sm" />
               <StatusBadge status="critical" size="sm" />
               <StatusBadge status="active" size="sm" />

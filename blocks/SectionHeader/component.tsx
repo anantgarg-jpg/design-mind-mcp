@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils"
 // Taste:    genome/taste.md — hierarchy through typography, not decoration
 //
 // INVARIANTS (never change):
-//   text-xs font-semibold uppercase tracking-wider text-muted-foreground
+//   text-sm (12px) font-semibold uppercase tracking-wider text-muted-foreground
 //   Never bold or large — must recede visually, not dominate.
 //   Count urgent/warning variants only when the count itself signals urgency.
 
@@ -41,12 +41,12 @@ export function SectionHeader({
       )}
     >
       <div className="flex items-center gap-2">
-        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+        <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
           {title}
         </span>
         {/* count !== undefined: renders 0 (hard-constraint rule 10 — 0 is not blank) */}
         {count !== undefined && (
-          <span className={cn("text-xs tabular-nums", countClass)}>
+          <span className={cn("text-sm tabular-nums", countClass)}>
             {count}
           </span>
         )}

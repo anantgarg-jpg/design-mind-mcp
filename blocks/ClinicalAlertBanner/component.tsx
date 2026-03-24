@@ -142,7 +142,7 @@ export function ClinicalAlertBanner({
       )}
     >
       <Icon
-        className={cn("h-5 w-5 flex-shrink-0 mt-0.5", config.iconClass)}
+        className={cn("h-5 w-5 flex-shrink-0 mt-1", config.iconClass)}
         aria-hidden="true"
       />
 
@@ -151,21 +151,21 @@ export function ClinicalAlertBanner({
           <div>
             {/* Patient name in "Last, First" format — hard-constraint rule 7 */}
             {patientName && (
-              <p className={cn("text-xs font-medium mb-0.5", config.bodyClass)}>
+              <p className={cn("text-sm font-semibold mb-1", config.bodyClass)}>
                 {patientName}
               </p>
             )}
-            <p className={cn("text-sm font-semibold", config.titleClass)}>
+            <p className={cn("text-base font-semibold", config.titleClass)}>
               {title}
             </p>
             {body && (
-              <p className={cn("text-sm mt-1", config.bodyClass)}>
+              <p className={cn("text-base mt-1", config.bodyClass)}>
                 {body}
               </p>
             )}
             {/* Absolute timestamp required — hard-constraint rule 11 */}
             {triggeredAt && (
-              <p className={cn("text-xs mt-1.5 opacity-70", config.bodyClass)}>
+              <p className={cn("text-sm mt-1 opacity-70", config.bodyClass)}>
                 {triggeredAt}
               </p>
             )}
@@ -177,7 +177,7 @@ export function ClinicalAlertBanner({
                 variant="ghost"
                 size="sm"
                 onClick={handleEscalate}
-                className={cn("h-7 gap-1 text-xs", config.bodyClass)}
+                className={cn("h-7 gap-1 text-sm", config.bodyClass)}
               >
                 <ArrowUpRight className="h-3 w-3" aria-hidden="true" />
                 Escalate
@@ -189,7 +189,7 @@ export function ClinicalAlertBanner({
                 variant="outline"
                 size="sm"
                 onClick={handleAcknowledge}
-                className="h-7 text-xs bg-card"
+                className="h-7 text-sm bg-card"
               >
                 Acknowledge
               </Button>

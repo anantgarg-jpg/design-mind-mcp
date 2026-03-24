@@ -177,22 +177,22 @@ Font: DM Sans via --font-sans (root). Mono: DM Mono via --font-mono.
 
   CATEGORY     VARIANT    CLASS                          SIZE   WEIGHT      LH    WHEN
   ───────────  ─────────  ─────────────────────────────  ─────  ──────────  ────  ──────────────────────────────
-  title        default    text-base font-bold            16px   700         24px  Card titles, dialog titles
-  title        medium     text-xl font-semibold          20px   600         32px  Section titles within artifacts
+  title        default    text-lg font-bold              16px   700         24px  Card titles, dialog titles
+  title        medium     text-xl font-semibold          20px   500         32px  Section titles within artifacts
   title        large      text-[28px] font-normal        28px   400         40px  Page/artifact titles
-  title        x-large    text-[32px] font-semibold      32px   600         48px  Stat values, hero metrics
+  title        x-large    text-[32px] font-semibold      32px   500         48px  Stat values, hero metrics
   title        xx-large   text-[40px] font-normal        40px   400         48px  Display, large hero metrics
-  body         default    text-sm font-normal            14px   400/600/700 20px  Default body text
-  body         large      text-base font-normal          16px   400/600     24px  Large body text, emphasis
-  body         small      text-xs font-semibold          12px   600/700     16px  Meta text, timestamps, hints
-  subheading   default    text-xs font-semibold          12px   600         24px  Section headers
-  link         default    text-sm font-normal            14px   400         20px  Inline links
-  label        default    text-sm font-semibold          14px   600         16px  Form labels, interactive labels
-  mono         default    font-mono text-xs              12px   400         16px  Unique identifiers & codes (DM Mono)
+  body         default    text-base font-normal          14px   400/500/700 20px  Default body text
+  body         large      text-lg font-normal            16px   400/500     24px  Large body text, emphasis
+  body         small      text-sm font-normal            12px   400/500     16px  Meta text, timestamps, hints
+  subheading   default    text-sm font-semibold          12px   500         24px  Section headers
+  link         default    text-base font-normal          14px   400         20px  Inline links
+  label        default    text-base font-semibold        14px   500         16px  Form labels, interactive labels
+  mono         default    font-mono text-sm              12px   400         16px  Unique identifiers & codes (DM Mono)
 
 WEIGHT RULES:
   - font-bold (700): title-default, body emphasis
-  - font-semibold (600): title-medium, title-x-large, subheading, label, body emphasis
+  - font-semibold (500): title-medium, title-x-large, subheading, label, body emphasis
   - font-normal (400): title-large, title-xx-large, body default, links
   - Never use font-thin, font-light, or font-black — insufficient contrast
     under cognitive load

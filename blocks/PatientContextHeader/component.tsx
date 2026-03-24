@@ -78,23 +78,23 @@ export function PatientContextHeader({
       <div className="flex items-center gap-6 min-w-0">
         <div>
           {/* Last, First format — hard-constraint rule 7 */}
-          <p className="text-sm font-semibold text-foreground leading-tight">
+          <p className="text-base font-semibold text-foreground leading-tight">
             {displayName}
           </p>
-          <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+          <div className="flex items-center gap-3 mt-1 flex-wrap">
             {/* "MRN" label is hard-constrained — ontology/entities.yaml identifier_label */}
-            <span className="text-xs text-muted-foreground">
-              MRN <span className="font-medium text-foreground">{displayMrn}</span>
+            <span className="text-sm text-muted-foreground">
+              MRN <span className="font-semibold text-foreground">{displayMrn}</span>
             </span>
             {/* MM/DD/YYYY format — hard-constraint rule 8 */}
-            <span className="text-xs text-muted-foreground">
-              DOB <span className="font-medium text-foreground">{displayDob}</span>
+            <span className="text-sm text-muted-foreground">
+              DOB <span className="font-semibold text-foreground">{displayDob}</span>
               {age != null && (
                 <span className="text-muted-foreground"> ({age}y)</span>
               )}
             </span>
             {primaryPayer && (
-              <span className="text-xs text-muted-foreground">{primaryPayer}</span>
+              <span className="text-sm text-muted-foreground">{primaryPayer}</span>
             )}
           </div>
         </div>
@@ -103,14 +103,14 @@ export function PatientContextHeader({
       {/* Contextual signals — right-aligned, flex-shrink-0 so identity is never truncated */}
       <div className="flex items-center gap-3 flex-shrink-0">
         {careTeamName && (
-          <span className="text-xs text-muted-foreground hidden md:block">
+          <span className="text-sm text-muted-foreground hidden md:block">
             {careTeamName}
           </span>
         )}
 
         {riskConfig && (
           <span className={cn(
-            "inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full",
+            "inline-flex items-center text-sm font-semibold px-2 py-0.5 rounded-full",
             riskConfig.classes
           )}>
             {riskConfig.label}
@@ -122,7 +122,7 @@ export function PatientContextHeader({
           <button
             onClick={onAlertClick}
             className={cn(
-              "inline-flex items-center gap-1 text-xs font-medium",
+              "inline-flex items-center gap-1 text-sm font-semibold",
               "px-2 py-0.5 rounded-full border transition-colors",
               alertIsCritical
                 ? "bg-destructive/10 text-destructive border-destructive/30 hover:bg-destructive/20"
