@@ -1978,6 +1978,10 @@ Two questions. Both must pass.
 21. Every interactive element must meet a 44×44px minimum touch
     target. This cannot be traded off for density.
 
+## Block constraints 
+
+22. When a Block composes another Block, the consuming Block must not pass className overrides that conflict with any CSS property listed in the composed Block's family_invariants. Only additive classes — positioning, sizing, spacing, and layout — are permitted on a child Block. To change an invariant property, the source Block's meta.yaml and component must be updated directly, only when the change is justified by a new design requirement.
+
 ---
 
 ## Safety — severity schema
@@ -3319,6 +3323,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { Button } from "@blocks/Button/component"
 
 // ── Genome sources ────────────────────────────────────────────────────────────
 // Block:    blocks/AlertDialog/meta.yaml
@@ -3375,19 +3380,13 @@ export function AlertDialog({
         </AlertDialogHeader>
         <AlertDialogFooter>
           {/* Rule 17: secondary button says "Close" not "Cancel" */}
-          <AlertDialogCancel className="rounded-md whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
-            Close
+          <AlertDialogCancel asChild>
+            <Button variant="outline">{/* Rule 17 */}Close</Button>
           </AlertDialogCancel>
-          <AlertDialogAction
-            onClick={onAction}
-            className={cn(
-              "rounded-md whitespace-nowrap focus-visible:outline-none focus-visible:ring-2",
-              variant === "destructive"
-                ? "bg-destructive text-destructive-foreground hover:bg-destructive/90 active:bg-destructive/85 active:scale-[0.97] focus-visible:ring-destructive/40"
-                : "focus-visible:ring-primary/40 active:scale-[0.97]",
-            )}
-          >
-            {actionLabel}
+          <AlertDialogAction asChild onClick={onAction}>
+            <Button variant={variant === "destructive" ? "destructive" : "primary"}>
+              {actionLabel}
+            </Button>
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -3994,7 +3993,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         asChild={asChild}
         className={cn(
           "rounded-md whitespace-nowrap",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1",
+          "focus-visible:outline-none focus-visible:ring-2",
           className,
         )}
         {...props}
@@ -4326,14 +4325,15 @@ embedding_hint: >
 #### component.tsx
 ```tsx
 import * as React from "react"
+import { ArrowLeft, ArrowRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
   Carousel as CarouselRoot,
   CarouselContent,
   CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
+  useCarousel,
 } from "@/components/ui/carousel"
+import { Button } from "@blocks/Button/component"
 
 // ── Genome sources ────────────────────────────────────────────────────────────
 // Block:    blocks/Carousel/meta.yaml
@@ -4342,7 +4342,7 @@ import {
 //
 // INVARIANTS (meta.yaml):
 //   Container: overflow-hidden relative
-//   Prev/Next buttons: rounded-full h-8 w-8 border shadow-sm
+//   Prev/Next buttons: outline iconOnly Button block, h-8 w-8 shadow-sm
 //   Items: gap-4 between slides
 
 interface CarouselFrameProps {
@@ -4382,21 +4382,43 @@ export function CarouselFrame({
       </CarouselContent>
 
       {/* Navigation buttons — 44px touch targets (rule 21) */}
-      <CarouselPrevious
-        className={cn(
-          "rounded-full h-8 w-8 border shadow-sm bg-background",
-          "min-w-[44px] min-h-[44px]",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        )}
-      />
-      <CarouselNext
-        className={cn(
-          "rounded-full h-8 w-8 border shadow-sm bg-background",
-          "min-w-[44px] min-h-[44px]",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        )}
-      />
+      <CarouselNavButton direction="prev" orientation={orientation} />
+      <CarouselNavButton direction="next" orientation={orientation} />
     </CarouselRoot>
+  )
+}
+
+function CarouselNavButton({
+  direction,
+  orientation,
+}: {
+  direction: "prev" | "next"
+  orientation: "horizontal" | "vertical"
+}) {
+  const { scrollPrev, scrollNext, canScrollPrev, canScrollNext } = useCarousel()
+  const isPrev = direction === "prev"
+
+  return (
+    <Button
+      variant="outline"
+      iconOnly
+      onClick={isPrev ? scrollPrev : scrollNext}
+      disabled={isPrev ? !canScrollPrev : !canScrollNext}
+      aria-label={isPrev ? "Previous slide" : "Next slide"}
+      className={cn(
+        "absolute h-8 w-8 shadow-sm bg-background",
+        "min-w-[44px] min-h-[44px]",
+        orientation === "horizontal"
+          ? isPrev
+            ? "-left-12 top-1/2 -translate-y-1/2"
+            : "-right-12 top-1/2 -translate-y-1/2"
+          : isPrev
+            ? "-top-12 left-1/2 -translate-x-1/2 rotate-90"
+            : "-bottom-12 left-1/2 -translate-x-1/2 rotate-90"
+      )}
+    >
+      {isPrev ? <ArrowLeft className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}
+    </Button>
   )
 }
 
@@ -4453,6 +4475,7 @@ embedding_hint: >
 ```tsx
 import * as React from "react"
 import { cn } from "@/lib/utils"
+import { Card } from "@blocks/Card/component"
 import {
   ChartConfig,
   ChartContainer,
@@ -4468,7 +4491,7 @@ import {
 // Safety:   safety/hard-constraints.md rules 19, 20
 //
 // INVARIANTS (meta.yaml):
-//   Container: rounded-lg border border-border/40 bg-card p-4 shadow-sm
+//   Container: Card block with elevation prop — no local card styling
 //   Labels/axes: text-sm text-muted-foreground
 //   Responsive width via ChartContainer
 
@@ -4479,6 +4502,8 @@ interface ChartFrameProps {
   description?: string
   /** Recharts chart config mapping series keys to labels and colors */
   config: ChartConfig
+  /** Shadow elevation */
+  elevation?: "flat" | "sm" | "md"
   /** Chart height in pixels */
   height?: number
   /** Recharts chart elements (e.g., BarChart, LineChart with children) */
@@ -4490,17 +4515,13 @@ export function ChartFrame({
   title,
   description,
   config,
+  elevation = "flat",
   height = 300,
   children,
   className,
 }: ChartFrameProps) {
   return (
-    <div
-      className={cn(
-        "rounded-lg border border-border/40 bg-card p-4 shadow-sm",
-        className
-      )}
-    >
+    <Card elevation={elevation} className={className}>
       {(title || description) && (
         <div className="mb-4 flex flex-col gap-1">
           {title && (
@@ -4515,7 +4536,7 @@ export function ChartFrame({
       <ChartContainer config={config} className="w-full" style={{ height }}>
         {children}
       </ChartContainer>
-    </div>
+    </Card>
   )
 }
 
@@ -4863,7 +4884,7 @@ embedding_hint: >
 import * as React from "react"
 import { Check, ChevronsUpDown, X } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import { Button } from "@blocks/Button/component"
 import {
   Command,
   CommandEmpty,
@@ -4928,8 +4949,7 @@ export function Combobox({
           aria-expanded={open}
           disabled={disabled}
           className={cn(
-            "h-9 w-full justify-between rounded-md border border-input px-3 text-sm font-normal",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+            "h-9 w-full justify-between border border-input px-3 text-sm font-normal",
             !value && "text-muted-foreground",
             hasError && "border-destructive",
             className
@@ -5573,7 +5593,7 @@ import * as React from "react"
 import { format } from "date-fns"
 import { CalendarIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import { Button } from "@blocks/Button/component"
 import { Calendar } from "@/components/ui/calendar"
 import {
   Popover,
@@ -5621,8 +5641,7 @@ export function DatePicker({
           variant="outline"
           disabled={disabled}
           className={cn(
-            "h-9 w-full justify-start rounded-md border border-input px-3 text-sm font-normal",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+            "h-9 w-full justify-start border border-input px-3 text-sm font-normal",
             !value && "text-muted-foreground",
             hasError && "border-destructive",
             className
@@ -5721,6 +5740,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog"
 import { X } from "lucide-react"
+import { Button } from "@blocks/Button/component"
 
 // -- Genome sources -----------------------------------------------------------
 // Block:    blocks/Dialog/meta.yaml
@@ -5767,15 +5787,16 @@ export function DialogBlock({
         )}
       >
         {/* Close button — always present (invariant) */}
-        <DialogClose
-          className={cn(
-            "absolute right-4 top-4 rounded-md p-1",
-            "text-muted-foreground hover:text-foreground",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-          )}
-        >
-          <X className="h-4 w-4" />
-          <span className="sr-only">Close</span>
+        <DialogClose asChild>
+          <Button
+            variant="transparent"
+            iconOnly
+            size="sm"
+            className="absolute right-4 top-4 text-muted-foreground hover:text-foreground"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </Button>
         </DialogClose>
 
         <DialogHeader>
@@ -6175,6 +6196,7 @@ embedding_hint: >
 ```tsx
 import { cn } from "@/lib/utils"
 import { AlertOctagon } from "lucide-react"
+import { Button } from "@blocks/Button/component"
 
 // ── Genome sources ────────────────────────────────────────────────────────────
 // Block:    blocks/EntityContextHeader/meta.yaml
@@ -6294,7 +6316,10 @@ export function EntityContextHeader({
 
         {/* Alert indicator — links to AlertBanner stack */}
         {hasAlerts && (
-          <button
+          <Button
+            variant="transparent"
+            size="sm"
+            leftIcon={<AlertOctagon className="h-3 w-3" aria-hidden="true" />}
             onClick={onAlertClick}
             className={cn(
               "inline-flex items-center gap-1 text-sm font-semibold",
@@ -6305,9 +6330,8 @@ export function EntityContextHeader({
             )}
             aria-label={`${alertCount} active alert${alertCount! > 1 ? "s" : ""}`}
           >
-            <AlertOctagon className="h-3 w-3" aria-hidden="true" />
             {alertCount} Alert{alertCount! > 1 ? "s" : ""}
-          </button>
+          </Button>
         )}
       </div>
     </div>
@@ -8956,6 +8980,8 @@ variants:
   success: success green — positive outcomes
 
 key_rules:
+  - uses Card block as container — elevation controlled via elevation prop
+  - "elevation: flat (default) on white surfaces, sm on bg-muted/bg-background grey surfaces, md for onboarding/expressive"
   - value always uses tabular-nums for alignment
   - label always uppercase tracking-wide (wayfinding, not a headline)
   - max 4 StatCards in a single row for readability
@@ -8979,6 +9005,7 @@ embedding_hint: >
 #### component.tsx
 ```tsx
 import { cn } from "@/lib/utils"
+import { Card } from "@blocks/Card/component"
 
 // ── Genome sources ────────────────────────────────────────────────────────────
 // Block:    blocks/StatCard/meta.yaml
@@ -8990,6 +9017,8 @@ import { cn } from "@/lib/utils"
 //   Label: text-sm (12px) font-semibold uppercase tracking-wide text-muted-foreground
 //   Value: text-2xl font-semibold tabular-nums leading-none
 //   Max 4 StatCards per row.
+//
+// Container: Card block with elevation prop — no local card styling.
 //
 // Variant tokens map to semantic colors — never use Tailwind default colors.
 //   urgent  → --destructive (Critical severity / highest-stakes data)
@@ -9012,6 +9041,7 @@ interface StatCardProps {
   // subtitle: supporting context — shown only when it adds meaning to the value
   subtitle?: string
   variant?: StatVariant
+  elevation?: "flat" | "sm" | "md"
   // onClick: makes the entire card interactive; hover state activates automatically
   onClick?: () => void
   className?: string
@@ -9022,36 +9052,32 @@ export function StatCard({
   value,
   subtitle,
   variant = "default",
+  elevation = "flat",
   onClick,
   className,
 }: StatCardProps) {
   const v = VARIANT_CONFIG[variant]
 
   return (
-    <div
-      role={onClick ? "button" : undefined}
-      tabIndex={onClick ? 0 : undefined}
+    <Card
+      elevation={elevation}
       onClick={onClick}
-      onKeyDown={onClick ? (e) => e.key === "Enter" && onClick() : undefined}
-      className={cn(
-        "flex flex-col gap-1 p-4 bg-card rounded-lg border border-border/40 shadow-sm",
-        "transition-colors",
-        onClick && "cursor-pointer hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        className
-      )}
+      className={className}
     >
-      <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-        {label}
-      </p>
-      <p className={cn("text-2xl font-semibold tabular-nums leading-none", v.valueClass)}>
-        {value}
-      </p>
-      {subtitle && (
-        <p className={cn("text-sm leading-tight", v.subtitleClass)}>
-          {subtitle}
+      <div className="flex flex-col gap-1">
+        <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+          {label}
         </p>
-      )}
-    </div>
+        <p className={cn("text-2xl font-semibold tabular-nums leading-none", v.valueClass)}>
+          {value}
+        </p>
+        {subtitle && (
+          <p className={cn("text-sm leading-tight", v.subtitleClass)}>
+            {subtitle}
+          </p>
+        )}
+      </div>
+    </Card>
   )
 }
 ```
