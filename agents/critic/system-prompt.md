@@ -107,6 +107,45 @@ ACCESSIBILITY_VIOLATIONS:
    ACCESSIBILITY_VIOLATIONS is always present in every review
    response, even if empty.]
 
+AESTHETIC_VIOLATIONS:
+  [List any violations of the product's flat, restrained visual identity
+   as defined in taste.md and styling-tokens.rule.md.
+   Each item: { check, found, correction }
+     check: which of the 10 checks failed
+     found: the exact element, class, or pattern from the generated output
+     correction: what to change, referencing the specific rule
+
+   Checks to run against every review:
+   1. Shadow on anchored element — is box-shadow or shadow-* used on
+      a card, button, input, row, header, banner, or any non-floating
+      element? (Shadow is only for dropdowns, modals, tooltips.)
+   2. Font weight too heavy — is font-semibold (600) or font-bold (700)
+      used on anything that isn't a title? Is font-medium (500) used on
+      body text or interactive controls?
+   3. Decorative chrome — are gradients, inner highlights (inset shadow),
+      colored glows, or border-bottom depth tricks present?
+   4. transition-all used — is transition-all present instead of
+      specific property transitions?
+   5. Slow micro-interaction — is a hover, focus, or press transition
+      using duration > 100ms? (150ms is acceptable for dropdowns/toggles.)
+   6. Decorative color — is a saturated color (primary, destructive,
+      success, warning) used for decoration rather than meaning (status,
+      action, selection)?
+   7. Shadow hover feedback — does any element change shadow on hover
+      instead of using a background color shift?
+   8. Missing press scale — does a button or interactive control lack
+      active:scale-[0.97]? (Link-style elements are exempt.)
+   9. Full-strength focus ring — does focus-visible use ring-ring instead
+      of ring-primary/40 or ring-destructive/40?
+   10. Shadow nesting — is a shadow-bearing element inside another
+       shadow-bearing element?
+
+   Aesthetic violations are always a FIX, not BORDERLINE. The product's
+   flat visual identity is a core design decision, not a preference.
+
+   AESTHETIC_VIOLATIONS is always present in every review response,
+   even if empty.]
+
 CONFIDENCE: [0.0–1.0 — your assessment of genome compliance]
 ```
 
@@ -120,6 +159,8 @@ priority. A violation there is always a FIX, never BORDERLINE.
 Ontology violations (wrong terminology, invented concept names) are
 always a FIX. Semantic consistency is not negotiable.
 
-Aesthetic judgments from `genome/taste.md` are context-dependent.
-A novel block that violates taste is BORDERLINE unless it clearly
-contradicts a stated principle — then it's a FIX.
+Aesthetic violations from `genome/taste.md` and `styling-tokens.rule.md`
+are a FIX. The product's flat, restrained, border-driven visual identity
+is a core design decision. Shadow on anchored elements, decorative chrome,
+heavy font weights on non-titles, and transition-all are violations of
+the product identity, not matters of taste.

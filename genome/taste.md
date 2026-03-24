@@ -5,6 +5,19 @@
 
 ---
 
+## Visual Identity
+
+The product's visual character is flat, restrained, and border-driven. Surfaces are defined by background contrast and thin borders, not shadows or elevation. The UI is quiet at rest — neutral colors, light type weights, minimal chrome — and only gains saturation or visual weight when communicating meaning. This restraint is deliberate: in a clinical tool used hundreds of times a day, every pixel of visual noise competes with the data that matters.
+
+**The principles:**
+
+- **Flat by default.** Shadows exist only for elements that genuinely float above the page — dropdowns, modals, tooltips, popovers. Everything anchored to the page (cards, buttons, inputs, rows, headers, banners) uses borders or background color shifts for separation. No element earns a shadow just by being a container.
+- **Borders over shadows.** A 1px border in `border-border` communicates "this is a region" without adding visual weight. When even a border feels heavy, use a background contrast shift (e.g., `bg-card` on `bg-background`). Reserve visible borders for edges that need structural definition.
+- **No decorative chrome.** No gradients, inner highlights, colored glows, or inset shadows. No border-bottom tricks to simulate depth. If an element looks "designed," it's probably over-styled. The interface should feel engineered.
+- **Color enters with purpose.** The resting UI is almost entirely neutral. Saturated color appears only when it carries meaning: status indicators, active/selected states, primary actions, destructive intent, or semantic feedback. Color used decoratively dilutes the meaning of color used semantically.
+
+---
+
 ## Design Dials
 
 Three dials govern the character of every interface. The baselines below are the default for all generations — do not deviate without reason. If the user asks for more creativity, more exploration, or something that feels fresh, turn the dials up. If they feel the output is too different from the current interface or too experimental, dial it back. Otherwise, hold the baselines.
@@ -67,8 +80,11 @@ When the dials conflict with each other, **density wins** — the amount of info
 
 How text is set determines whether a screen feels considered or careless. Typography isn't the only tool — but it's the one that fails loudest when neglected.
 
-- **Hierarchy is the work.** Size, weight, and spacing contrasts should carry much of the visual structure. If you're reaching for borders, background fills, or dividers to create separation, check whether the type hierarchy could do the job first.
-- **Two weights can do what five colors can't.** A semibold heading against a regular-weight body creates instant scanability. Overusing color for emphasis is a sign that the typographic hierarchy is underbuilt.
+- **Weight hierarchy is strict.** Three weights, three roles — no exceptions:
+  - **Regular (400)** — the workhorse. Body text, interactive controls (buttons, inputs, selects, toggles), table cells, list content, descriptions, helper text. This is the default weight for the entire UI.
+  - **Medium (500)** — structural emphasis. Section headings, column headers, active navigation items, form labels, stat labels. Used to create scannable landmarks within a page without shouting.
+  - **Semibold (600)** — rare, high-level titles only. Page titles, dialog titles, card titles when the card is the primary content. If you're reaching for semibold on anything that isn't a title, reconsider — size and color contrast should do the job instead.
+- **Hierarchy comes from size and color, not weight stacking.** A regular-weight label in `text-muted-foreground` at 12px against a regular-weight value in `text-foreground` at 14px creates clear hierarchy without touching font-weight. Resist the urge to make things bolder — make them bigger, darker, or lighter instead.
 - **Numbers earn emphasis contextually.** When numbers are the primary content — metrics, totals, scores — give them tabular figures, proper alignment, and breathing room. When they're supporting detail alongside text, they don't need special treatment. Let the screen's purpose decide.
 - **Use the defined text styles.** Typefaces and text styles are predefined in the design tokens. Use those — don't pick new typefaces or invent custom styles. The consistency of the system depends on every screen drawing from the same typographic palette.
 
@@ -78,8 +94,9 @@ How text is set determines whether a screen feels considered or careless. Typogr
 
 Color is a language. Every hue in the interface is a word — use too many and the sentence is noise. Color tokens are defined both semantically and as raw values — use only those. Do not introduce colors outside the token system.
 
-- **Neutral at rest, saturated with intent.** The base UI should live in a restrained palette — considered neutrals, subtle surface shifts for depth. Saturated color enters only when it carries meaning: status, interaction, emphasis.
-- **Surfaces create depth.** Use the existing card styles and shadow utilities from shadcn/Tailwind to establish spatial relationships between content layers. A flat card, a bordered card, and an elevated card each communicate something different about the content's relationship to its surroundings.
+- **Neutral at rest, saturated with intent.** The base UI lives in a restrained neutral palette — whites, light greys, subtle borders. Saturated color enters only when it carries meaning: status, interaction state, primary actions, destructive intent. A screen at rest should be almost entirely monochromatic.
+- **Surfaces separate through contrast, not elevation.** Use background color differences (`bg-card` on `bg-background`, `bg-muted` for inset regions) and thin borders to define content regions. Do not use shadows to separate anchored surfaces — shadows are reserved for floating layers only.
+- **State changes through opacity.** Hover, selected, and active states use background opacity shifts on the base color (`foreground/[0.04]` for hover, `foreground/[0.08]` for active, `primary/10` for selected). This keeps state feedback subtle and consistent across every element without introducing new colors.
 - **Stay within the token system.** Semantic tokens (background, foreground, muted, accent, destructive, etc.) exist for a reason — they encode meaning that raw hex values don't. Using tokens consistently is how the interface stays coherent across dozens of screens built at different times.
 
 ---
@@ -88,6 +105,7 @@ Color is a language. Every hue in the interface is a word — use too many and t
 
 Whitespace isn't the absence of design. It's the most powerful structural element available.
 
+- **Compact but not cramped.** Padding is efficient — elements don't waste space — but never so tight that content feels compressed or hard to parse. When in doubt, add breathing room. A few extra pixels of padding cost nothing; a cluttered interface costs comprehension. The goal is "productive density," not "maximum packing."
 - **Spacing creates grouping.** Related elements sit close; unrelated elements breathe apart. If spacing is doing its job, visible dividers become redundant. The Gestalt principle of proximity is the most underused tool in interface design.
 - **Rhythm over randomness.** Consistent spacing tokens — applied religiously — create the subconscious feeling of "one system." Irregular spacing, even by 4px, registers as carelessness.
 - **Density is a choice, not an accident.** Some interfaces need to be dense — dashboards, data tables, professional tools. That's fine. Dense and organized feels calm. Dense and unstructured feels chaotic. The difference is the spatial system.
@@ -100,8 +118,10 @@ Whitespace isn't the absence of design. It's the most powerful structural elemen
 Animation is not personality. It's spatial communication.
 
 - **Transitions answer "where."** Where did this element come from? Where did it go? Where am I now? If an animation doesn't orient the user in space or state, it's decoration.
-- **Speed is a feature.** 120–200ms for micro-interactions. 200–350ms for layout shifts. Anything that makes the user wait for an animation to finish is borrowing time they didn't offer. Err on the side of too fast.
+- **Speed is a feature.** 100ms for micro-interactions (hover, focus, press feedback). 150ms for component state changes (dropdown open, toggle flip). 200–300ms for layout shifts only. Anything that makes the user wait for an animation to finish is borrowing time they didn't offer.
+- **Press feedback is physical.** Interactive elements scale down subtly on press (`scale(0.97)`) to give tactile confirmation. This replaces shadow changes or color darkening as the primary press signal. The scale is small enough to feel natural, never bouncy or exaggerated.
 - **Easing conveys physics.** Ease-out for entrances (arriving and settling), ease-in for exits (accelerating away), ease-in-out for repositions. Linear motion feels robotic. Spring physics feel alive but should be used sparingly — bounciness is a strong flavor.
+- **Transition only what changes.** Never use `transition-all`. Specify the exact properties that transition (`transition-colors`, `transition-[color,background-color,transform]`). This prevents unintended animation of properties like width, height, or padding during layout changes.
 - **No gratuitous motion.** No loading spinners designed to entertain. No success confetti. Skeleton screens are fine as loading placeholders, but they should be simple and structural — not shimmer animations performing busyness. If the system is working, the result is the reward.
 
 ---
@@ -123,7 +143,7 @@ The difference between good and great is in the details no one consciously notic
 
 - **Icon consistency.** Same stroke weight, same optical size, same style across every icon in the system. Mixing outlined and filled styles, or varying visual weight, creates subtle discord.
 - **Border radius consistency.** Radii are defined in the token system. Use them consistently — mixing values across a screen reads as indecisive, even if no one can pinpoint why.
-- **Shadows and elevation with intent.** Elevation tokens are defined in the system. Every use of a shadow should have a clear reason — distinguishing a floating element from the surface beneath it, signalling interactivity, or creating visual grouping. Arbitrary shadows are visual noise.
+- **Flatness is a craft decision.** Shadows are reserved for floating layers (dropdowns, modals, tooltips). Every other element — cards, buttons, inputs, banners, rows — relies on borders and background contrast. If you reach for a shadow on an anchored element, stop and use a border instead. The product's visual identity is flat and border-driven; shadows break that identity.
 - **Pixel-level precision.** Subpixel alignment, consistent padding, optical centering of icons within buttons. These things are invisible when right and quietly wrong when not. Sweat them.
 - **List scanability test.** In any list or table, cover the leftmost column and check: can you still read each remaining column as a vertical stripe? If column edges waver across rows, the layout fails the scanability test regardless of how individual rows look in isolation.
 
@@ -133,6 +153,7 @@ The difference between good and great is in the details no one consciously notic
 
 - **Chase trends.** No glassmorphism-of-the-year, no bouncy micro-interactions borrowed from consumer apps, no aesthetic choices driven by what's popular on Dribbble. Timelessness over trendiness.
 - **Decorate without purpose.** Every visual element — illustration, gradient, shadow, animation — must have a reason beyond "it felt empty." If it doesn't inform, orient, or clarify, it doesn't belong.
+- **Add visual weight for emphasis.** No gradients on buttons. No inner highlights on cards. No colored glows around inputs. No inset shadows on containers. If something needs emphasis, use size, color, or position — not decorative chrome.
 - **Break consistency for novelty.** One screen that looks different from the rest undermines the entire system. Coherence is more important than any individual screen looking impressive.
 - **Sacrifice clarity for aesthetics.** If a design choice makes something beautiful but harder to understand, the design choice is wrong.
 

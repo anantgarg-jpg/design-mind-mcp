@@ -34,7 +34,16 @@ SURFACES (gray "stone" and "night" semantic families):
   --popover          #FFFFFF  — dropdown and tooltip surfaces
   --border           #D4D4D4  (gray-400 / stone) — all borders and dividers
   --input            #C4C4C4  (gray-500 / stone dark) — input field borders
-  --ring             #0060D6  (blue-1000 / primary-default) — focus ring color
+  --ring             #0060D6  (blue-1000 / primary-default) — focus ring base color
+
+FOCUS RING TREATMENT:
+  Focus rings use the base --ring color at reduced opacity for a softer,
+  less intrusive appearance while remaining clearly visible:
+    - Default:      ring-primary/40  (all non-destructive elements)
+    - Destructive:  ring-destructive/40  (destructive buttons and actions)
+  Structure: focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none
+  The ring color is set per-variant, not globally, so destructive actions
+  get a red-tinted ring that matches their intent.
 
 # ── TOKEN MAP: BRAND ─────────────────────────────────────────────────────────
 
@@ -190,10 +199,18 @@ Font: DM Sans via --font-sans (root). Mono: DM Mono via --font-mono.
   label        default    text-base font-semibold        14px   500         16px  Form labels, interactive labels
   mono         default    font-mono text-sm              12px   400         16px  Unique identifiers & codes (DM Mono)
 
-WEIGHT RULES:
-  - font-bold (700): title-default, body emphasis
-  - font-semibold (500): title-medium, title-x-large, subheading, label, body emphasis
-  - font-normal (400): title-large, title-xx-large, body default, links
+WEIGHT HIERARCHY (by UI role):
+  - font-normal (400): THE DEFAULT. Body text, interactive controls (buttons,
+    inputs, selects, toggles, checkboxes), table cells, list content,
+    descriptions, helper text, links. If in doubt, use 400.
+  - font-medium (500): Structural emphasis. Section headings, column headers,
+    active navigation items, form labels, stat labels, subheadings. Creates
+    scannable landmarks without shouting.
+  - font-semibold (600): Rare — titles only. Page titles, dialog titles,
+    card titles when the card is the primary surface. If reaching for 600 on
+    anything that isn't a title, use size or color contrast instead.
+  - font-bold (700): title-default only. Almost never used outside card/dialog
+    titles at small sizes where 600 is insufficient.
   - Never use font-thin, font-light, or font-black — insufficient contrast
     under cognitive load
 
@@ -274,31 +291,44 @@ NEVER:
 
 # ── ELEVATION & SHADOWS ──────────────────────────────────────────────────────
 
-The platform uses a restrained shadow system. Clinical density demands
-that elevation is structural, not decorative. Most surfaces rely on
-borders, not shadows, for visual separation.
+FLAT BY DEFAULT. The product's visual identity is flat and border-driven.
+Shadows exist only for elements that genuinely float above the page.
+Everything anchored to the page uses borders or background contrast
+for separation — never shadows.
 
   LEVEL         CLASS               WHEN
   ────────────  ──────────────────  ────────────────────────────────────────
-  flat          (no shadow)         Rows, list items, inline elements, headers
-  card          shadow-card         Cards at rest (CareGapCard, StatCard)
-  card-hover    shadow-card-hover   Cards on hover — subtle lift
+  flat          (no shadow)         THE DEFAULT. Cards, buttons, inputs, rows,
+                                    headers, banners, list items, all controls
   dropdown      shadow-md           Dropdowns, popovers, context menus
   dialog        shadow-lg           Modals, dialogs, command palette
   tooltip       shadow-sm           Tooltips
 
-WHEN NOT TO USE SHADOWS:
-  - Rows in lists — rows use border-b, never shadow
-  - EntityContextHeader — uses border-b, no shadow
-  - AlertBanner — uses colored left border, no shadow
-  - Sidebar content — sidebar tokens handle their own surface treatment
-  - Any element inside a card — shadows are for top-level containers only
+WHAT IS ALWAYS FLAT (no shadow, no exceptions):
+  - Cards at rest — use border border-border, not shadow
+  - Buttons and interactive controls — always flat
+  - Inputs, selects, textareas — border only
+  - Rows in lists — border-b or background alternation
+  - Headers (EntityContextHeader, section headers) — border-b
+  - Alert banners — colored left border, no shadow
+  - Sidebar content — sidebar tokens handle surface treatment
+  - Any element inside a card — shadows never nest
+
+HOW TO SEPARATE WITHOUT SHADOW:
+  - Border: border border-border (1px, subtle grey) for structural edges
+  - Background contrast: bg-card on bg-background for content regions
+  - Inset background: bg-muted for nested/secondary regions
+  - Dividers: border-b border-border between stacked items
 
 NEVER:
-  - Stack shadows (a card with shadow inside a panel with shadow)
+  - Stack shadows (a floating element inside another floating element)
   - Use shadow-xl or shadow-2xl — too dramatic for clinical context
   - Add shadow to severity indicators — severity communicates via color, not depth
-  - Use box-shadow for non-elevation purposes (glow effects, highlights)
+  - Use box-shadow for non-elevation purposes (glow effects, colored glows,
+    inner highlights, inset shadows for depth simulation)
+  - Add shadow to cards, buttons, inputs, or any anchored element
+  - Use hover shadow transitions (shadow-card → shadow-card-hover) — use
+    background color shift for hover instead
 
 # ── Z-INDEX LAYERING ─────────────────────────────────────────────────────────
 
@@ -328,11 +358,18 @@ must answer: does this help the user understand what changed?
 
 DURATION SCALE:
   instant     0ms        Severity indicator state changes — NEVER animate
-  micro       100ms      Hover states, focus rings, opacity toggles
-  fast        150ms      Button press feedback, dropdown open/close
+  micro       100ms      Hover states, focus rings, press feedback, opacity toggles
+  fast        150ms      Dropdown open/close, toggle flip, component state change
   normal      200ms      Tab switch content, panel state change
   layout      300ms      Panel collapse/expand, skeleton-to-content reveal
   (no slow)              Nothing in this product takes > 300ms
+
+PRESS FEEDBACK:
+  Interactive elements use active:scale-[0.97] as the standard press signal.
+  This replaces shadow changes, color darkening, or translate-y as the
+  primary press feedback. The scale is subtle enough to feel physical
+  without being bouncy. Link-style elements (text links, breadcrumbs) do
+  NOT scale — they use opacity change only.
 
 EASING:
   ease-out              Default for entrances — element arrives and settles
@@ -341,14 +378,17 @@ EASING:
   linear                Never for UI — only for progress bars
 
 TAILWIND CLASSES:
-  transition-colors     Hover backgrounds, border changes
-  transition-opacity    Reveal on group-hover (opacity-0 group-hover:opacity-100)
-  transition-shadow     Card hover elevation (shadow-card → shadow-card-hover)
-  transition-all        Avoid — be specific about what transitions
-  duration-100          Micro interactions
-  duration-150          Default for most transitions
-  duration-200          Content swaps
-  duration-300          Layout shifts only
+  transition-colors                                        Hover backgrounds, border changes (most common)
+  transition-opacity                                       Reveal on group-hover (opacity-0 group-hover:opacity-100)
+  transition-[color,background-color,border-color,transform]  Interactive controls with press scale
+  duration-100                                             Micro interactions (hover, focus, press)
+  duration-150                                             Component state changes (dropdown, toggle)
+  duration-200                                             Content swaps
+  duration-300                                             Layout shifts only
+
+  NEVER use transition-all — it transitions width, height, padding, and
+  other layout properties unintentionally. Always specify exact properties.
+  NEVER use transition-shadow — the product does not animate shadows.
 
 WHAT TRANSITIONS:
   - Row hover background:   hover:bg-muted/60 transition-colors
@@ -400,6 +440,25 @@ ALWAYS:
   - Use shadow-card for cards, no shadow for rows
   - Use specific transition classes (transition-colors, -opacity, -shadow)
 
+# ── STATE FEEDBACK PATTERNS ──────────────────────────────────────────────────
+
+Interactive elements follow a consistent state feedback language:
+
+  STATE      TREATMENT                              EXAMPLE
+  ─────────  ─────────────────────────────────────  ──────────────────────────
+  hover      Background opacity shift               hover:bg-foreground/[0.04]
+  active     Darker bg shift + scale(0.97)          active:bg-foreground/[0.08] active:scale-[0.97]
+  focused    Soft ring at 40% opacity               focus-visible:ring-primary/40
+  selected   Primary-tinted background              bg-primary/10 or bg-accent
+  disabled   50% opacity, no pointer events          disabled:opacity-50 disabled:pointer-events-none
+
+  NEVER use shadow changes for hover feedback (no shadow-card → shadow-card-hover).
+  NEVER use translate-y for press feedback — use scale instead.
+  NEVER use color darkening as the sole press signal — always include scale.
+  NEVER use gradients, glows, or inner highlights for any state.
+
+# ── USAGE RULES ──────────────────────────────────────────────────────────────
+
 NEVER:
   - Use hardcoded hex values in component code
   - Use Tailwind default color classes (red-600, amber-100, blue-500, etc.)
@@ -408,7 +467,10 @@ NEVER:
   - Use a color that "looks like" a severity color for non-severity purposes
   - Use font-thin, font-light, or font-black
   - Use rounded-2xl or larger radius values
+  - Use shadow on anchored elements (cards, buttons, inputs, rows, headers)
   - Use shadow-xl or shadow-2xl
-  - Use transition-all when a specific property transition will do
+  - Use transition-all — specify exact properties
+  - Use transition-shadow — the product does not animate shadows
   - Use transition durations > 300ms
   - Animate severity indicators or clinical data values
+  - Use gradients, inner highlights, colored glows, or inset shadows
