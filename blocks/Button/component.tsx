@@ -68,7 +68,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         asChild={asChild}
         className={cn(
           "rounded-md whitespace-nowrap",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1",
+          "focus-visible:outline-none focus-visible:ring-2",
           className,
         )}
         {...props}

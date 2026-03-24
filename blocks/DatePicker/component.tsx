@@ -2,7 +2,7 @@ import * as React from "react"
 import { format } from "date-fns"
 import { CalendarIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import { Button } from "@blocks/Button/component"
 import { Calendar } from "@/components/ui/calendar"
 import {
   Popover,
@@ -50,8 +50,7 @@ export function DatePicker({
           variant="outline"
           disabled={disabled}
           className={cn(
-            "h-9 w-full justify-start rounded-md border border-input px-3 text-sm font-normal",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+            "h-9 w-full justify-start border border-input px-3 text-sm font-normal",
             !value && "text-muted-foreground",
             hasError && "border-destructive",
             className

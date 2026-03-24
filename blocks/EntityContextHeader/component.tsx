@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils"
 import { AlertOctagon } from "lucide-react"
+import { Button } from "@blocks/Button/component"
 
 // ── Genome sources ────────────────────────────────────────────────────────────
 // Block:    blocks/EntityContextHeader/meta.yaml
@@ -119,7 +120,10 @@ export function EntityContextHeader({
 
         {/* Alert indicator — links to AlertBanner stack */}
         {hasAlerts && (
-          <button
+          <Button
+            variant="transparent"
+            size="sm"
+            leftIcon={<AlertOctagon className="h-3 w-3" aria-hidden="true" />}
             onClick={onAlertClick}
             className={cn(
               "inline-flex items-center gap-1 text-sm font-semibold",
@@ -130,9 +134,8 @@ export function EntityContextHeader({
             )}
             aria-label={`${alertCount} active alert${alertCount! > 1 ? "s" : ""}`}
           >
-            <AlertOctagon className="h-3 w-3" aria-hidden="true" />
             {alertCount} Alert{alertCount! > 1 ? "s" : ""}
-          </button>
+          </Button>
         )}
       </div>
     </div>

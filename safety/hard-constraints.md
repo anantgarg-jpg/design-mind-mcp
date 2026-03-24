@@ -124,3 +124,7 @@
 
 21. Every interactive element must meet a 44×44px minimum touch
     target. This cannot be traded off for density.
+
+## Block constraints 
+
+22. When a Block composes another Block, the consuming Block must not pass className overrides that conflict with any CSS property listed in the composed Block's family_invariants. Only additive classes — positioning, sizing, spacing, and layout — are permitted on a child Block. To change an invariant property, the source Block's meta.yaml and component must be updated directly, only when the change is justified by a new design requirement.

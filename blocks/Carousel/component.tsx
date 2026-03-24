@@ -1,12 +1,13 @@
 import * as React from "react"
+import { ArrowLeft, ArrowRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
   Carousel as CarouselRoot,
   CarouselContent,
   CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
+  useCarousel,
 } from "@/components/ui/carousel"
+import { Button } from "@blocks/Button/component"
 
 // ── Genome sources ────────────────────────────────────────────────────────────
 // Block:    blocks/Carousel/meta.yaml
@@ -15,7 +16,7 @@ import {
 //
 // INVARIANTS (meta.yaml):
 //   Container: overflow-hidden relative
-//   Prev/Next buttons: rounded-full h-8 w-8 border shadow-sm
+//   Prev/Next buttons: outline iconOnly Button block, h-8 w-8 shadow-sm
 //   Items: gap-4 between slides
 
 interface CarouselFrameProps {
@@ -55,21 +56,43 @@ export function CarouselFrame({
       </CarouselContent>
 
       {/* Navigation buttons — 44px touch targets (rule 21) */}
-      <CarouselPrevious
-        className={cn(
-          "rounded-full h-8 w-8 border shadow-sm bg-background",
-          "min-w-[44px] min-h-[44px]",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        )}
-      />
-      <CarouselNext
-        className={cn(
-          "rounded-full h-8 w-8 border shadow-sm bg-background",
-          "min-w-[44px] min-h-[44px]",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        )}
-      />
+      <CarouselNavButton direction="prev" orientation={orientation} />
+      <CarouselNavButton direction="next" orientation={orientation} />
     </CarouselRoot>
+  )
+}
+
+function CarouselNavButton({
+  direction,
+  orientation,
+}: {
+  direction: "prev" | "next"
+  orientation: "horizontal" | "vertical"
+}) {
+  const { scrollPrev, scrollNext, canScrollPrev, canScrollNext } = useCarousel()
+  const isPrev = direction === "prev"
+
+  return (
+    <Button
+      variant="outline"
+      iconOnly
+      onClick={isPrev ? scrollPrev : scrollNext}
+      disabled={isPrev ? !canScrollPrev : !canScrollNext}
+      aria-label={isPrev ? "Previous slide" : "Next slide"}
+      className={cn(
+        "absolute h-8 w-8 shadow-sm bg-background",
+        "min-w-[44px] min-h-[44px]",
+        orientation === "horizontal"
+          ? isPrev
+            ? "-left-12 top-1/2 -translate-y-1/2"
+            : "-right-12 top-1/2 -translate-y-1/2"
+          : isPrev
+            ? "-top-12 left-1/2 -translate-x-1/2 rotate-90"
+            : "-bottom-12 left-1/2 -translate-x-1/2 rotate-90"
+      )}
+    >
+      {isPrev ? <ArrowLeft className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}
+    </Button>
   )
 }
 

@@ -10,6 +10,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { Button } from "@blocks/Button/component"
 
 // ── Genome sources ────────────────────────────────────────────────────────────
 // Block:    blocks/AlertDialog/meta.yaml
@@ -66,19 +67,13 @@ export function AlertDialog({
         </AlertDialogHeader>
         <AlertDialogFooter>
           {/* Rule 17: secondary button says "Close" not "Cancel" */}
-          <AlertDialogCancel className="rounded-md whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
-            Close
+          <AlertDialogCancel asChild>
+            <Button variant="outline">{/* Rule 17 */}Close</Button>
           </AlertDialogCancel>
-          <AlertDialogAction
-            onClick={onAction}
-            className={cn(
-              "rounded-md whitespace-nowrap focus-visible:outline-none focus-visible:ring-2",
-              variant === "destructive"
-                ? "bg-destructive text-destructive-foreground hover:bg-destructive/90 active:bg-destructive/85 active:scale-[0.97] focus-visible:ring-destructive/40"
-                : "focus-visible:ring-primary/40 active:scale-[0.97]",
-            )}
-          >
-            {actionLabel}
+          <AlertDialogAction asChild onClick={onAction}>
+            <Button variant={variant === "destructive" ? "destructive" : "primary"}>
+              {actionLabel}
+            </Button>
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

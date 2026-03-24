@@ -10,6 +10,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog"
 import { X } from "lucide-react"
+import { Button } from "@blocks/Button/component"
 
 // -- Genome sources -----------------------------------------------------------
 // Block:    blocks/Dialog/meta.yaml
@@ -56,15 +57,16 @@ export function DialogBlock({
         )}
       >
         {/* Close button — always present (invariant) */}
-        <DialogClose
-          className={cn(
-            "absolute right-4 top-4 rounded-md p-1",
-            "text-muted-foreground hover:text-foreground",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-          )}
-        >
-          <X className="h-4 w-4" />
-          <span className="sr-only">Close</span>
+        <DialogClose asChild>
+          <Button
+            variant="transparent"
+            iconOnly
+            size="sm"
+            className="absolute right-4 top-4 text-muted-foreground hover:text-foreground"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </Button>
         </DialogClose>
 
         <DialogHeader>
