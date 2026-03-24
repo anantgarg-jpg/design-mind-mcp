@@ -1,5 +1,6 @@
 import React from 'react'
 import { DropdownMenuBlock } from '@blocks/DropdownMenu/component'
+import { Button } from '@blocks/Button/component'
 import { Fixture, PageHeader } from '@/components/Fixture'
 
 export function DropdownMenuPage() {
@@ -15,7 +16,7 @@ export function DropdownMenuPage() {
       <div className="flex flex-col gap-6">
         <Fixture label="Grouped actions with labels">
           <DropdownMenuBlock
-            trigger={<button className="rounded-md border border-border px-4 py-2 text-sm">Actions</button>}
+            trigger={<Button variant="outline">Actions</Button>}
             groups={[
               {
                 label: 'Patient',
@@ -36,7 +37,7 @@ export function DropdownMenuPage() {
 
         <Fixture label="Simple flat menu">
           <DropdownMenuBlock
-            trigger={<button className="rounded-md border border-border px-4 py-2 text-sm">Options</button>}
+            trigger={<Button variant="outline">Options</Button>}
             groups={[
               {
                 items: [

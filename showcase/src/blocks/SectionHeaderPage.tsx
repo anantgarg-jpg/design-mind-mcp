@@ -1,5 +1,6 @@
 import React from 'react'
 import { SectionHeader } from '@blocks/SectionHeader/component'
+import { Button } from '@blocks/Button/component'
 import { Fixture, PageHeader } from '@/components/Fixture'
 
 export function SectionHeaderPage() {
@@ -42,9 +43,9 @@ export function SectionHeaderPage() {
             <SectionHeader
               title="COMING UP"
               action={
-                <button className="text-xs text-primary hover:underline">
+                <Button variant="link" size="sm">
                   View all
-                </button>
+                </Button>
               }
             />
           </div>

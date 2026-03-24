@@ -1,6 +1,6 @@
 import { AlertOctagon, AlertTriangle, AlertCircle, Info, X, ArrowUpRight } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import { Button } from "@blocks/Button/component"
 
 // ── Genome sources ────────────────────────────────────────────────────────────
 // Block:    blocks/AlertBanner/meta.yaml
@@ -172,12 +172,12 @@ export function AlertBanner({
           <div className="flex items-center gap-2 flex-shrink-0">
             {onEscalate && (
               <Button
-                variant="ghost"
+                variant="transparent"
                 size="sm"
                 onClick={handleEscalate}
-                className={cn("h-7 gap-1 text-sm", config.bodyClass)}
+                leftIcon={<ArrowUpRight className="h-3 w-3" aria-hidden="true" />}
+                className={config.bodyClass}
               >
-                <ArrowUpRight className="h-3 w-3" aria-hidden="true" />
                 Escalate
               </Button>
             )}
@@ -187,7 +187,7 @@ export function AlertBanner({
                 variant="outline"
                 size="sm"
                 onClick={handleAcknowledge}
-                className="h-7 text-sm bg-card"
+                className="bg-card"
               >
                 Acknowledge
               </Button>
@@ -196,10 +196,11 @@ export function AlertBanner({
             {/* Dismiss is forbidden on critical (hard-constraint rule 5) */}
             {config.canDismiss && onDismiss && (
               <Button
-                variant="ghost"
+                variant="transparent"
                 size="sm"
                 onClick={handleDismiss}
-                className={cn("h-7 w-7 p-0", config.bodyClass)}
+                iconOnly
+                className={config.bodyClass}
                 aria-label="Dismiss alert"
               >
                 <X className="h-3.5 w-3.5" />

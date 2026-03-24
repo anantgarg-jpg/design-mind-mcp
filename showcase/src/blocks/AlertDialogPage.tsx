@@ -1,5 +1,6 @@
 import React from 'react'
 import { AlertDialog } from '@blocks/AlertDialog/component'
+import { Button } from '@blocks/Button/component'
 import { Fixture, PageHeader } from '@/components/Fixture'
 
 export function AlertDialogPage() {
@@ -15,7 +16,7 @@ export function AlertDialogPage() {
       <div className="flex flex-col gap-6">
         <Fixture label="Destructive action confirmation">
           <AlertDialog
-            trigger={<button className="rounded-md border border-destructive text-destructive px-4 py-2 text-sm">Remove patient</button>}
+            trigger={<Button variant="destructive">Remove patient</Button>}
             title="This will remove the patient from your panel"
             description="The patient will be unassigned from your care team and all pending tasks will be reassigned. This action cannot be undone."
             actionLabel="Remove patient"
@@ -26,7 +27,7 @@ export function AlertDialogPage() {
 
         <Fixture label="Default confirmation">
           <AlertDialog
-            trigger={<button className="rounded-md border border-border px-4 py-2 text-sm">Archive protocol</button>}
+            trigger={<Button variant="outline">Archive protocol</Button>}
             title="This will archive the protocol"
             description="Archived protocols are hidden from the active list but can be restored at any time from the archives."
             actionLabel="Archive"

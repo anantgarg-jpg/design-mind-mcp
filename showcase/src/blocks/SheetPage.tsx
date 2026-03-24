@@ -1,5 +1,6 @@
 import React from 'react'
 import { Sheet } from '@blocks/Sheet/component'
+import { Button } from '@blocks/Button/component'
 import { Fixture, PageHeader } from '@/components/Fixture'
 
 export function SheetPage() {
@@ -17,7 +18,7 @@ export function SheetPage() {
           <Sheet
             title="Patient Details"
             description="Review and update patient information."
-            trigger={<button className="px-3 py-2 rounded-md border text-sm">Open Sheet</button>}
+            trigger={<Button variant="outline">Open Sheet</Button>}
           >
             <div className="p-4 space-y-2">
               <p className="text-sm">Sheet body content goes here.</p>
@@ -29,7 +30,7 @@ export function SheetPage() {
           <Sheet
             title="Navigation"
             side="left"
-            trigger={<button className="px-3 py-2 rounded-md border text-sm">Open Left Sheet</button>}
+            trigger={<Button variant="outline">Open Left Sheet</Button>}
           >
             <div className="p-4 space-y-2">
               <p className="text-sm">Side navigation content.</p>

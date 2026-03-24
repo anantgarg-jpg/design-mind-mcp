@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
+import { Button } from "@blocks/Button/component"
 
 // ── Genome sources ────────────────────────────────────────────────────────────
 // Block:    blocks/DataTable/meta.yaml
@@ -103,12 +103,11 @@ export function DataTable<T>({
                 >
                   {col.sortable ? (
                     <Button
-                      variant="ghost"
+                      variant="transparent"
                       size="sm"
                       onClick={() => handleSort(col.id)}
                       className={cn(
-                        "h-8 px-2 -ml-2 gap-1 font-medium",
-                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                        "-ml-2",
                         col.numeric && "ml-auto"
                       )}
                     >
@@ -168,7 +167,6 @@ export function DataTable<T>({
               size="sm"
               disabled={page <= 1}
               onClick={() => onPageChange?.(page - 1)}
-              className="h-9 min-w-[44px] min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               Previous
             </Button>
@@ -177,7 +175,6 @@ export function DataTable<T>({
               size="sm"
               disabled={page >= pageCount}
               onClick={() => onPageChange?.(page + 1)}
-              className="h-9 min-w-[44px] min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               Next
             </Button>

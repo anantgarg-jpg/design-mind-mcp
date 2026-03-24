@@ -40,43 +40,49 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   className?: string
 }
 
-export function Button({
-  variant = "primary",
-  size = "default",
-  leftIcon,
-  rightIcon,
-  iconOnly = false,
-  asChild = false,
-  className,
-  children,
-  ...props
-}: ButtonProps) {
-  const shadcnVariant = VARIANT_MAP[variant]
-  const shadcnSize = iconOnly
-    ? size === "sm" ? "icon-sm" : size === "lg" ? "icon-lg" : "icon"
-    : size
+export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  function Button(
+    {
+      variant = "primary",
+      size = "default",
+      leftIcon,
+      rightIcon,
+      iconOnly = false,
+      asChild = false,
+      className,
+      children,
+      ...props
+    },
+    ref,
+  ) {
+    const shadcnVariant = VARIANT_MAP[variant]
+    const shadcnSize = iconOnly
+      ? size === "sm" ? "icon-sm" : size === "lg" ? "icon-lg" : "icon"
+      : size
 
-  return (
-    <ShadcnButton
-      variant={shadcnVariant as any}
-      size={shadcnSize as any}
-      asChild={asChild}
-      className={cn(
-        "rounded-md whitespace-nowrap",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1",
-        className,
-      )}
-      {...props}
-    >
-      {iconOnly ? (
-        children
-      ) : (
-        <>
-          {leftIcon}
-          {children}
-          {rightIcon}
-        </>
-      )}
-    </ShadcnButton>
-  )
-}
+    return (
+      <ShadcnButton
+        ref={ref}
+        variant={shadcnVariant as any}
+        size={shadcnSize as any}
+        asChild={asChild}
+        className={cn(
+          "rounded-md whitespace-nowrap",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1",
+          className,
+        )}
+        {...props}
+      >
+        {iconOnly ? (
+          children
+        ) : (
+          <>
+            {leftIcon}
+            {children}
+            {rightIcon}
+          </>
+        )}
+      </ShadcnButton>
+    )
+  },
+)

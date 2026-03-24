@@ -1,5 +1,6 @@
 import React from 'react'
 import { Collapsible } from '@blocks/Collapsible/component'
+import { Button } from '@blocks/Button/component'
 import { Fixture, PageHeader } from '@/components/Fixture'
 
 export function CollapsiblePage() {
@@ -16,9 +17,9 @@ export function CollapsiblePage() {
         <Fixture label="Default collapsed">
           <Collapsible
             trigger={
-              <button className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-semibold hover:bg-accent">
+              <Button variant="outline">
                 Show additional details
-              </button>
+              </Button>
             }
           >
             <div className="mt-2 rounded-md border border-border p-3 text-sm text-muted-foreground">
@@ -31,9 +32,9 @@ export function CollapsiblePage() {
           <Collapsible
             defaultOpen
             trigger={
-              <button className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-semibold hover:bg-accent">
+              <Button variant="outline">
                 Toggle notes section
-              </button>
+              </Button>
             }
           >
             <div className="mt-2 rounded-md border border-border p-3 text-sm text-muted-foreground">

@@ -9,7 +9,6 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
 import { X } from "lucide-react"
 
 // -- Genome sources -----------------------------------------------------------
@@ -61,7 +60,7 @@ export function DialogBlock({
           className={cn(
             "absolute right-4 top-4 rounded-md p-1",
             "text-muted-foreground hover:text-foreground",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           )}
         >
           <X className="h-4 w-4" />

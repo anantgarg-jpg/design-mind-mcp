@@ -9,7 +9,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
-import { Button } from "@/components/ui/button"
+import { Button } from "@blocks/Button/component"
 import { UseFormReturn, FieldValues } from "react-hook-form"
 
 // ── Genome sources ────────────────────────────────────────────────────────────
@@ -57,11 +57,8 @@ export function FormLayout<T extends FieldValues>({
         <div className="flex items-center gap-3 border-t pt-4 mt-4">
           <Button
             type="submit"
+            variant="primary"
             disabled={!form.formState.isValid || isSubmitting}
-            className={cn(
-              "min-h-[44px] px-4 whitespace-nowrap",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            )}
           >
             {isSubmitting ? "Submitting..." : submitLabel}
           </Button>

@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import { Button } from "@blocks/Button/component"
 import { ChevronRight } from "lucide-react"
 
 // ── Genome sources ────────────────────────────────────────────────────────────
@@ -49,7 +49,7 @@ interface EntityRowProps {
   band: BandLevel
   // Context-specific label (not generic "View")
   primaryAction: string
-  primaryActionVariant?: "default" | "outline"
+  primaryActionVariant?: "primary" | "outline"
   isOverdue?: boolean
   onPrimaryAction?: () => void
   onExpand?: () => void
@@ -65,7 +65,7 @@ export function EntityRow({
   tier,
   band,
   primaryAction,
-  primaryActionVariant = "default",
+  primaryActionVariant = "primary",
   isOverdue,
   onPrimaryAction,
   onExpand,
@@ -120,7 +120,6 @@ export function EntityRow({
             size="sm"
             variant={primaryActionVariant}
             onClick={onPrimaryAction}
-            className="h-7 text-sm whitespace-nowrap"
           >
             {primaryAction}
           </Button>
@@ -130,10 +129,11 @@ export function EntityRow({
       {/* Expand — visible on hover only */}
       {onExpand && (
         <Button
-          variant="ghost"
+          variant="transparent"
           size="sm"
+          iconOnly
           onClick={onExpand}
-          className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+          className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity flex-shrink-0"
           aria-label={`Expand ${name}`}
         >
           <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />

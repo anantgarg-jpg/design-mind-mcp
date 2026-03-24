@@ -1,5 +1,6 @@
 import React from 'react'
 import { DialogBlock } from '@blocks/Dialog/component'
+import { Button } from '@blocks/Button/component'
 import { Fixture, PageHeader } from '@/components/Fixture'
 
 export function DialogPage() {
@@ -15,13 +16,13 @@ export function DialogPage() {
       <div className="flex flex-col gap-6">
         <Fixture label="Basic dialog with title and description">
           <DialogBlock
-            trigger={<button className="rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm">Open dialog</button>}
+            trigger={<Button variant="primary">Open dialog</Button>}
             title="Edit patient name"
             description="Update the display name for this patient record."
             footer={
               <div className="flex gap-3">
-                <button className="rounded-md border border-border px-4 py-2 text-sm">Cancel</button>
-                <button className="rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm">Save changes</button>
+                <Button variant="outline">Cancel</Button>
+                <Button variant="primary">Save changes</Button>
               </div>
             }
           >
@@ -34,7 +35,7 @@ export function DialogPage() {
 
         <Fixture label="Informational dialog (no footer)">
           <DialogBlock
-            trigger={<button className="rounded-md border border-border px-4 py-2 text-sm">View policy</button>}
+            trigger={<Button variant="outline">View policy</Button>}
             title="Data retention policy"
             description="How we handle patient data storage and archival."
           >

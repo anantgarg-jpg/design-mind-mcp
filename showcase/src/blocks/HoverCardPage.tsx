@@ -1,5 +1,6 @@
 import React from 'react'
 import { HoverCardBlock } from '@blocks/HoverCard/component'
+import { Button } from '@blocks/Button/component'
 import { Fixture, PageHeader } from '@/components/Fixture'
 
 export function HoverCardPage() {
@@ -16,9 +17,9 @@ export function HoverCardPage() {
         <Fixture label="User profile preview">
           <HoverCardBlock
             trigger={
-              <button className="text-sm font-semibold text-primary underline-offset-4 hover:underline">
+              <Button variant="link">
                 Dr. Sarah Chen
-              </button>
+              </Button>
             }
           >
             <div className="flex flex-col gap-2">
@@ -34,9 +35,9 @@ export function HoverCardPage() {
             Patient is enrolled in{' '}
             <HoverCardBlock
               trigger={
-                <button className="text-sm font-semibold text-primary underline-offset-4 hover:underline">
+                <Button variant="link">
                   HbA1c Monitoring
-                </button>
+                </Button>
               }
               align="start"
             >

@@ -67,8 +67,7 @@ export function Combobox({
           disabled={disabled}
           className={cn(
             "h-9 w-full justify-between rounded-md border border-input px-3 text-sm font-normal",
-            "min-h-[44px]",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
             !value && "text-muted-foreground",
             hasError && "border-destructive",
             className
