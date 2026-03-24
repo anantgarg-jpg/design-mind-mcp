@@ -21,6 +21,7 @@ export function ClinicalAlertBannerPage() {
             patientName="Rivera, Maria"
             triggeredAt="Triggered Jan 15, 2025 · 09:42"
             onAcknowledge={() => console.log('Acknowledged')}
+            onAuditEvent={(event, sev) => console.log('Audit:', event, sev)}
           />
         </Fixture>
 
@@ -32,6 +33,7 @@ export function ClinicalAlertBannerPage() {
             onAcknowledge={() => console.log('Acknowledged')}
             onEscalate={() => console.log('Escalated')}
             onDismiss={() => console.log('Dismissed')}
+            onAuditEvent={(event, sev) => console.log('Audit:', event, sev)}
           />
         </Fixture>
 
@@ -40,6 +42,7 @@ export function ClinicalAlertBannerPage() {
             severity="medium"
             title="Follow-up overdue: 45 days"
             onDismiss={() => console.log('Dismissed')}
+            onAuditEvent={(event, sev) => console.log('Audit:', event, sev)}
           />
         </Fixture>
 

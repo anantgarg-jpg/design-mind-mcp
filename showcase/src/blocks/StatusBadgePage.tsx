@@ -22,9 +22,9 @@ export function StatusBadgePage() {
           </div>
         </Fixture>
 
-        <Fixture label="Care gap states">
+        <Fixture label="Care gap states — open is amber (not neutral)">
           <div className="flex flex-wrap gap-2">
-            {(['in_outreach', 'closed', 'excluded'] as StatusKey[]).map((s) => (
+            {(['care_gap_open', 'in_outreach', 'closed', 'excluded'] as StatusKey[]).map((s) => (
               <StatusBadge key={s} status={s} />
             ))}
           </div>

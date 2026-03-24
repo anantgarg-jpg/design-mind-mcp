@@ -18,7 +18,7 @@ export function PatientContextHeaderPage() {
             lastName="Rivera"
             firstName="Maria"
             mrn="00123456"
-            dateOfBirth="Jan 5, 1968"
+            dateOfBirth="01/05/1968"
           />
         </Fixture>
 
@@ -27,7 +27,7 @@ export function PatientContextHeaderPage() {
             lastName="Rivera"
             firstName="Maria"
             mrn="00123456"
-            dateOfBirth="Jan 5, 1968"
+            dateOfBirth="01/05/1968"
             age={57}
             riskTier="medium"
             primaryPayer="Medicare"
@@ -39,7 +39,7 @@ export function PatientContextHeaderPage() {
             lastName="Rivera"
             firstName="Maria"
             mrn="00123456"
-            dateOfBirth="Jan 5, 1968"
+            dateOfBirth="01/05/1968"
             age={57}
             riskTier="high"
             primaryPayer="Medicare"
@@ -54,7 +54,7 @@ export function PatientContextHeaderPage() {
             lastName="Rivera"
             firstName="Maria"
             mrn="00123456"
-            dateOfBirth="Jan 5, 1968"
+            dateOfBirth="01/05/1968"
             age={57}
             riskTier="high"
             careTeamName="Care Team A"
