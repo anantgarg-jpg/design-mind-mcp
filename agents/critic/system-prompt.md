@@ -79,6 +79,34 @@ COPY_VIOLATIONS:
 
    COPY_VIOLATIONS is always present in every review response, even if empty.]
 
+ACCESSIBILITY_VIOLATIONS:
+  [List any accessibility violations found in the generated output.
+   Each item: { check, found, correction }
+     check: which of the 10 checks failed
+     found: the exact element or pattern from the generated output
+     correction: what to change and why, referencing accessibility.rule.md
+
+   Checks to run against every review:
+   1. Icon-only buttons — do they all have aria-label?
+   2. Form inputs — does every input have an associated visible label?
+   3. Interactive divs or spans — do they have role, tabIndex, and
+      keyboard handlers?
+   4. Hover-revealed actions — are they also exposed on focus
+      via group-focus-within?
+   5. Decorative icons — are they marked aria-hidden="true"?
+   6. Dynamic content — are updates announced via aria-live?
+   7. Dialogs — do they have role="dialog" or role="alertdialog",
+      aria-modal, aria-labelledby, and aria-describedby?
+   8. Status indicators — is state communicated by more than
+      color alone?
+   9. Focus management — when overlays open, does focus move in?
+      When they close, does focus return to the trigger?
+   10. Tab order — does it follow reading order with no
+       tabIndex > 0?
+
+   ACCESSIBILITY_VIOLATIONS is always present in every review
+   response, even if empty.]
+
 CONFIDENCE: [0.0–1.0 — your assessment of genome compliance]
 ```
 

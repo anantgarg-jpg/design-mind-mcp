@@ -43,6 +43,13 @@
       "status": "active",
       "version": "1.0.0",
       "applies_to": "every string in every component, surface, and generated output"
+    },
+    "accessibility": {
+      "file": "genome/rules/accessibility.rule.md",
+      "confidence": 0.95,
+      "status": "active",
+      "version": "1.1.0",
+      "applies_to": "every component, every surface, every generated UI"
     }
   },
   "blocks": {

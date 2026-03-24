@@ -163,13 +163,13 @@ function detectSafetyViolations(intent, componentType, domain, kb) {
   const idsFromDomain = CONSTRAINT_RELEVANCE[domain]        || [];
   const inScope       = new Set([...idsFromType, ...idsFromDomain]);
 
-  // Unlisted component types always check terminology + copy/language (13–17)
+  // Unlisted component types always check terminology + copy/language + CTA + accessibility (13–21)
   if (idsFromType.length === 0 && idsFromDomain.length === 0) {
-    [13, 14, 15, 16, 17].forEach(id => inScope.add(id));
+    [13, 14, 15, 16, 17, 18, 19, 20, 21].forEach(id => inScope.add(id));
   }
 
-  // Copy and language constraints always apply regardless of component type
-  [15, 16, 17].forEach(id => inScope.add(id));
+  // Copy, language, CTA display, and accessibility constraints always apply regardless of component type
+  [15, 16, 17, 18, 19, 20, 21].forEach(id => inScope.add(id));
 
   const violations = [];
   for (const id of inScope) {
@@ -210,8 +210,8 @@ function inferAppliesBecause(constraint, intentLower, componentType) {
     }
     return 'Confirm any destructive or bulk actions with explicit consequence statement';
   }
-  // Terminology + copy/language rules (13–17) — always apply
-  return 'Clinical terminology and copy/language rules always apply';
+  // Terminology + copy/language + CTA display + accessibility rules (13–21) — always apply
+  return 'Clinical terminology, copy/language, CTA display, and accessibility rules always apply';
 }
 
 // Get relevant ontology concepts for a set of ontology_refs
@@ -337,7 +337,7 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
   // Also enrich any result's metadata with the full kb.rules entry (which
   // carries the raw field) since the TF-IDF / vector store payloads strip it.
   const enriched = new Map(kb.rules.map(r => [r.id, r]));
-  for (const alwaysId of ['styling-tokens', 'copy-voice']) {
+  for (const alwaysId of ['styling-tokens', 'copy-voice', 'accessibility']) {
     if (!ruleResults.some(r => r.id === alwaysId)) {
       const rule = enriched.get(alwaysId);
       if (rule) ruleResults = [...ruleResults, { id: rule.id, score: 1.0, metadata: rule }];

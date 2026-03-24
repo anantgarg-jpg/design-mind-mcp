@@ -108,3 +108,19 @@
     (whitespace-nowrap). When space is constrained, other content columns — such as
     names, descriptions, or metadata — must shrink or truncate to preserve the full
     visibility of the CTA label.
+
+---
+
+## Accessibility constraints
+
+19. Color is never the sole differentiator for severity, status,
+    or any meaningful state. Shape, icon, or text must also
+    carry the meaning. No agent may generate a component where
+    color is the only signal.
+
+20. focus-visible must never be suppressed with outline:none or
+    ring-0 without an explicit visible replacement. The --ring
+    token exists for this purpose.
+
+21. Every interactive element must meet a 44×44px minimum touch
+    target. This cannot be traded off for density.
