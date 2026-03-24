@@ -60,16 +60,24 @@ COPY_VIOLATIONS:
      correction: the corrected version following copy-voice.md
 
    Rules to check:
-   - Tone: never cute ("All caught up!"), apologetic ("We're sorry"), or vague ("Something went wrong")
-   - Labels: imperative present tense ("Acknowledge" not "Acknowledging")
-   - Confirmations: [Consequence statement]. [Action instruction]. Never "Are you sure?"
-   - Empty states: honest and specific ("No open care gaps for this patient" not "No results found")
-   - Error messages: what happened + what to do (never "Something went wrong. Please try again.")
-   - Dates: MMM D, YYYY ("Jan 5, 2025" not "01/05/2025")
-   - Clinical quantities: always numerals ("3 patients" not "three patients")
-   - Entity names: use canonical names from ontology/entities.yaml
+   1. First-person forms — "we", "our", "I" — present anywhere?
+   2. "Something went wrong" present?
+   3. "due to a system issue" or "due to a technical issue" present?
+   4. "denied" in a permission error?
+   5. "to continue" appended after a CTA?
+   6. "Unable to …" used in body copy (not a header)?
+   7. Passive construction used in body copy for system outcomes?
+   8. Infrastructure terms (server, API, backend, database) used for a non-technical audience?
+   9. "after some time" present — should be "later"?
+   10. "Try again" missing from a recoverable system-loading error?
+   11. For technical audiences — generic system error used when a specific cause is known and safe to expose?
 
-   Empty array if none found. This section is ALWAYS present in every review response.]
+   Every COPY_VIOLATIONS entry must include:
+   - rule: which of the 11 checks failed
+   - found: the exact string from the generated output
+   - correction: the corrected string per copy-voice.rule.md
+
+   COPY_VIOLATIONS is always present in every review response, even if empty.]
 
 CONFIDENCE: [0.0–1.0 — your assessment of genome compliance]
 ```

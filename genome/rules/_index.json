@@ -36,6 +36,13 @@
       "mutation_count": 1,
       "last_challenged": "v2-expansion",
       "note": "v2.0.0 — expanded from color-only tokens to full styling system: typography (DM Sans), spacing (4px grid), border-radius, elevation, z-index, motion. Colors updated to the color palette defined in theme.css. Single comprehensive file. Load this rule for ANY styling decision."
+    },
+    "copy-voice": {
+      "file": "genome/rules/copy-voice.rule.md",
+      "confidence": 0.95,
+      "status": "active",
+      "version": "1.0.0",
+      "applies_to": "every string in every component, surface, and generated output"
     }
   },
   "blocks": {

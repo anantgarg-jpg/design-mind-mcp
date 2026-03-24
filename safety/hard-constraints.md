@@ -85,3 +85,17 @@
     reduced opacity — does not qualify for this exception.
     Secondary and tertiary actions must use visually subordinate treatments regardless
     of hover state.
+
+---
+
+## Copy and language constraints
+
+15. "We" and all first-person constructions are prohibited in
+    every user-facing string. No exceptions.
+
+16. Confirmation dialogs must never use "Are you sure?" or
+    equivalent. The header must state the consequence. The
+    primary CTA label must match the header.
+
+17. Secondary buttons on modals, interstitials, and popovers
+    must use "Close", not "Cancel".

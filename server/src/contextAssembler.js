@@ -163,11 +163,13 @@ function detectSafetyViolations(intent, componentType, domain, kb) {
   const idsFromDomain = CONSTRAINT_RELEVANCE[domain]        || [];
   const inScope       = new Set([...idsFromType, ...idsFromDomain]);
 
-  // Unlisted component types always check terminology (13, 14)
+  // Unlisted component types always check terminology + copy/language (13–17)
   if (idsFromType.length === 0 && idsFromDomain.length === 0) {
-    inScope.add(13);
-    inScope.add(14);
+    [13, 14, 15, 16, 17].forEach(id => inScope.add(id));
   }
+
+  // Copy and language constraints always apply regardless of component type
+  [15, 16, 17].forEach(id => inScope.add(id));
 
   const violations = [];
   for (const id of inScope) {
@@ -208,8 +210,8 @@ function inferAppliesBecause(constraint, intentLower, componentType) {
     }
     return 'Confirm any destructive or bulk actions with explicit consequence statement';
   }
-  // Terminology rules (13-14)
-  return 'Clinical terminology rules always apply';
+  // Terminology + copy/language rules (13–17) — always apply
+  return 'Clinical terminology and copy/language rules always apply';
 }
 
 // Get relevant ontology concepts for a set of ontology_refs
@@ -329,16 +331,16 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
 
   let ruleResults = await queryRules(searchText, 3, ruleIndex);
 
-  // styling-tokens applies to every component — always include it regardless
-  // of query relevance so the model always has the token reference.
+  // styling-tokens and copy-voice apply to every component — always include both
+  // regardless of query relevance so the model always has the token reference
+  // and the copy/language rules before generating any output.
   // Also enrich any result's metadata with the full kb.rules entry (which
   // carries the raw field) since the TF-IDF / vector store payloads strip it.
   const enriched = new Map(kb.rules.map(r => [r.id, r]));
-  const hasTokenRule = ruleResults.some(r => r.id === 'styling-tokens');
-  if (!hasTokenRule) {
-    const tokenRule = enriched.get('styling-tokens');
-    if (tokenRule) {
-      ruleResults = [...ruleResults, { id: tokenRule.id, score: 1.0, metadata: tokenRule }];
+  for (const alwaysId of ['styling-tokens', 'copy-voice']) {
+    if (!ruleResults.some(r => r.id === alwaysId)) {
+      const rule = enriched.get(alwaysId);
+      if (rule) ruleResults = [...ruleResults, { id: rule.id, score: 1.0, metadata: rule }];
     }
   }
   // Merge raw (and any other fields stripped by the index) back into each result
@@ -485,7 +487,7 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
     })),
     rules_included: includedRuleIds,
     rules_excluded: excludedRuleIds,
-    rules_excluded_reason: excludedRuleIds.map(id => `${id}: not in top-3 for this query`),
+    rules_excluded_reason: excludedRuleIds.map(id => `${id}: not in top-3 for this query and not force-included`),
     surface_matched: surfaceMatch ? surfaceMatch.surface.id : null,
     episodic_query: searchText.substring(0, 80),
     episodic_hits: similarBuilds.length,
@@ -532,26 +534,87 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
 // The checks below run in reviewOutput and populate copy_violations in the response.
 // agents/critic/system-prompt.md has a parallel COPY_VIOLATIONS section — VERIFIED PRESENT.
 // COPY_VOICE_CHECKS below — VERIFIED PRESENT. No changes needed.
+// COPY_VOICE_CHECKS — mirrors the 11-rule checklist in agents/critic/system-prompt.md
 const COPY_VOICE_CHECKS = [
+  // Rule 1: first-person forms
+  {
+    rule: 'first-person-copy',
+    pattern: /\b(we |we'|our |i am |i've |i'll )/i,
+    correction: 'First-person constructions ("we", "our", "I") are prohibited in all user-facing strings. Rewrite in second person or state the fact directly.',
+  },
+  // Rule 2: "something went wrong"
+  {
+    rule: 'vague-error-something-went-wrong',
+    pattern: /something went wrong|something happened(?! to the patient)/i,
+    correction: 'Error messages must state what happened + what to do. E.g. "Patient record could not be saved. Check your connection and try again."',
+  },
+  // Rule 3: "due to a system/technical issue"
+  {
+    rule: 'system-issue-euphemism',
+    pattern: /due to a (system|technical) issue/i,
+    correction: 'State the actual cause or use a direct recovery instruction. Avoid vague blame phrases.',
+  },
+  // Rule 4: "denied" in permission errors
+  {
+    rule: 'permission-denied-wording',
+    pattern: /\baccess denied\b|\bpermission denied\b/i,
+    correction: 'Avoid "denied" in permission errors. Use "You don\'t have access to [resource]. Contact your administrator." instead.',
+  },
+  // Rule 5: "to continue" appended after a CTA
+  {
+    rule: 'cta-to-continue-suffix',
+    pattern: /\b(save|submit|confirm|continue|proceed|next)\b[^"'<]*to continue/i,
+    correction: 'Remove "to continue" after CTA labels. The action label should be self-explanatory.',
+  },
+  // Rule 6: "Unable to …" in body copy
+  {
+    rule: 'unable-to-in-body-copy',
+    pattern: /unable to (load|fetch|retrieve|save|submit|update|delete)/i,
+    correction: '"Unable to …" is permitted only in error headings, not body copy. Body copy must state what happened and what to do.',
+  },
+  // Rule 8: infrastructure terms for non-technical audience
+  {
+    rule: 'infrastructure-terms-exposed',
+    pattern: /\b(the server|our server|the API|the backend|the database)\b/i,
+    correction: 'Do not expose infrastructure terms (server, API, backend, database) to non-technical users. Describe the outcome instead.',
+  },
+  // Rule 9: "after some time" → should be "later"
+  {
+    rule: 'after-some-time-vague',
+    pattern: /after some time/i,
+    correction: 'Replace "after some time" with "later".',
+  },
+  // Rule 10: "Try again" missing from recoverable system-loading errors
+  {
+    rule: 'recoverable-error-missing-try-again',
+    pattern: /could not (load|fetch|retrieve)[^.]*\./i,
+    check: (stripped) => {
+      // Only flag if the error string does NOT already contain "try again"
+      const match = stripped.match(/could not (load|fetch|retrieve)[^.]*\./i);
+      if (!match) return null;
+      const afterMatch = stripped.substring(stripped.indexOf(match[0]));
+      if (/try again/i.test(afterMatch.substring(0, 200))) return null;
+      return match[0];
+    },
+    correction: 'Recoverable loading errors must include "Try again" so the user knows there is an action to take.',
+  },
+  // Rule 16 (hard constraint): "Are you sure?" in confirmation dialogs
+  {
+    rule: 'confirmation-are-you-sure',
+    pattern: /are you sure/i,
+    correction: 'Confirmation dialogs must state the consequence, not ask "Are you sure?". Primary CTA label must match the consequence.',
+  },
+  // Rule 17 (hard constraint): "Cancel" on secondary modal/popover buttons
+  {
+    rule: 'modal-cancel-not-close',
+    pattern: /"Cancel"|'Cancel'|>Cancel</,
+    correction: 'Secondary buttons on modals, interstitials, and popovers must use "Close", not "Cancel".',
+  },
+  // Legacy checks preserved
   {
     rule: 'tone-cute-or-casual',
     pattern: /all caught up|looks like you('re| are)|nothing to see here|hooray|yay[^a-z]|great job/i,
     correction: 'Use honest, specific copy. E.g. "No open care gaps for this patient" not "All caught up!"',
-  },
-  {
-    rule: 'tone-apologetic',
-    pattern: /we('re| are) sorry|sorry,?\s+(something|we|our)/i,
-    correction: 'State what happened and what to do. Never apologize. E.g. "Patient record could not be saved. Check your connection and try again."',
-  },
-  {
-    rule: 'vague-error-message',
-    pattern: /something went wrong|something happened(?! to the patient)/i,
-    correction: 'Error messages must state what happened + what to do. "Patient record could not be saved. Check your connection and try again."',
-  },
-  {
-    rule: 'confirmation-are-you-sure',
-    pattern: /are you sure/i,
-    correction: 'Confirmation dialogs must use: [Consequence statement]. [Action instruction]. Never "Are you sure?"',
   },
   {
     rule: 'label-gerund-tense',
@@ -562,11 +625,6 @@ const COPY_VOICE_CHECKS = [
     rule: 'empty-state-vague',
     pattern: /no (items|results|data|records) (found|available|here)|nothing to (show|display|find)/i,
     correction: 'Empty states must be specific: "No open care gaps for this patient" not "No results found".',
-  },
-  {
-    rule: 'date-format-numeric',
-    pattern: /\b\d{2}\/\d{2}\/\d{4}\b/,
-    correction: 'Use MMM D, YYYY format for display dates: "Jan 5, 2025" not "01/05/2025". See copy-voice.md.',
   },
   {
     rule: 'written-out-clinical-number',
@@ -584,6 +642,14 @@ function checkCopyVoice(code) {
     .replace(/import\s+.*from\s+["'][^"']*["']/g, '');
 
   for (const check of COPY_VOICE_CHECKS) {
+    // Some checks provide a custom check() fn instead of a bare pattern test
+    if (check.check) {
+      const found = check.check(stripped);
+      if (found) {
+        violations.push({ rule: check.rule, found, correction: check.correction });
+      }
+      continue;
+    }
     const match = stripped.match(check.pattern);
     if (match) {
       violations.push({
@@ -660,6 +726,22 @@ const HARD_CONSTRAINT_CHECKS = [
     problem: 'Forbidden clinical terminology found in copy',
     rule_violated: 'safety/hard-constraints.md rule 13',
     correction: 'Remove "Normal", "Fine", "don\'t worry", "unfortunately". Use clinical terminology per ontology/copy-voice.md.',
+  },
+  {
+    id: 'c15-first-person',
+    check: (code) => /\b(we |we'|our |i am |i've |i'll )/i.test(
+      code.replace(/\/\/[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '')
+    ),
+    problem: 'First-person construction ("we", "our", "I") found in user-facing copy',
+    rule_violated: 'safety/hard-constraints.md rule 15',
+    correction: 'All first-person constructions are prohibited. Rewrite in second person or state the fact directly.',
+  },
+  {
+    id: 'c17-cancel-not-close',
+    check: (code) => /"Cancel"|'Cancel'|>Cancel</.test(code),
+    problem: '"Cancel" found on a button — secondary actions on modals must use "Close"',
+    rule_violated: 'safety/hard-constraints.md rule 17',
+    correction: 'Replace "Cancel" with "Close" on modal, interstitial, and popover secondary buttons.',
   },
 ];
 
