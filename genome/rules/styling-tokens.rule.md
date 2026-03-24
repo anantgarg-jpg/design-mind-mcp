@@ -22,19 +22,23 @@ FONT RULES:
   - Never use system-ui, Arial, Inter, Nunito Sans, or any other font family
   - Components do not need an explicit font class — they inherit from root
 
-# ── TOKEN MAP: SURFACES ──────────────────────────────────────────────────────
+# ── TOKEN VALUES ─────────────────────────────────────────────────────────────
 
-SURFACES (gray "stone" and "night" semantic families):
-  --background       #F7F7F7  (gray-100 / stone lightest) — page background
-  --card             #FFFFFF  — card and panel surfaces, sits above background
-  --foreground       #1A1A1A  (gray-1400 / night) — primary text on background
-  --card-foreground  #1A1A1A  — primary text on cards
-  --muted            #EBEBEB  (gray-200 / stone lighter) — subtle backgrounds for inactive areas
-  --muted-foreground #636363  (gray-900 / night lighter) — secondary and hint text
-  --popover          #FFFFFF  — dropdown and tooltip surfaces
-  --border           #D4D4D4  (gray-400 / stone) — all borders and dividers
-  --input            #C4C4C4  (gray-500 / stone dark) — input field borders
-  --ring             #0060D6  (blue-1000 / primary-default) — focus ring base color
+Token values (hex, oklch, CSS custom properties) live in `theme.css` in the
+consuming project. Read that file for actual color values.
+
+Surface tokens: --background, --foreground, --card, --card-foreground,
+  --muted, --muted-foreground, --popover, --popover-foreground,
+  --border, --input, --ring
+Brand tokens: --primary, --primary-foreground
+Semantic tokens: --destructive, --destructive-foreground, --destructive-light,
+  --success, --success-foreground, --success-light,
+  --warning, --warning-foreground, --warning-light, --warning-surface,
+  --alert, --alert-foreground, --alert-light,
+  --accent, --accent-foreground,
+  --info, --info-foreground, --info-light
+Accent tokens: --accent1 through --accent8 (charts, tags, avatar fallback)
+Sidebar tokens: --sidebar* (Panel 1 only — see below)
 
 FOCUS RING TREATMENT:
   Focus rings use the base --ring color at reduced opacity for a softer,
@@ -45,33 +49,9 @@ FOCUS RING TREATMENT:
   The ring color is set per-variant, not globally, so destructive actions
   get a red-tinted ring that matches their intent.
 
-# ── TOKEN MAP: BRAND ─────────────────────────────────────────────────────────
+# ── GRAY SCALE USAGE ─────────────────────────────────────────────────────────
 
-BRAND:
-  --primary            #0060D6  (blue-1000 / primary-default) — CTAs, active states, links, focus rings
-  --primary-foreground #FFFFFF  — text on primary backgrounds
-
-# ── TOKEN MAP: NEUTRAL / GRAY SCALE ─────────────────────────────────────────
-
-Gray primitives use a 100–1400 scale with two semantic families:
-"stone" (lighter, for surfaces) and "night" (darker, for text).
-
-  TOKEN        HEX      SEMANTIC           USE
-  ───────────  ───────  ─────────────────  ──────────────────────────────────
-  --gray-100   #F7F7F7  stone lightest     backgrounds, zebra-stripe (= --background)
-  --gray-200   #EBEBEB  stone lighter      hover on muted surfaces (= --muted)
-  --gray-300   #E0E0E0  stone light        light dividers, disabled input bg
-  --gray-400   #D4D4D4  stone              borders, dividers (= --border)
-  --gray-500   #C4C4C4  stone dark         input field borders (= --input)
-  --gray-600   #B5B5B5  —                  disabled state backgrounds
-  --gray-700   #A3A3A3  night lightest     placeholder text, disabled icons
-  --gray-800   #858585  —                  stronger disabled states
-  --gray-900   #636363  night lighter      secondary text (= --muted-foreground)
-  --gray-1000  #575757  —                  emphasis secondary text
-  --gray-1100  #424242  night light        strong secondary, sub-headings
-  --gray-1200  #333333  —                  near-primary text
-  --gray-1300  #242424  —                  headings
-  --gray-1400  #1A1A1A  night              primary text (= --foreground)
+Gray primitives use a 100–1400 scale. Values in theme.css.
 
 USAGE: Prefer semantic tokens (--muted, --border, --foreground, --muted-foreground)
 over raw --gray-* values. The gray scale exists as a reference for edge cases
@@ -79,57 +59,11 @@ where semantic tokens don't cover the need — chart axis labels, skeleton
 placeholders, disabled states. If you're reaching for --gray-* in a component,
 ask first whether a semantic token already handles it.
 
-# ── TOKEN MAP: SEMANTIC COLORS ───────────────────────────────────────────────
+# ── ACCENT PALETTE USAGE ─────────────────────────────────────────────────────
 
-Each semantic color has a foreground (accessible text), foreground-on-color,
-and light (ultra-light background) variant.
-
-DESTRUCTIVE (Red — Critical severity, delete actions):
-  --destructive            #D62400  (red-1000 / alert-default)
-  --destructive-foreground #FFFFFF  text on destructive backgrounds
-  --destructive-light      #FFF2F0  (red-100 / alert-ultra-light) — banner/card bg
-
-SUCCESS (Green):
-  --success                #007A0E  (green-1000 / success-default)
-  --success-foreground     #FFFFFF  text on success backgrounds
-  --success-light          #DEFFDB  (green-100 / success-ultra-light) — banner/card bg
-
-WARNING (Yellow — Overdue, Medium severity):
-  --warning                #AD8200  (yellow-1100 / warning-dark) — accessible fg on white
-  --warning-foreground     #FFFFFF  text on warning backgrounds
-  --warning-light          #FFF9E5  (yellow-100 / warning-ultra-light) — banner/card bg
-  --warning-surface        #F5BA0A  (yellow-900 / warning-default) — visual indicator fill
-
-ALERT (Orange — High severity ONLY):
-  --alert                  #B24D00  (orange-1200 / accent1-dark) — accessible fg on white
-  --alert-foreground       #FFFFFF  text on alert backgrounds
-  --alert-light            #FFF2DB  (orange-100 / accent1-ultra-light) — banner/card bg
-
-ACCENT (Blue tint — Low severity, info states):
-  --accent                 #F0F9FF  (blue-100 / primary-ultra-light) — background
-  --accent-foreground      #0051AD  (blue-1100) — foreground text
-
-INFO (Cyan — non-severity informational callouts):
-  --info                   #0FABD2  (cyan-1000 / accent5-default)
-  --info-foreground        #FFFFFF  text on info backgrounds
-  --info-light             #DBFAFF  (cyan-100 / accent5-ultra-light) — help surfaces
-
-# ── TOKEN MAP: ACCENT PALETTE ────────────────────────────────────────────────
-
-Eight accent families for charts, category tags, and avatar fallback colors.
-Only base (default) shades listed — each has ultra-light through darker variants
-in the token map.
-
-  NAME               HEX      PRIMITIVE
-  ─────────────────  ───────  ─────────────
-  accent1 (Orange)   #E56F00  orange-1000
-  accent2 (Violet)   #6F21E4  violet-1000
-  accent3 (Indigo)   #3B48DE  indigo-1000
-  accent4 (Lime)     #70BC06  lime-900
-  accent5 (Cyan)     #0FABD2  cyan-1000
-  accent6 (Sea)      #0CA79F  sea-1000
-  accent7 (Magenta)  #E40763  magenta-1100
-  accent8 (Pink)     #ED68ED  pink-1000
+Eight accent families (--accent1 through --accent8) for charts, category tags,
+and avatar fallback colors. Each has ultra-light through darker variants.
+Values in theme.css.
 
 WHEN TO USE ACCENTS:
   - Chart series colors (use in order: accent1 through accent8)
@@ -142,11 +76,10 @@ NEVER:
   - Use accents for status badges — use the status color reference below
   - Mix accent base shades with their light/dark variants in the same context
 
-# ── TOKEN MAP: SIDEBAR ───────────────────────────────────────────────────────
+# ── SIDEBAR ──────────────────────────────────────────────────────────────────
 
-SIDEBAR:
-  --sidebar*       parallel token set for Panel 1 styling — always use sidebar
-                   tokens when styling Panel 1 content
+--sidebar* is a parallel token set for Panel 1 styling — always use sidebar
+tokens when styling Panel 1 content. Values in theme.css.
 
 # ── CRITICAL NAMING DISAMBIGUATION ───────────────────────────────────────────
 
@@ -166,19 +99,19 @@ Low clinical severity. Never swap them.
 # ── SEVERITY COLOR FAST REFERENCE ────────────────────────────────────────────
 # Full spec in safety/severity-schema.yaml
 
-  Critical  → text-destructive (#D62400) / bg-destructive-light (#FFF2F0) / border-destructive/30
-  High      → text-alert (#B24D00) / bg-alert-light (#FFF2DB) / border-alert/30
-  Medium    → text-warning (#AD8200) / bg-warning-light (#FFF9E5) / border-warning/30
-  Low       → text-accent-foreground (#0051AD) / bg-accent (#F0F9FF) / border-accent-foreground/20
+  Critical  → text-destructive / bg-destructive-light / border-destructive/30
+  High      → text-alert / bg-alert-light / border-alert/30
+  Medium    → text-warning / bg-warning-light / border-warning/30
+  Low       → text-accent-foreground / bg-accent / border-accent-foreground/20
 
 # ── STATUS COLOR FAST REFERENCE ──────────────────────────────────────────────
 
-  Completed / Closed / Success   → text-success (#007A0E) / bg-success-light (#DEFFDB)
-  Overdue                        → text-warning (#AD8200) / bg-warning-light (#FFF9E5)
-  In Progress / In Outreach      → text-primary (#0060D6) / bg-accent (#F0F9FF)
-  Open                           → text-muted-foreground (#636363) / border border-border
-  Cancelled / Excluded           → text-muted-foreground (#636363) / bg-muted (#EBEBEB)
-  Error / Failed                 → text-destructive (#D62400) / bg-destructive-light (#FFF2F0)
+  Completed / Closed / Success   → text-success / bg-success-light
+  Overdue                        → text-warning / bg-warning-light
+  In Progress / In Outreach      → text-primary / bg-accent
+  Open                           → text-muted-foreground / border border-border
+  Cancelled / Excluded           → text-muted-foreground / bg-muted
+  Error / Failed                 → text-destructive / bg-destructive-light
 
 # ── TYPOGRAPHY SCALE ─────────────────────────────────────────────────────────
 

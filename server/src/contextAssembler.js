@@ -14,6 +14,21 @@ import { query } from './vectorIndex.js';
 import { embedOne } from './embedder.js';
 import { search, isSeeded } from './vectorstore.js';
 
+// ── Styling-tokens compact cache ─────────────────────────────────────────────
+// Read once at first use, cached for the process lifetime.
+let _stylingTokensCompact = null;
+function getStylingTokensCompact(basePath) {
+  if (_stylingTokensCompact) return _stylingTokensCompact;
+  try {
+    _stylingTokensCompact = readFileSync(
+      join(basePath, 'genome/rules/styling-tokens-compact.rule.md'), 'utf-8'
+    );
+  } catch {
+    _stylingTokensCompact = ''; // fallback: agent uses theme.css directly
+  }
+  return _stylingTokensCompact;
+}
+
 // ── Tokenizer (mirrors vectorIndex.js — no new dependency) ───────────────────
 // Used for not_when penalty and composition hint checks.
 function tokenize(text) {
@@ -79,20 +94,24 @@ function applyNotWhenPenalty(scoredBlocks, intentTokens) {
 // ── Change 2: composition hints ───────────────────────────────────────────────
 // When two blocks each score in the ambiguous zone and are structurally distinct,
 // suggest composing them rather than inventing a third block.
-function buildCompositionHints(patterns) {
-  const qualifiers = patterns.filter(p => p.relevance_score >= 0.45 && p.relevance_score <= 0.72);
+// Accepts boostedResults (raw scored blocks) so _embedding_hint is read from
+// r.metadata — it is not exposed in the patterns output.
+function buildCompositionHints(boostedResults) {
+  const qualifiers = boostedResults.filter(r => r.score >= 0.45 && r.score <= 0.72);
   const hints = [];
   for (let i = 0; i < qualifiers.length && hints.length < 2; i++) {
     for (let j = i + 1; j < qualifiers.length && hints.length < 2; j++) {
       const a = qualifiers[i];
       const b = qualifiers[j];
-      if (a.structural_family && a.structural_family === b.structural_family) continue;
-      const aTokens = tokenize(a._embedding_hint || a.summary || '');
-      const bTokens = tokenize(b._embedding_hint || b.summary || '');
+      const aFam = a.metadata?.structural_family;
+      const bFam = b.metadata?.structural_family;
+      if (aFam && aFam === bFam) continue;
+      const aTokens = tokenize(a.metadata?.embedding_hint || a.metadata?.summary || '');
+      const bTokens = tokenize(b.metadata?.embedding_hint || b.metadata?.summary || '');
       const overlap = aTokens.filter(t => bTokens.includes(t)).length;
       if (overlap > 3) continue;
-      const aSummary = (a.summary || '').trim().replace(/\s+/g, ' ').substring(0, 120);
-      const bSummary = (b.summary || '').trim().replace(/\s+/g, ' ').substring(0, 120);
+      const aSummary = (a.metadata?.summary || '').trim().replace(/\s+/g, ' ').substring(0, 120);
+      const bSummary = (b.metadata?.summary || '').trim().replace(/\s+/g, ' ').substring(0, 120);
       hints.push({
         blocks: [a.id, b.id],
         rationale: `${aSummary} ${bSummary}`.trim().substring(0, 220),
@@ -211,10 +230,6 @@ const CONSTRAINT_RELEVANCE = {
 };
 
 function detectSafetyViolations(intent, componentType, domain, kb) {
-  const allConstraints = kb.safety.constraints || [];
-  const constraintMap  = new Map(allConstraints.map(c => [c.id, c]));
-
-  // Union constraint IDs from component_type and domain lookups
   const idsFromType   = CONSTRAINT_RELEVANCE[componentType] || [];
   const idsFromDomain = CONSTRAINT_RELEVANCE[domain]        || [];
   const inScope       = new Set([...idsFromType, ...idsFromDomain]);
@@ -227,18 +242,7 @@ function detectSafetyViolations(intent, componentType, domain, kb) {
   // Copy, language, CTA display, and accessibility constraints always apply regardless of component type
   [15, 16, 17, 18, 19, 20, 21].forEach(id => inScope.add(id));
 
-  const violations = [];
-  for (const id of inScope) {
-    const constraint = constraintMap.get(id);
-    if (!constraint) continue;
-    violations.push({
-      constraint_id:  id,
-      rule:           constraint.text,
-      applies_because: `component_type=${componentType}${domain !== 'other' ? ` in ${domain} domain` : ''}`,
-    });
-  }
-
-  return violations;
+  return [...inScope].sort((a, b) => a - b);
 }
 
 function inferAppliesBecause(constraint, intentLower, componentType) {
@@ -408,21 +412,22 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
   }));
 
   // ── Pattern results ─────────────────────────────────────────────────────────
-  const patterns = boostedResults.map(r => ({
-    id: r.id,
-    relevance_score: parseFloat(r.score.toFixed(4)),
-    structural_family: r.metadata?.structural_family || null,
-    component_type: r.metadata?.component_type || null,
-    structurally_matched: r.structurally_matched || false,
-    not_when_penalised: r.not_when_penalised || false,   // Change 1
-    summary: r.metadata?.summary || '',
-    _embedding_hint: r.metadata?.embedding_hint || '',   // used by buildCompositionHints, stripped in prod if desired
-    when: formatWhen(r.metadata?.when),
-    not_when: formatNotWhen(r.metadata?.not_when),
-    because: r.metadata?.because || '',
-    confidence: r.metadata?.confidence || 0.9,
-    usage_signal: { renders_total: 0, override_rate: 0.0 },
-  }));
+  const patterns = boostedResults.map(r => {
+    const usageSignal = r.metadata?.usage_signal;
+    const hasUsageData = usageSignal && usageSignal.renders_total > 0;
+    return {
+      id: r.id,
+      relevance_score:  parseFloat(r.score.toFixed(4)),
+      structural_family: r.metadata?.structural_family || null,
+      component_type:   r.metadata?.component_type || null,
+      summary:          r.metadata?.summary || '',
+      when:             formatWhen(r.metadata?.when),
+      not_when:         formatNotWhen(r.metadata?.not_when),
+      because:          r.metadata?.because || '',
+      confidence:       r.metadata?.confidence || 0.9,
+      ...(hasUsageData ? { usage_signal: usageSignal } : {}),
+    };
+  });
 
   // ── Structural guidance — dominant family + invariants ──────────────────────
   // When multiple top patterns share a structural family, surface the invariants
@@ -454,15 +459,26 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
 
   // ── Rule results ────────────────────────────────────────────────────────────
   const rules = ruleResults.map(r => {
-    // A rule is "structured" when both WHEN and USE sections were parsed —
-    // those two fields together give a meaningful summary. If USE is empty the
-    // rule uses free-form markdown (e.g. styling-tokens v2 token tables) and
-    // the structured summary is unreliable; return the full raw content instead
-    // so the model sees the actual token maps / prose.
-    const hasStructured = !!(r.metadata.when && r.metadata.use);
-    const content = hasStructured
-      ? { summary: [r.metadata.when, r.metadata.use].join(' | ').substring(0, 300) }
-      : { full_content: r.metadata.raw || '' };
+    let content;
+    if (r.id === 'styling-tokens') {
+      // Send compact lookup reference — token values are in theme.css in the consumer project
+      content = { compact_ref: getStylingTokensCompact(kb.basePath) };
+    } else if (r.id === 'copy-voice') {
+      // Summary + pointer — no full content needed
+      content = {
+        summary:
+          "Clinical and direct. No 'we'/'our'/'I'. No 'Something went wrong'. " +
+          "Error messages state what happened + what to do. Labels are imperative " +
+          "present tense. Empty states are honest and specific. " +
+          "Confirmation dialogs state the consequence, never 'Are you sure?'.",
+        ref: 'genome/rules/copy-voice.rule.md',
+      };
+    } else {
+      const hasStructured = !!(r.metadata.when && r.metadata.use);
+      content = hasStructured
+        ? { summary: [r.metadata.when, r.metadata.use].join(' | ').substring(0, 300) }
+        : { full_content: r.metadata.raw || '' };
+    }
     return {
       rule_id: r.id,
       ...content,
@@ -554,7 +570,7 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
   } : {};
 
   // ── Change 2: composition hints ──────────────────────────────────────────────
-  const compositions = buildCompositionHints(patterns);
+  const compositions = buildCompositionHints(boostedResults);
 
   // ── Change 3: structure-vs-content gap probe ─────────────────────────────────
   const gap_probe = buildGapProbe(patterns[0] || null);
@@ -594,20 +610,20 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
   // ── Assemble response — block if safety violations detected ─────────────────
   const response = {
     build_mode,
-    surface,
-    structural_guidance: structuralGuidance,
+    ...(surface                        ? { surface }                               : {}),
+    ...(structuralGuidance             ? { structural_guidance: structuralGuidance } : {}),
     patterns,
-    compositions,
-    gap_probe,
+    ...(compositions.length > 0        ? { compositions }                          : {}),
+    ...(gap_probe                      ? { gap_probe }                             : {}),
     rules,
-    ontology_refs: ontologyRefs,
+    ...(ontologyRefs.length > 0        ? { ontology_refs: ontologyRefs }           : {}),
     safety_constraints: safetyConstraints,
-    similar_builds: similarBuilds,
+    ...(similarBuilds.length > 0       ? { similar_builds: similarBuilds }         : {}),
     confidence,
     safety_violations: safetyViolations,
     coverage_gap: coverageGap,
-    gaps,
-    _debug: debugField,
+    ...(gaps.length > 0                ? { gaps }                                  : {}),
+    ...(Object.keys(debugField).length ? { _debug: debugField }                    : {}),
   };
 
   if (safetyViolations.length > 0) {
@@ -615,8 +631,8 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
     response.block_reason =
       `${safetyViolations.length} hard constraint(s) are structurally relevant for ` +
       `component_type="${component_type}" in domain="${domain}". ` +
-      `Review safety_violations and ensure compliance before generating: ` +
-      safetyViolations.map(v => `[C${v.constraint_id}] ${v.applies_because}`).join(' | ');
+      `Review safety_constraints and ensure compliance before generating: ` +
+      safetyViolations.map(id => `[C${id}]`).join(' | ');
   }
 
   if (coverageGap) {
