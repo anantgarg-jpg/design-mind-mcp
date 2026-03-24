@@ -364,7 +364,7 @@ The product's visual character is flat, restrained, and border-driven. Surfaces 
 
 **The principles:**
 
-- **Flat by default.** Shadows exist only for elements that genuinely float above the page — dropdowns, modals, tooltips, popovers. Everything anchored to the page (cards, buttons, inputs, rows, headers, banners) uses borders or background color shifts for separation. No element earns a shadow just by being a container.
+- **Flat by default, with contextual card elevation.** Shadows exist for elements that genuinely float above the page — dropdowns, modals, tooltips, popovers — and for cards that sit on a tinted/muted background where border alone doesn't provide enough separation. Buttons, inputs, rows, headers, and banners are always flat. Cards on white backgrounds stay border-driven; cards on grey/muted surfaces get `shadow-sm`; cards in expressive/onboarding flows may use `shadow-md`.
 - **Borders over shadows.** A 1px border in `border-border` communicates "this is a region" without adding visual weight. When even a border feels heavy, use a background contrast shift (e.g., `bg-card` on `bg-background`). Reserve visible borders for edges that need structural definition.
 - **No decorative chrome.** No gradients, inner highlights, colored glows, or inset shadows. No border-bottom tricks to simulate depth. If an element looks "designed," it's probably over-styled. The interface should feel engineered.
 - **Color enters with purpose.** The resting UI is almost entirely neutral. Saturated color appears only when it carries meaning: status indicators, active/selected states, primary actions, destructive intent, or semantic feedback. Color used decoratively dilutes the meaning of color used semantically.
@@ -448,7 +448,7 @@ How text is set determines whether a screen feels considered or careless. Typogr
 Color is a language. Every hue in the interface is a word — use too many and the sentence is noise. Color tokens are defined both semantically and as raw values — use only those. Do not introduce colors outside the token system.
 
 - **Neutral at rest, saturated with intent.** The base UI lives in a restrained neutral palette — whites, light greys, subtle borders. Saturated color enters only when it carries meaning: status, interaction state, primary actions, destructive intent. A screen at rest should be almost entirely monochromatic.
-- **Surfaces separate through contrast, not elevation.** Use background color differences (`bg-card` on `bg-background`, `bg-muted` for inset regions) and thin borders to define content regions. Do not use shadows to separate anchored surfaces — shadows are reserved for floating layers only.
+- **Surfaces separate through contrast, not elevation.** Use background color differences (`bg-card` on `bg-background`, `bg-muted` for inset regions) and thin borders to define content regions. Shadows are reserved for floating layers and for cards on muted/tinted backgrounds where border alone lacks sufficient contrast.
 - **State changes through opacity.** Hover, selected, and active states use background opacity shifts on the base color (`foreground/[0.04]` for hover, `foreground/[0.08]` for active, `primary/10` for selected). This keeps state feedback subtle and consistent across every element without introducing new colors.
 - **Stay within the token system.** Semantic tokens (background, foreground, muted, accent, destructive, etc.) exist for a reason — they encode meaning that raw hex values don't. Using tokens consistently is how the interface stays coherent across dozens of screens built at different times.
 
@@ -496,7 +496,7 @@ The difference between good and great is in the details no one consciously notic
 
 - **Icon consistency.** Same stroke weight, same optical size, same style across every icon in the system. Mixing outlined and filled styles, or varying visual weight, creates subtle discord.
 - **Border radius consistency.** Radii are defined in the token system. Use them consistently — mixing values across a screen reads as indecisive, even if no one can pinpoint why.
-- **Flatness is a craft decision.** Shadows are reserved for floating layers (dropdowns, modals, tooltips). Every other element — cards, buttons, inputs, banners, rows — relies on borders and background contrast. If you reach for a shadow on an anchored element, stop and use a border instead. The product's visual identity is flat and border-driven; shadows break that identity.
+- **Flatness is a craft decision.** Shadows are reserved for floating layers (dropdowns, modals, tooltips) and cards on muted/tinted backgrounds. Buttons, inputs, banners, and rows always rely on borders and background contrast. If you reach for a shadow on a non-card anchored element, stop and use a border instead. The product's visual identity is flat and border-driven; shadows are contextual, not decorative.
 - **Pixel-level precision.** Subpixel alignment, consistent padding, optical centering of icons within buttons. These things are invisible when right and quietly wrong when not. Sweat them.
 - **List scanability test.** In any list or table, cover the leftmost column and check: can you still read each remaining column as a vertical stripe? If column edges waver across rows, the layout fails the scanability test regardless of how individual rows look in isolation.
 
@@ -1304,21 +1304,26 @@ NEVER:
 
 # ── ELEVATION & SHADOWS ──────────────────────────────────────────────────────
 
-FLAT BY DEFAULT. The product's visual identity is flat and border-driven.
-Shadows exist only for elements that genuinely float above the page.
-Everything anchored to the page uses borders or background contrast
-for separation — never shadows.
+FLAT BY DEFAULT — WITH CONTEXTUAL CARD ELEVATION.
+The product's visual identity is flat and border-driven.
+Shadows exist for elements that genuinely float above the page,
+AND for cards that sit on a tinted/muted background where border
+alone doesn't provide enough separation.
 
   LEVEL         CLASS               WHEN
   ────────────  ──────────────────  ────────────────────────────────────────
-  flat          (no shadow)         THE DEFAULT. Cards, buttons, inputs, rows,
+  flat          (no shadow)         THE DEFAULT. Buttons, inputs, rows,
                                     headers, banners, list items, all controls
+  card-raised   shadow-sm           Cards on bg-muted or bg-background when
+                                    the parent surface is tinted/grey
+  card-express  shadow-md           Cards in onboarding/expressive flows
+                                    needing stronger visual presence
   dropdown      shadow-md           Dropdowns, popovers, context menus
   dialog        shadow-lg           Modals, dialogs, command palette
   tooltip       shadow-sm           Tooltips
 
 WHAT IS ALWAYS FLAT (no shadow, no exceptions):
-  - Cards at rest — use border border-border, not shadow
+  - Cards on bg-background (white-on-white) — use border border-border
   - Buttons and interactive controls — always flat
   - Inputs, selects, textareas — border only
   - Rows in lists — border-b or background alternation
@@ -1327,11 +1332,23 @@ WHAT IS ALWAYS FLAT (no shadow, no exceptions):
   - Sidebar content — sidebar tokens handle surface treatment
   - Any element inside a card — shadows never nest
 
+WHEN CARDS GET shadow-sm:
+  - Card (bg-card) sits on a muted/grey parent (bg-muted, bg-background
+    with a tinted page wrapper, or any non-white surface)
+  - The shadow replaces the border — do NOT combine shadow-sm + border
+  - Maximum card shadow is shadow-sm for standard layouts
+
+WHEN CARDS GET shadow-md:
+  - Expressive / onboarding flows where cards need stronger visual presence
+  - Still never shadow-lg or higher — those stay reserved for dialogs
+
 HOW TO SEPARATE WITHOUT SHADOW:
   - Border: border border-border (1px, subtle grey) for structural edges
   - Background contrast: bg-card on bg-background for content regions
   - Inset background: bg-muted for nested/secondary regions
   - Dividers: border-b border-border between stacked items
+  - Contextual shadow: shadow-sm on bg-card when parent is bg-muted
+    (prefer this over border when the card needs visual lift)
 
 NEVER:
   - Stack shadows (a floating element inside another floating element)
@@ -1339,9 +1356,8 @@ NEVER:
   - Add shadow to severity indicators — severity communicates via color, not depth
   - Use box-shadow for non-elevation purposes (glow effects, colored glows,
     inner highlights, inset shadows for depth simulation)
-  - Add shadow to cards, buttons, inputs, or any anchored element
-  - Use hover shadow transitions (shadow-card → shadow-card-hover) — use
-    background color shift for hover instead
+  - Add shadow to buttons, inputs, or non-card anchored elements
+  - Use hover shadow transitions — use background color shift for hover instead
 
 # ── Z-INDEX LAYERING ─────────────────────────────────────────────────────────
 
@@ -1405,7 +1421,7 @@ TAILWIND CLASSES:
 
 WHAT TRANSITIONS:
   - Row hover background:   hover:bg-muted/60 transition-colors
-  - Card hover shadow:      hover:shadow-card-hover transition-shadow
+  - Card hover background:  hover:bg-accent/50 transition-colors
   - Button reveal on hover: opacity-0 group-hover:opacity-100 transition-opacity
   - Focus ring appearance:  ring-ring transition (handled by component library)
 
@@ -1450,7 +1466,7 @@ ALWAYS:
   - Use text-muted-foreground for secondary, hint, and label text
   - Use the typography scale levels defined above — don't invent sizes
   - Use the spacing system — all spacing multiples of 4px
-  - Use shadow-card for cards, no shadow for rows
+  - Use contextual shadow for cards (shadow-sm on muted bg, shadow-md for expressive), no shadow for rows
   - Use specific transition classes (transition-colors, -opacity, -shadow)
 
 # ── STATE FEEDBACK PATTERNS ──────────────────────────────────────────────────
@@ -1465,7 +1481,7 @@ Interactive elements follow a consistent state feedback language:
   selected   Primary-tinted background              bg-primary/10 or bg-accent
   disabled   50% opacity, no pointer events          disabled:opacity-50 disabled:pointer-events-none
 
-  NEVER use shadow changes for hover feedback (no shadow-card → shadow-card-hover).
+  NEVER use shadow changes for hover feedback — use background color shift instead.
   NEVER use translate-y for press feedback — use scale instead.
   NEVER use color darkening as the sole press signal — always include scale.
   NEVER use gradients, glows, or inner highlights for any state.
@@ -1480,7 +1496,7 @@ NEVER:
   - Use a color that "looks like" a severity color for non-severity purposes
   - Use font-thin, font-light, or font-black
   - Use rounded-2xl or larger radius values
-  - Use shadow on anchored elements (cards, buttons, inputs, rows, headers)
+  - Use shadow on non-card anchored elements (buttons, inputs, rows, headers)
   - Use shadow-xl or shadow-2xl
   - Use transition-all — specify exact properties
   - Use transition-shadow — the product does not animate shadows
@@ -2699,7 +2715,7 @@ variants:
       - title (required)
       - label (optional monospace badge above title)
       - contextLabel (optional entity name when not in entity-scoped view)
-      - status (optional StatusBadge)
+      - status (optional Badge)
       - meta[] (icon + text pairs, up to ~3)
       - primaryAction (right-aligned button)
       - secondaryActions (MoreHorizontal dropdown)
@@ -2710,12 +2726,12 @@ variants:
       Used when each row is a standalone card. No shared container.
       Has its own border, rounded corners, and shadow.
     invariants:
-      - "flex items-start justify-between gap-4 p-4 bg-card border border-border/60 rounded-lg shadow-card hover:shadow-card-hover transition-shadow"
+      - "flex items-start justify-between gap-4 p-4 bg-card border border-border/60 rounded-lg shadow-sm hover:bg-accent/50 transition-colors"
     slots:
       - title (required)
       - label (optional monospace badge above title)
       - contextLabel (optional entity name)
-      - status (optional StatusBadge)
+      - status (optional Badge)
       - meta[] (icon + text pairs)
       - primaryAction (right-aligned button)
       - secondaryActions (MoreHorizontal dropdown)
@@ -2750,7 +2766,7 @@ props:
   label: "string — small badge above title (e.g. measure code HBD)"
   labelMono: "boolean — renders label in monospace"
   contextLabel: "string — entity name when outside entity-scoped view"
-  status: "StatusKey — passed to StatusBadge"
+  status: "StatusKey — passed to Badge"
   accent: '"warning" | "accent" | "success" | "none" — row stripe color'
   meta: "MetaItem[] — [{icon?, text, urgent?, success?}]"
   primaryAction: "{ label: string; onClick: () => void }"
@@ -4112,7 +4128,8 @@ component_type: layout
 level: primitive
 structural_family: content-container
 family_invariants:
-  - "rounded-lg border border-border/40 bg-card shadow-card"
+  - "rounded-lg border border-border/40 bg-card"
+  - "shadow-sm when on muted/tinted background, no shadow on white background"
   - "p-4 content padding"
 confidence: 0.85
 version: 1.0.0
@@ -4133,13 +4150,18 @@ not_when:
   - full-width page sections without visual boundaries
 
 variants:
-  default: static content container at rest
-  interactive: hover shadow elevation for clickable cards
+  flat: no shadow, border-driven — default for white-on-white layouts
+  shadow-sm: raised card — for muted/tinted parent backgrounds
+  shadow-md: expressive card — for onboarding/highlight flows
+  interactive: clickable card with hover, active, focus, selected, and disabled states
 
 key_rules:
-  - shadow-card at rest, shadow-card-hover on interactive variants
+  - elevation prop controls shadow — flat (default), sm (raised), md (expressive)
+  - hover uses bg-foreground/[0.04], active adds scale-[0.97] + bg-foreground/[0.08]
+  - selected state uses bg-primary/10 border-primary/30
+  - disabled state uses opacity-50 pointer-events-none
   - no nested cards
-  - use for grouping related content
+  - never use shadow transitions for hover — background color shift only
 
 embedding_hint: >
   card container surface panel tile group
@@ -4164,19 +4186,46 @@ import {
 // Safety:   safety/hard-constraints.md rules 20, 21
 //
 // INVARIANTS (meta.yaml):
-//   rounded-lg border border-border/40 bg-card shadow-card
+//   rounded-lg border border-border/40 bg-card
+//   shadow-sm when on muted/tinted background, no shadow on white background
 //   p-4 content padding
 //
+// Elevation (styling-tokens.rule.md):
+//   flat       — no shadow, border-driven (white-on-white)
+//   shadow-sm  — card-raised, on muted/grey parent
+//   shadow-md  — card-express, onboarding/expressive flows
+//
+// State feedback (styling-tokens.rule.md):
+//   hover:    bg-foreground/[0.04]
+//   active:   bg-foreground/[0.08]
+//   focused:  ring-2 ring-ring ring-offset-1
+//   selected: border-2 border-primary
+//   disabled: opacity-50, pointer-events-none, no shadow, border border-border/40
+//
 // No nested cards permitted.
+
+type CardElevation = "flat" | "sm" | "md"
 
 interface CardProps {
   title?: string
   description?: string
   children: React.ReactNode
   footer?: React.ReactNode
-  /** Makes the card interactive with hover elevation */
+  /** Shadow elevation: "flat" (no shadow), "sm" (raised), "md" (expressive) */
+  elevation?: CardElevation
+  /** Makes the card interactive with hover/active/focus states */
   onClick?: () => void
+  /** Renders the card in a selected state (2px primary border) */
+  selected?: boolean
+  /** Disables the card (50% opacity, no interaction) */
+  disabled?: boolean
   className?: string
+}
+
+const elevationClass: Record<CardElevation, string> = {
+  flat: "",
+  sm: "shadow-sm",
+  md: "shadow-md",
 }
 
 export function Card({
@@ -4184,18 +4233,36 @@ export function Card({
   description,
   children,
   footer,
+  elevation = "flat",
   onClick,
+  selected = false,
+  disabled = false,
   className,
 }: CardProps) {
+  const isInteractive = !!onClick && !disabled
+
   return (
     <ShadcnCard
       role={onClick ? "button" : undefined}
-      tabIndex={onClick ? 0 : undefined}
-      onClick={onClick}
-      onKeyDown={onClick ? (e) => e.key === "Enter" && onClick() : undefined}
+      tabIndex={isInteractive ? 0 : undefined}
+      onClick={isInteractive ? onClick : undefined}
+      onKeyDown={isInteractive ? (e) => e.key === "Enter" && onClick() : undefined}
+      aria-disabled={disabled || undefined}
+      aria-selected={selected || undefined}
       className={cn(
-        "rounded-lg border border-border/40 bg-card shadow-card",
-        onClick && "cursor-pointer transition-shadow hover:shadow-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "rounded-lg bg-card",
+        disabled
+          ? "border border-border/40 opacity-50 pointer-events-none"
+          : elevation === "flat"
+            ? "border border-border/40"
+            : elevationClass[elevation],
+        selected && !disabled && "border-2 border-primary",
+        isInteractive && [
+          "cursor-pointer transition-colors",
+          "hover:bg-foreground/[0.04]",
+          "active:bg-foreground/[0.08]",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+        ],
         className,
       )}
     >
@@ -4225,7 +4292,7 @@ level: composite
 structural_family: content-carousel
 family_invariants:
   - "Container: overflow-hidden relative"
-  - "Prev/Next buttons: rounded-full h-8 w-8 border shadow-sm bg-background"
+  - "Prev/Next buttons: rounded-full h-8 w-8 border bg-background"
   - "Items: gap-4 between slides"
 confidence: 0.80
 version: 1.0.0
@@ -4349,7 +4416,7 @@ component_type: data-display
 level: composite
 structural_family: chart-visualization
 family_invariants:
-  - "Container: rounded-lg border border-border/40 bg-card p-4 shadow-card"
+  - "Container: rounded-lg border border-border/40 bg-card p-4 shadow-sm"
   - "Labels and axes: text-sm text-muted-foreground"
   - "Responsive: width 100% via ResponsiveContainer"
 confidence: 0.80
@@ -4401,7 +4468,7 @@ import {
 // Safety:   safety/hard-constraints.md rules 19, 20
 //
 // INVARIANTS (meta.yaml):
-//   Container: rounded-lg border border-border/40 bg-card p-4 shadow-card
+//   Container: rounded-lg border border-border/40 bg-card p-4 shadow-sm
 //   Labels/axes: text-sm text-muted-foreground
 //   Responsive width via ChartContainer
 
@@ -4430,7 +4497,7 @@ export function ChartFrame({
   return (
     <div
       className={cn(
-        "rounded-lg border border-border/40 bg-card p-4 shadow-card",
+        "rounded-lg border border-border/40 bg-card p-4 shadow-sm",
         className
       )}
     >
@@ -4473,7 +4540,7 @@ component_type: button
 level: domain
 structural_family: quick-action-chip
 family_invariants:
-  - "Shape: rounded-full border border-border/70 hover:border-primary/50 shadow-card"
+  - "Shape: rounded-full border border-border/70 hover:border-primary/50"
   - "Triggers inline card in Panel 2 only — never opens artifact tab"
   - "Read-only triggers — chips never modify data directly"
   - "Maximum ~4 chips in strip before needing command palette"
@@ -4486,7 +4553,7 @@ summary: >
   A persistent strip of pill-shaped chip buttons rendered above the chat input in
   Panel 2. Each chip is a one-tap shortcut that injects a structured assistant
   response inline in the conversation — no artifact tab is opened. The chip style
-  is rounded-full, border-border/70, hover:border-primary/50, shadow-card. The
+  is rounded-full, border-border/70, hover:border-primary/50. The
   triggered response is an assistant message with a text lead and an InlineCard
   attached below it.
 
@@ -8967,9 +9034,9 @@ export function StatCard({
       onClick={onClick}
       onKeyDown={onClick ? (e) => e.key === "Enter" && onClick() : undefined}
       className={cn(
-        "flex flex-col gap-1 p-4 bg-card rounded-lg border border-border/40 shadow-card",
-        "transition-shadow",
-        onClick && "cursor-pointer hover:shadow-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "flex flex-col gap-1 p-4 bg-card rounded-lg border border-border/40 shadow-sm",
+        "transition-colors",
+        onClick && "cursor-pointer hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         className
       )}
     >
