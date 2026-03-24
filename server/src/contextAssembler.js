@@ -14,6 +14,17 @@ import { query } from './vectorIndex.js';
 import { embedOne } from './embedder.js';
 import { search, isSeeded } from './vectorstore.js';
 
+// ── Tokenizer (mirrors vectorIndex.js — no new dependency) ───────────────────
+// Used for not_when penalty and composition hint checks.
+function tokenize(text) {
+  if (!text || typeof text !== 'string') return [];
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter(t => t.length >= 2);
+}
+
 // Maps query component_type to the pattern component_types it should structurally match.
 // "list" queries match "row" and "card" patterns since lists are composed of rows/cards.
 const TYPE_FAMILIES = {
@@ -60,6 +71,71 @@ function familyRankScore(patternStructuralFamily, queryComponentType) {
   if (expected.length === 0) return 0;
   if (expected.includes(patternStructuralFamily)) return 0.2;
   return -0.1;   // families defined for this type but this pattern's family is not one of them
+}
+
+// ── Change 1: not_when penalty ────────────────────────────────────────────────
+// Demotes blocks whose not_when text overlaps strongly with the intent.
+function applyNotWhenPenalty(scoredBlocks, intentTokens) {
+  return scoredBlocks.map(block => {
+    const notWhenVal = block.metadata?.not_when;
+    const notWhenText = Array.isArray(notWhenVal)
+      ? notWhenVal.join(' ')
+      : (notWhenVal || '');
+    const notWhenTokens = tokenize(notWhenText);
+    const overlap = notWhenTokens.filter(t => intentTokens.includes(t)).length;
+    if (overlap >= 2) {
+      const demotedScore = block.score * 0.3;
+      return {
+        ...block,
+        score: demotedScore,
+        adjusted_score: demotedScore,
+        not_when_penalised: true,
+      };
+    }
+    return block;
+  });
+}
+
+// ── Change 2: composition hints ───────────────────────────────────────────────
+// When two blocks each score in the ambiguous zone and are structurally distinct,
+// suggest composing them rather than inventing a third block.
+function buildCompositionHints(patterns) {
+  const qualifiers = patterns.filter(p => p.relevance_score >= 0.45 && p.relevance_score <= 0.72);
+  const hints = [];
+  for (let i = 0; i < qualifiers.length && hints.length < 2; i++) {
+    for (let j = i + 1; j < qualifiers.length && hints.length < 2; j++) {
+      const a = qualifiers[i];
+      const b = qualifiers[j];
+      if (a.structural_family && a.structural_family === b.structural_family) continue;
+      const aTokens = tokenize(a._embedding_hint || a.summary || '');
+      const bTokens = tokenize(b._embedding_hint || b.summary || '');
+      const overlap = aTokens.filter(t => bTokens.includes(t)).length;
+      if (overlap > 3) continue;
+      const aSummary = (a.summary || '').trim().replace(/\s+/g, ' ').substring(0, 120);
+      const bSummary = (b.summary || '').trim().replace(/\s+/g, ' ').substring(0, 120);
+      hints.push({
+        blocks: [a.id, b.id],
+        rationale: `${aSummary} ${bSummary}`.trim().substring(0, 220),
+        usage: `Render ${b.id} inside ${a.id}'s secondary metadata slot.`,
+      });
+    }
+  }
+  return hints;
+}
+
+// ── Change 3: structure-vs-content gap probe ──────────────────────────────────
+// Fires only in the 0.55–0.74 ambiguous zone to pre-empt false report_pattern calls.
+function buildGapProbe(topPattern) {
+  if (!topPattern) return null;
+  const score = topPattern.relevance_score;
+  if (score < 0.55 || score > 0.74) return null;
+  return {
+    matched_block: topPattern.id,
+    confidence: score,
+    question: `Does your intent change the slot structure of ${topPattern.id}, or just its content — labels, domain, entity type, icon?`,
+    if_content: `Use ${topPattern.id} as-is. Content changes do not require a new block or report_pattern.`,
+    if_structure: `Describe the structural difference specifically, then consider calling report_pattern. Do not invent a new block without first confirming the structure genuinely differs.`,
+  };
 }
 
 // Set to true by index.js after confirming the vector store has been seeded
@@ -311,7 +387,8 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
   // Stage 1: component_type structural boost (existing)
   // Stage 2: structural_family re-rank using FAMILY_MAP (new)
   // Raw scores and adjusted scores both preserved for _debug (Change 6)
-  const boostedResults = patternResults
+  // Change 1: not_when penalty applied before top-5 slice
+  const _rawBoosted = patternResults
     .map(r => {
       const raw_score = r.score;
       const stage1    = structuralBoost(r.metadata?.component_type, component_type);
@@ -326,6 +403,10 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
         family_match: stage2 > 0,
       };
     })
+    .sort((a, b) => b.score - a.score);
+
+  const intentTokens = tokenize(intent_description);
+  const boostedResults = applyNotWhenPenalty(_rawBoosted, intentTokens)
     .sort((a, b) => b.score - a.score)
     .slice(0, 5);
 
@@ -356,7 +437,9 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
     structural_family: r.metadata?.structural_family || null,
     component_type: r.metadata?.component_type || null,
     structurally_matched: r.structurally_matched || false,
+    not_when_penalised: r.not_when_penalised || false,   // Change 1
     summary: r.metadata?.summary || '',
+    _embedding_hint: r.metadata?.embedding_hint || '',   // used by buildCompositionHints, stripped in prod if desired
     when: formatWhen(r.metadata?.when),
     not_when: formatNotWhen(r.metadata?.not_when),
     because: r.metadata?.because || '',
@@ -493,11 +576,19 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
     episodic_hits: similarBuilds.length,
   } : {};
 
+  // ── Change 2: composition hints ──────────────────────────────────────────────
+  const compositions = buildCompositionHints(patterns);
+
+  // ── Change 3: structure-vs-content gap probe ─────────────────────────────────
+  const gap_probe = buildGapProbe(patterns[0] || null);
+
   // ── Assemble response — block if safety violations detected ─────────────────
   const response = {
     surface,
     structural_guidance: structuralGuidance,
     patterns,
+    compositions,
+    gap_probe,
     rules,
     ontology_refs: ontologyRefs,
     safety_constraints: safetyConstraints,
@@ -942,14 +1033,18 @@ function loadExistingCandidates(candidatesDir) {
       const nameMatch    = content.match(/pattern_name:\s*["']?(.+?)["']?\n/);
       const descMatch    = content.match(/description:\s*[>|]?\s*\n?((?:  .+\n?)+)/);
       const intentMatch  = content.match(/intent_it_serves:\s*[>|]?\s*\n?((?:  .+\n?)+)/);
+      const familyMatch  = content.match(/structural_family:\s*["']?(.+?)["']?\n/);
+      const idMatch      = content.match(/candidate_id:\s*["']?(.+?)["']?\n/);
       return {
         file: f,
-        pattern_name:     nameMatch   ? nameMatch[1].trim()              : f,
-        description:      descMatch   ? descMatch[1].replace(/\s+/g, ' ').trim()   : '',
-        intent_it_serves: intentMatch ? intentMatch[1].replace(/\s+/g, ' ').trim() : '',
+        pattern_name:      nameMatch   ? nameMatch[1].trim()                         : f,
+        description:       descMatch   ? descMatch[1].replace(/\s+/g, ' ').trim()   : '',
+        intent_it_serves:  intentMatch ? intentMatch[1].replace(/\s+/g, ' ').trim() : '',
+        structural_family: familyMatch ? familyMatch[1].trim()                       : null,
+        candidate_id:      idMatch     ? idMatch[1].trim()                           : f.replace('.yaml', ''),
       };
     } catch {
-      return { file: f, pattern_name: f, description: '', intent_it_serves: '' };
+      return { file: f, pattern_name: f, description: '', intent_it_serves: '', structural_family: null, candidate_id: f.replace('.yaml', '') };
     }
   });
 }
@@ -970,6 +1065,113 @@ function stringSimilarity(a, b) {
   const intersection = new Set([...wordsA].filter(w => wordsB.has(w)));
   const union = new Set([...wordsA, ...wordsB]);
   return union.size > 0 ? intersection.size / union.size : 0;
+}
+
+// ── Change 4: structural family deduplication helpers ─────────────────────────
+
+// Build a map of block_name (lowercase) → structural_family from the blocks directory.
+function loadBlockFamilyMap(basePath) {
+  const blocksDir = join(basePath, 'blocks');
+  const map = {};
+  try {
+    const entries = readdirSync(blocksDir);
+    for (const entry of entries) {
+      if (entry.startsWith('_')) continue;
+      const metaPath = join(blocksDir, entry, 'meta.yaml');
+      if (!existsSync(metaPath)) continue;
+      try {
+        const content = readFileSync(metaPath, 'utf-8');
+        const familyMatch = content.match(/structural_family:\s*["']?(.+?)["']?\n/);
+        if (familyMatch) map[entry.toLowerCase()] = familyMatch[1].trim();
+      } catch { /* skip */ }
+    }
+  } catch { /* skip */ }
+  return map;
+}
+
+// Keyword-to-family fallback table.
+const FAMILY_KEYWORD_MAP = {
+  'form-input':        ['input', 'field', 'textfield', 'textarea'],
+  'data-row':          ['data row', 'table row'],
+  'entity-header':     ['entity header', 'context header', 'patient header'],
+  'feedback-banner':   ['banner', 'notification', 'feedback message'],
+  'actionable-list-row': ['worklist', 'action row', 'entity row', 'list row'],
+  'assessment-form':   ['assessment', 'questionnaire', 'screening', 'sdoh'],
+  'stat-metric-card':  ['metric', 'stat', 'count', 'kpi', 'summary count'],
+  'status-indicator':  ['status badge', 'status indicator', 'state indicator'],
+  'modal-dialog':      ['modal', 'dialog', 'confirmation dialog'],
+  'overlay-panel':     ['drawer', 'sheet', 'overlay panel'],
+  'form-layout':       ['form layout', 'form container'],
+  'severity-alert-banner': ['alert banner', 'severity alert', 'clinical alert'],
+};
+
+// Infer structural_family from pattern name, description, and why text.
+function inferStructuralFamily(params, basePath) {
+  const text = [
+    params.description || '',
+    params.why_existing_patterns_didnt_fit || '',
+    params.pattern_name || '',
+  ].join(' ').toLowerCase();
+
+  // Step 1: check for known block names referenced in the why/description text
+  const blockFamilyMap = loadBlockFamilyMap(basePath);
+  for (const [blockName, family] of Object.entries(blockFamilyMap)) {
+    if (text.includes(blockName)) return family;
+  }
+
+  // Step 2: keyword match against known family names
+  for (const [family, keywords] of Object.entries(FAMILY_KEYWORD_MAP)) {
+    const hits = keywords.filter(kw => text.includes(kw));
+    if (hits.length >= 2) return family;
+  }
+
+  return null;
+}
+
+// Update an existing candidate YAML: increment frequency, append impl ref, update timestamp.
+function mergeIntoCandidate(candidatePath, implementationRef) {
+  let content = readFileSync(candidatePath, 'utf-8');
+
+  // Increment frequency_count (and legacy frequency field if present)
+  const freqMatch = content.match(/frequency_count:\s*(\d+)/);
+  const existingFreq = freqMatch ? parseInt(freqMatch[1], 10) : 1;
+  const newFreq = existingFreq + 1;
+  content = content.replace(/frequency_count:\s*\d+/, `frequency_count: ${newFreq}`);
+  content = content.replace(/^frequency:\s*\d+/m, `frequency: ${newFreq}`);
+
+  // Append implementation_ref if provided
+  if (implementationRef) {
+    if (/^implementation_refs:/m.test(content)) {
+      // Already an array — append
+      content = content.replace(
+        /(implementation_refs:(?:\n  - .+)*)/,
+        `$1\n  - "${implementationRef}"`
+      );
+    } else if (/^implementation_ref:/m.test(content)) {
+      // Singular → convert to plural array
+      content = content.replace(
+        /^implementation_ref:\s*["']?(.+?)["']?\n/m,
+        (_, existing) =>
+          `implementation_refs:\n  - "${existing.trim()}"\n  - "${implementationRef}"\n`
+      );
+    } else {
+      content += `\nimplementation_refs:\n  - "${implementationRef}"\n`;
+    }
+  }
+
+  // Update or insert updated_at timestamp
+  const now = new Date().toISOString();
+  if (/^updated_at:/m.test(content)) {
+    content = content.replace(/^updated_at:\s*.+/m, `updated_at: "${now}"`);
+  } else {
+    content = content.replace(
+      /(frequency_count:\s*\d+\n)/,
+      `$1updated_at: "${now}"\n`
+    );
+  }
+
+  writeFileSync(candidatePath, content, 'utf-8');
+  return newFreq;
 }
 
 // ── API submission config ─────────────────────────────────────────────────────
@@ -1030,6 +1232,30 @@ function localFallback(params, basePath, reason) {
   if (!existsSync(candidatesDir)) mkdirSync(candidatesDir, { recursive: true });
 
   const existing = loadExistingCandidates(candidatesDir);
+
+  // ── Change 4: structural family deduplication ─────────────────────────────
+  const incomingFamily = inferStructuralFamily(params, basePath);
+  if (incomingFamily) {
+    const familyMatch = existing.find(e => e.structural_family === incomingFamily);
+    if (familyMatch) {
+      const candidatePath = join(candidatesDir, familyMatch.file);
+      const newFreq = mergeIntoCandidate(candidatePath, implementation_ref || null);
+      const newStatus = newFreq >= 3 ? 'ready_for_ratification'
+                      : newFreq === 2 ? 'needs_more_signal'
+                      : 'logged';
+      process.stderr.write(
+        `[report_pattern] Merged into existing candidate ${familyMatch.candidate_id} ` +
+        `(structural_family: ${incomingFamily}). frequency_count: ${newFreq}\n`
+      );
+      return {
+        candidate_id:        familyMatch.candidate_id,
+        frequency_count:     newFreq,
+        status:              newStatus,
+        merged_into_existing: true,
+        source:              'local_fallback',
+      };
+    }
+  }
   const incomingText = compositeText(pattern_name, params.description, params.intent_it_serves);
   const similar = existing
     .map(e => ({
@@ -1053,6 +1279,9 @@ function localFallback(params, basePath, reason) {
   const projectId = process.env.DESIGN_MIND_PROJECT || basePath.split('/').pop() || 'unknown';
   const today = new Date().toISOString().substring(0, 10); // YYYY-MM-DD
 
+  // Include inferred structural_family in the YAML so future deduplication works (Change 4)
+  const structuralFamilyLine = incomingFamily ? `structural_family: "${incomingFamily}"` : null;
+
   const yamlContent = [
     `# Design Mind Pattern Candidate`,
     `# Generated: ${new Date().toISOString()}`,
@@ -1064,6 +1293,7 @@ function localFallback(params, basePath, reason) {
     `status: ${status}`,
     `frequency: ${frequencyCount}`,
     `frequency_count: ${frequencyCount}`,
+    ...(structuralFamilyLine ? [structuralFamilyLine] : []),
     ``,
     `reporting_projects:`,
     `  - project_id: "${projectId}"`,
@@ -1098,6 +1328,12 @@ function localFallback(params, basePath, reason) {
   ].join('\n');
 
   writeFileSync(join(candidatesDir, `${candidateId}.yaml`), yamlContent, 'utf-8');
+
+  if (params.preview_code) {
+    writeFileSync(join(candidatesDir, `${candidateId}.preview.tsx`), params.preview_code, 'utf-8');
+    process.stderr.write(`[reportPattern] Preview written: ${candidateId}.preview.tsx\n`);
+  }
+
   return { candidate_id: candidateId, similar_candidates: similar.map(s => ({ file: s.file, pattern_name: s.pattern_name })), frequency_count: frequencyCount, status, source: 'local_fallback' };
 }
 
