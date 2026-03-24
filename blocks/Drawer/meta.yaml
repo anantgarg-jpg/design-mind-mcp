@@ -1,0 +1,42 @@
+id: Drawer
+status: active
+component_type: overlay
+level: primitive
+structural_family: slide-panel
+family_invariants:
+  - "Container: rounded-t-lg bg-card z-40"
+  - "Drag handle visible at top center: w-12 h-1.5 rounded-full bg-muted"
+  - "Backdrop: z-30 bg-background/80"
+  - "Snap points for partial-open states"
+confidence: 0.85
+version: 1.0.0
+
+summary: >
+  Bottom or side sliding panel for mobile-friendly content presentation.
+  Supports drag-to-dismiss and snap points for partial-open states.
+  Preferred over Dialog on small screens.
+
+when:
+  - mobile context needing an overlay for content or actions
+  - multi-step flow on small screens (e.g. filters, settings)
+  - content that benefits from drag-to-dismiss interaction
+
+not_when:
+  - desktop-only context — prefer Dialog or Sheet
+  - simple confirmation — use AlertDialog
+  - always-visible sidebar — use a layout panel
+
+variants:
+  bottom: slides up from bottom edge (default, mobile-first)
+  side: slides in from left or right edge (tablet/desktop)
+
+key_rules:
+  - drag handle always visible at top center
+  - drag-to-dismiss supported
+  - snap points for partial open states
+  - backdrop tap closes the drawer
+  - prefer Sheet component on desktop breakpoints
+
+embedding_hint: >
+  drawer bottom sheet slide panel mobile overlay
+  drag dismiss snap swipe action sheet

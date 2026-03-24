@@ -1,0 +1,60 @@
+id: AlertBanner
+status: active
+component_type: banner
+level: composite
+structural_family: severity-alert-banner
+family_invariants:
+  - "Severity token map: critical=destructive, high=alert, medium=warning, low=accent"
+  - "Never hardcode colors — all visual decisions flow from the severity prop"
+  - "Critical and High must render Acknowledge — never Dismiss on Critical"
+  - "Always renders above page content — never inline or in sidebar"
+  - "Stacking order: Critical first, High, Medium, Low"
+confidence: 0.93
+version: 1.0.0
+introduced: seed-v0
+last_evolved: seed-v0
+
+summary: >
+  A severity-driven alert banner for displaying alerts that require user
+  attention or action. Severity is always visible. Permitted actions are
+  determined by severity level. This component is the most safety-critical
+  in the library.
+
+when:
+  - displaying any alert that requires user attention
+  - interrupting a workflow with urgent or safety-critical information
+  - system needs to communicate urgency with required action
+
+not_when:
+  - success confirmation → use Toast
+  - passive informational message with no action → use InfoBanner
+  - inline field validation error → use FormFieldError
+  - displaying a list of historical alerts → use AlertHistoryRow
+
+critical_rules:
+  - severity prop drives ALL visual and behavioral decisions
+  - never pass custom colors — they come from safety/severity-schema.yaml
+  - Critical and High alerts MUST render an Acknowledge button
+  - Critical alerts MUST NOT render a Dismiss button (safety constraint)
+  - High alerts may render Dismiss only with reason selector
+  - onAcknowledge callback is required for Critical and High severity
+  - component fires audit event on every acknowledgment
+
+layout:
+  - always renders above page content, never in sidebar or inline
+  - stacks vertically when multiple alerts are present
+  - Critical alerts stack before High, High before Medium, Medium before Low
+
+safety_refs:
+  - safety/hard-constraints.md rules 1, 5, 6
+  - safety/severity-schema.yaml
+
+usage_signal:
+  renders_total: 0
+  products: []
+  override_rate: 0.0
+
+embedding_hint: >
+  alert banner interrupt workflow severity urgent safety
+  acknowledge escalate dismiss critical high medium low
+  warning notification required action audit trail

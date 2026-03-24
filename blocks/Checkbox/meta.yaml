@@ -1,0 +1,41 @@
+id: Checkbox
+status: active
+component_type: input
+level: primitive
+structural_family: form-input
+family_invariants:
+  - "h-4 w-4 rounded-sm border border-input"
+  - "checked bg-primary"
+  - "focus-visible:ring-2"
+confidence: 0.85
+version: 1.0.0
+
+summary: >
+  Binary selection control for toggling a single option on or off.
+  Wraps shadcn Checkbox with enforced touch targets, label pairing,
+  and error state tokens. Supports indeterminate state for partial selections.
+
+when:
+  - toggling a boolean option in a form
+  - selecting multiple items from a list
+  - accepting terms or confirming a condition
+
+not_when:
+  - mutually exclusive options (use RadioGroup)
+  - on/off toggle with immediate effect (use Switch)
+  - complex multi-state selection
+
+variants:
+  default: unchecked state with border-input
+  checked: filled bg-primary with check icon
+  indeterminate: dash icon for partial group selection
+
+key_rules:
+  - 44px touch target on label+checkbox combined (rule 21)
+  - always paired with a Label component
+  - indeterminate state supported for group selections
+  - error state uses border-destructive (rule 13)
+
+embedding_hint: >
+  checkbox check toggle select binary boolean
+  form input tick mark option

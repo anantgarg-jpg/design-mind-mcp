@@ -1,0 +1,40 @@
+id: AlertDialog
+status: active
+component_type: overlay
+level: primitive
+structural_family: confirmation-dialog
+family_invariants:
+  - "rounded-lg shadow-lg container"
+  - "z-40 dialog layer, z-30 backdrop overlay"
+  - "Cancel action always present"
+confidence: 0.85
+version: 1.0.0
+
+summary: >
+  Modal confirmation dialog for destructive or irreversible actions. Wraps
+  shadcn AlertDialog with enforced copy rules — header states consequence,
+  action label matches consequence, and cancel is always available.
+
+when:
+  - confirming a destructive action like delete or remove
+  - irreversible operations requiring explicit user acknowledgment
+  - high-stakes state changes that cannot be undone
+
+not_when:
+  - non-destructive confirmations (use a standard Dialog)
+  - informational messages (use Alert or Toast)
+  - inline confirmation patterns (use inline confirm button)
+
+variants:
+  destructive: red action button for delete/remove operations
+  default: primary action button for non-delete irreversible actions
+
+key_rules:
+  - cancel action always present
+  - header states the consequence, never "Are you sure?" (rule 16)
+  - action label matches the consequence described in header (rule 16)
+  - secondary button says "Close" not "Cancel" (rule 17)
+
+embedding_hint: >
+  alert dialog confirm confirmation destructive delete
+  remove irreversible modal overlay acknowledge

@@ -178,7 +178,7 @@ async function handleRequest(req, res) {
 
     // Check for similar existing candidates using composite similarity
     // (name × 3 + description + intent) so patterns with different names
-    // but the same underlying concept (e.g. SdohAssessmentTab vs ClinicalAssessmentForm)
+    // but the same underlying concept (e.g. AssessmentTab vs ClinicalAssessmentForm)
     // are recognised as duplicates and their frequency count is merged.
     const nameLower = body.pattern_name.toLowerCase().trim();
     const existing = loadCandidates();

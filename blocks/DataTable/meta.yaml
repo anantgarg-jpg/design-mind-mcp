@@ -1,0 +1,36 @@
+id: DataTable
+status: active
+component_type: data-display
+level: composition
+structural_family: data-table
+family_invariants:
+  - "Container: w-full rounded-lg border border-border overflow-hidden"
+  - "Header: sticky top-0 bg-muted/50 text-sm font-medium text-muted-foreground"
+  - "Footer: border-t px-4 py-3 with pagination controls"
+confidence: 0.80
+version: 1.0.0
+
+summary: >
+  Full-featured data grid composing Table with sorting, filtering,
+  and pagination. Renders tabular data with sticky headers, sortable
+  columns, and row-level hover states.
+
+when:
+  - displaying structured tabular data with multiple columns
+  - data requires sorting, filtering, or pagination
+  - rows exceed a single viewport and need scroll or pagination
+
+not_when:
+  - simple key-value display — use KeyValueList
+  - list of interactive rows with actions — use ActionableRow
+
+key_rules:
+  - tabular-nums for all numeric columns
+  - sortable columns show ascending/descending indicator
+  - virtual scroll recommended for >100 rows
+  - row hover state hover:bg-muted/50
+  - column alignment follows convention (text left, numbers right)
+
+embedding_hint: >
+  data table grid sort filter paginate columns rows
+  tabular list records structured display

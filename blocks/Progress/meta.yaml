@@ -1,0 +1,41 @@
+id: Progress
+status: active
+component_type: feedback
+level: primitive
+structural_family: progress-indicator
+family_invariants:
+  - "Track: h-2 rounded-full bg-muted"
+  - "Indicator: bg-primary rounded-full"
+  - "Always includes aria-valuenow, aria-valuemin, aria-valuemax"
+confidence: 0.85
+version: 1.0.0
+
+summary: >
+  Visual progress bar indicating determinate completion percentage.
+  Renders a horizontal track with a filled indicator. Supports
+  optional percentage label with tabular-nums formatting.
+
+when:
+  - showing completion progress of a task or process
+  - file upload or download progress
+  - step completion indicator (e.g. profile completeness)
+
+not_when:
+  - indeterminate loading — use a spinner or skeleton
+  - step-by-step wizard — use StepIndicator
+  - real-time streaming — use a spinner
+
+variants:
+  default: standard progress bar with primary fill
+  labeled: progress bar with percentage label (tabular-nums)
+
+key_rules:
+  - always include aria-valuenow, aria-valuemax, aria-valuemin
+  - use for determinate progress only (known percentage)
+  - no animation on severity changes (instant update)
+  - percentage labels use tabular-nums for stable alignment
+  - color never sole differentiator (rule 19) — pair with label
+
+embedding_hint: >
+  progress bar indicator completion percentage
+  upload download loading determinate fill track

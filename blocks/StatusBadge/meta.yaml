@@ -19,11 +19,11 @@ summary: >
   and the highest-stakes for semantic consistency.
 
 when:
-  - displaying the current state of any entity (Task, CareGap, Alert, Patient)
+  - displaying the current state of any entity
   - any surface that shows a list of entities needs their status visible
 
 not_when:
-  - displaying severity of a clinical alert → use ClinicalAlertBanner which
+  - displaying severity of an alert → use AlertBanner which
     renders its own severity indicator
   - displaying a count or numeric value → use a plain text span
 
@@ -43,11 +43,8 @@ rules:
   - never use custom colors outside the token system
   - always include aria-label for screen readers
 
-ontology_refs:
-  states: [TaskStatus, CareGapStatus, AlertSeverity]
-
 safety_refs:
-  - safety/severity-schema.yaml for AlertSeverity rendering
+  - safety/severity-schema.yaml for severity rendering
 
 usage_signal:
   renders_total: 0
@@ -55,5 +52,5 @@ usage_signal:
   override_rate: 0.0
 
 embedding_hint: >
-  status badge state label entity task care gap alert active
-  open completed overdue cancelled closed severity indicator
+  status badge state label entity active open completed
+  overdue cancelled closed severity indicator

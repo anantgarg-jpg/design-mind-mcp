@@ -24,7 +24,7 @@ summary: >
 when:
   - adding a one-tap shortcut for a frequently-needed data lookup in Panel 2
   - the data to surface is compact enough to fit in an inline card (not a full artifact)
-  - coordinator needs the answer in conversation flow without context-switching
+  - user needs the answer in conversation flow without context-switching
 
 not_when:
   - the data requires a full list, table, or multi-record view — open an artifact tab instead
@@ -32,14 +32,9 @@ not_when:
   - more than ~4 chips (strip becomes unwieldy — consider a command palette instead)
 
 because: >
-  Panel 2 is the primary navigation instrument. Chips let coordinators surface
+  Panel 2 is the primary navigation instrument. Chips let users surface
   structured context without typing a query or leaving the conversation flow. They
   complement — not replace — full artifact tabs.
-
-ontology_refs:
-  entities: [Patient, CareGap]
-  states: []
-  actions: []
 
 usage_signal:
   renders_total: 0
@@ -48,5 +43,5 @@ usage_signal:
 
 embedding_hint: >
   chat chip quick action shortcut pill button panel 2 inline card conversation
-  one tap lookup coordinator last outreach next patient structured response
+  one tap lookup structured response data entity
   no artifact tab chat input strip persistent

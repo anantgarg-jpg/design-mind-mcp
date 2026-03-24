@@ -7,18 +7,18 @@ confidence: 0.0
 version: 0.0.0
 
 summary: >
-  Placeholder — not yet ratified. Page-level header for non-patient-scoped
+  Placeholder — not yet ratified. Page-level header for non-entity-scoped
   surfaces. Encodes the surface title, optional subtitle, and top-level
-  page actions. Distinct from PatientContextHeader (patient-scoped only).
+  page actions. Distinct from EntityContextHeader (entity-scoped only).
 
 when:
-  - top-level heading of a non-patient-scoped page or artifact
+  - top-level heading of a non-entity-scoped page or artifact
   - surface needs a title, optional description, and primary page actions
 
 not_when:
-  - patient-scoped surface — use PatientContextHeader
+  - entity-scoped surface — use EntityContextHeader
   - section within a page — use SectionHeader
 
 embedding_hint: >
   page header title surface artifact heading top level actions breadcrumb
-  navigation non-patient coordinator admin surface name
+  navigation non-entity admin surface name

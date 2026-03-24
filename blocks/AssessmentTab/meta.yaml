@@ -1,0 +1,54 @@
+id: AssessmentTab
+status: active
+component_type: form
+level: domain
+structural_family: assessment-form
+family_invariants:
+  - "Instrument questions are verbatim — never paraphrased or shortened"
+  - "Submit disabled until all required questions answered"
+  - "Score and results not shown until at least one answer recorded"
+  - "Self-harm or critical indicator question: trigger Review badge on any non-zero answer"
+  - "Never navigate away on submit — show inline success/results state"
+confidence: 0.85
+version: 1.0.0
+introduced: 2026-03-20
+last_evolved: 2026-03-20
+
+summary: >
+  A two-view assessment component for any structured screening instrument within
+  an entity-scoped surface. View 1: questionnaire with domain-organized questions
+  and structured responses (radio pills). View 2: per-domain results with need level
+  indicators (flagged/clear/not screened), Create Task CTA on flagged domains, and
+  Re-screen action. Integrates into an entity detail artifact as a tab.
+
+when:
+  - administering a structured assessment or questionnaire within an entity-scoped surface
+  - user needs to record and act on assessment results
+  - displaying assessment results with per-domain flagged status and follow-up actions
+
+not_when:
+  - population-level assessment summary counts — use a stat/metric component
+  - read-only display of a single assessment data point — use StatusBadge
+  - outside an entity-scoped surface (EntityContextHeader must be present above)
+
+because: >
+  Structured assessments directly affect outcomes and workflow closure rates. Users
+  need a fast, structured way to screen and act without leaving entity context. The
+  two-view design (form → results) avoids re-entry and surfaces actionable tasks
+  immediately on flagged domains.
+
+actions_available:
+  - Start Assessment (when no assessment on file)
+  - Save Assessment (completes the form, transitions to results view)
+  - Create Task (per flagged domain in results view)
+  - Re-screen (from results view, resets form)
+
+usage_signal:
+  renders_total: 0
+  products: []
+  override_rate: 0.0
+
+embedding_hint: >
+  assessment tab questionnaire screening form domains results
+  flagged needs identified summary task create re-screen
+  two-view form results structured instrument entity detail

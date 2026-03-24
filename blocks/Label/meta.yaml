@@ -1,0 +1,41 @@
+id: Label
+status: active
+component_type: form-control
+level: primitive
+structural_family: form-label
+family_invariants:
+  - "Typography: text-base font-semibold leading-none"
+  - "Disabled peer: peer-disabled:opacity-50 peer-disabled:cursor-not-allowed"
+  - "Error state: text-destructive (rule 13)"
+confidence: 0.85
+version: 1.0.0
+
+summary: >
+  Form field label associated with an input element via htmlFor.
+  Supports required indicator and error state styling.
+  Always used alongside Input, Select, or other form controls.
+
+when:
+  - labelling any form input, select, textarea, or radio group
+  - required field indicator needed
+  - error message association with a form field
+
+not_when:
+  - decorative heading — use a heading element
+  - inline helper text — use a description or hint span
+  - standalone text — use a paragraph
+
+variants:
+  default: standard label text
+  required: label with required indicator (asterisk)
+  error: label in error state with text-destructive
+
+key_rules:
+  - always use htmlFor to associate with the input element
+  - required indicator is optional (asterisk or "(required)" text)
+  - error state uses text-destructive (rule 13, NOT severity-critical)
+  - color never sole differentiator (rule 19) — pair with icon or text
+
+embedding_hint: >
+  label form field input association htmlFor
+  required asterisk error accessible name

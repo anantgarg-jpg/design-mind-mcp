@@ -1,0 +1,42 @@
+id: Sheet
+status: active
+component_type: overlay
+level: primitive
+structural_family: slide-panel
+family_invariants:
+  - "Panel: bg-card z-40 shadow-lg inset-y-0"
+  - "Width: min-w-[320px] max-w-[540px]"
+  - "Backdrop: z-30 bg-black/50"
+confidence: 0.85
+version: 1.0.0
+
+summary: >
+  Side-sliding panel overlay for secondary content, detail views, or
+  forms that don't warrant a full page navigation. Traps focus and
+  supports keyboard dismissal.
+
+when:
+  - showing detail or edit forms without leaving the current context
+  - secondary navigation or filter panels
+  - content too complex for a dialog but not worth a page route
+
+not_when:
+  - simple confirmation (use Dialog)
+  - quick action with 1-2 fields (use Popover)
+  - primary navigation flow (use page routing)
+
+variants:
+  right: slides in from the right edge (default)
+  left: slides in from the left edge
+  top: slides down from the top
+  bottom: slides up from the bottom
+
+key_rules:
+  - close button always visible in top corner
+  - ESC key closes the sheet
+  - focus trapped within the sheet while open
+  - overlay backdrop click closes the sheet
+
+embedding_hint: >
+  sheet panel slide drawer overlay side
+  detail form secondary content slide-in

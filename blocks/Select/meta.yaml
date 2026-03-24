@@ -1,0 +1,41 @@
+id: Select
+status: active
+component_type: input
+level: primitive
+structural_family: form-input
+family_invariants:
+  - "Trigger: h-9 rounded-md border border-input px-3 bg-background"
+  - "Content: rounded-md shadow-md z-20 bg-card border"
+  - "Item: py-1.5 px-2 cursor-pointer hover:bg-muted/50"
+confidence: 0.85
+version: 1.0.0
+
+summary: >
+  Dropdown single-value selector for forms and filters. Wraps a trigger
+  button that opens a popover list of options. Supports placeholder text,
+  error states, and disabled items.
+
+when:
+  - user must pick exactly one value from a predefined list
+  - 4-20 options (fewer use RadioGroup, more use Combobox)
+  - form field requiring structured selection
+
+not_when:
+  - multi-select needed (use Combobox or CheckboxGroup)
+  - fewer than 3 options (use RadioGroup)
+  - free-text entry required (use Combobox)
+
+variants:
+  default: standard form select with border
+  error: border-destructive for validation failure
+
+key_rules:
+  - placeholder uses text-muted-foreground
+  - chevron indicator always visible on trigger
+  - error state uses border-destructive (rule 13, never --severity-critical)
+  - trigger height 44px minimum touch target (rule 21)
+  - focus-visible ring never suppressed (rule 20)
+
+embedding_hint: >
+  select dropdown picker single value option form input
+  choose list menu trigger popover

@@ -1,7 +1,7 @@
 # Severity schema — machine-readable
 # Single source of truth for severity rendering across all surfaces.
 # Updated to use design tokens from theme.css.
-# Referenced by: ClinicalAlertBanner/meta.yaml, StatusBadge/meta.yaml,
+# Referenced by: AlertBanner/meta.yaml, StatusBadge/meta.yaml,
 # runtime generation layer, conversational layer.
 
 # IMPORTANT NAMING NOTE:

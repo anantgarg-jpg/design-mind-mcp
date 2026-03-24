@@ -109,8 +109,8 @@ The `type` field classifies where in the genome hierarchy the block belongs:
 | Type | Meaning |
 |------|---------|
 | `primitive` | A small, single-purpose block (e.g. StatusBadge, StatCard) |
-| `composite` | A block that assembles primitives (e.g. ActionableRow, PatientContextHeader) |
-| `domain` | A product-specific block tied to a workflow (e.g. ChatQuickActionChip, SdohAssessmentTab) |
+| `composite` | A block that assembles primitives (e.g. ActionableRow, EntityContextHeader) |
+| `domain` | A product-specific block tied to a workflow (e.g. ChatQuickActionChip, AssessmentTab) |
 | `surface` | A full artifact with workflow intent |
 
 ---
@@ -208,14 +208,14 @@ This keeps the genome lean. Four domain-named patterns (CareGapCard, CareGapRow,
 
 | Block | Level | Use for |
 |-------|-------|---------|
-| `ActionableRow` | composite | Any entity in a list that needs a primary action — care gaps, tasks, protocols, assessments. `variant="row"` inside a shared container; `variant="card"` as standalone cards |
+| `ActionableRow` | composite | Any entity in a list that needs a primary action — tasks, protocols, assessments. `variant="row"` inside a shared container; `variant="card"` as standalone cards |
 | `StatusBadge` | primitive | Any entity status display |
-| `ClinicalAlertBanner` | composite | Clinical alerts requiring immediate acknowledgment |
-| `PatientContextHeader` | composite | Patient identity at the top of any patient-scoped surface |
+| `AlertBanner` | composite | Severity-driven alerts requiring user attention or acknowledgment |
+| `EntityContextHeader` | composite | Entity identity at the top of any entity-scoped surface |
 | `StatCard` | primitive | Summary metric or count display |
-| `PatientRow` | composite | Patient in a population list |
+| `EntityRow` | composite | Entity in a population/worklist view with score, tier, and primary action |
 | `SectionHeader` | primitive | Section label with optional count and action |
 | `ChatQuickActionChip` | domain | Quick action chips in the chat interface |
-| `InlinePatientCard` | domain | Compact patient identity inline in chat or detail views |
-| `OutreachLogRow` | domain | Single outreach attempt in an outreach log |
-| `SdohAssessmentTab` | domain | SDOH assessment question group tab |
+| `InlineEntityCard` | domain | Compact entity card inline in chat or detail views |
+| `ActivityLogRow` | domain | Single activity entry in a chronological log |
+| `AssessmentTab` | domain | Structured assessment/questionnaire tab |

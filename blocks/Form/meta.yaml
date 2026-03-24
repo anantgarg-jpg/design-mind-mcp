@@ -1,0 +1,36 @@
+id: Form
+status: active
+component_type: form-control
+level: composition
+structural_family: form-layout
+family_invariants:
+  - "Container: flex flex-col gap-4"
+  - "Field: flex flex-col gap-2"
+  - "Error: text-sm text-destructive (rule 13 — error token, not severity-critical)"
+  - "Submit section: border-t pt-4 mt-4"
+confidence: 0.80
+version: 1.0.0
+
+summary: >
+  Form container with integrated validation powered by react-hook-form.
+  Provides consistent field layout, error messaging, and submit section
+  styling for any multi-field data entry surface.
+
+when:
+  - multi-field data entry requiring validation
+  - structured form with consistent error display
+  - form submission with dirty-state tracking
+
+not_when:
+  - single inline input — use a standalone Input
+  - settings toggles list — use a switch group
+
+key_rules:
+  - error messages rendered below the field using text-destructive (rule 13)
+  - warn before navigating away with unsaved changes (rule 12)
+  - submit button disabled until form is valid
+  - single primary submit CTA per form (rule 14)
+
+embedding_hint: >
+  form validation fields input submit react-hook-form
+  error state dirty unsaved changes entry

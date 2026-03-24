@@ -13,7 +13,7 @@ version: 1.0.0
 summary: >
   Artifact content section label with optional count and action.
   Used to divide Panel 3 content into named groups — "NEEDS ATTENTION",
-  "COMING UP", "CARE GAPS". Muted and small — organizes without competing.
+  "COMING UP", "ITEMS". Muted and small — organizes without competing.
 
 when:
   - dividing a list into named sections
@@ -31,4 +31,4 @@ key_rules:
 
 embedding_hint: >
   section header label group divider needs attention coming up
-  care gaps count wayfinding artifact content organizer
+  items count wayfinding artifact content organizer

@@ -214,7 +214,7 @@ Base unit: 4px. All spacing is a multiple of 4.
   space-2  8px     p-2        Badge padding, chip padding, inline gaps
   space-3  12px    p-3        Alert banner padding, compact card padding
   space-4  16px    p-4        Standard card padding, section padding
-  space-6  24px    p-6        PatientContextHeader horizontal padding
+  space-6  24px    p-6        EntityContextHeader horizontal padding
   space-8  32px    p-8        Major section separation, panel gutters
   space-12 48px    p-12       Page-level vertical spacing (rare)
   space-16 64px    p-16       Reserved (almost never needed)
@@ -223,7 +223,7 @@ COMPONENT SPACING CONVENTIONS:
   Cards (bg-card):        p-4 (16px all sides)
   Rows (list items):      px-4 py-3.5 (16px horizontal, 14px vertical)
   Alert banners:          p-4 with gap-3 internal
-  PatientContextHeader:   px-6 py-4
+  EntityContextHeader:   px-6 py-4
   Section gaps:           gap-4 (16px) between cards, gap-3 (12px) between rows
   Meta row (below title): mt-1.5 (6px), gap-3 (12px) between items
   Button groups:          gap-2 (8px) between buttons, gap-1.5 (6px) for icon buttons
@@ -254,7 +254,7 @@ NEVER:
   sm           rounded-sm      2px      Rarely used — prefer md
   md (default) rounded-md      6px      Inputs, buttons, dropdowns, tooltips
   lg           rounded-lg      8px      Cards, panels, dialogs, alert banners
-  xl           rounded-xl      12px     Inline cards within chat (InlinePatientCard)
+  xl           rounded-xl      12px     Inline cards within chat (InlineEntityCard)
   full         rounded-full    9999px   Badges, pills, status indicators, avatars, chips
 
 COMPONENT DEFAULTS:
@@ -289,8 +289,8 @@ borders, not shadows, for visual separation.
 
 WHEN NOT TO USE SHADOWS:
   - Rows in lists — rows use border-b, never shadow
-  - PatientContextHeader — uses border-b, no shadow
-  - ClinicalAlertBanner — uses colored left border, no shadow
+  - EntityContextHeader — uses border-b, no shadow
+  - AlertBanner — uses colored left border, no shadow
   - Sidebar content — sidebar tokens handle their own surface treatment
   - Any element inside a card — shadows are for top-level containers only
 
@@ -305,7 +305,7 @@ NEVER:
   LAYER         Z-INDEX   WHAT
   ────────────  ────────  ──────────────────────────────────────
   base          0         Normal content flow
-  sticky        10        Sticky headers, tab bars, PatientContextHeader
+  sticky        10        Sticky headers, tab bars, EntityContextHeader
   dropdown      20        Dropdowns, popovers, context menus
   overlay       30        Modal backdrops, drawer overlays
   modal         40        Dialogs, confirmation modals, command palette

@@ -1,0 +1,38 @@
+id: Card
+status: active
+component_type: layout
+level: primitive
+structural_family: content-container
+family_invariants:
+  - "rounded-lg border border-border/40 bg-card shadow-card"
+  - "p-4 content padding"
+confidence: 0.85
+version: 1.0.0
+
+summary: >
+  Surface container for grouping related content with optional header,
+  content body, and footer sections. Wraps shadcn Card with project
+  shadow tokens and enforced nesting rules.
+
+when:
+  - grouping related content into a visually distinct surface
+  - dashboard tiles or content panels
+  - form sections that need visual separation
+
+not_when:
+  - nesting a Card inside another Card (no nested cards)
+  - single-line items in a list (use a row component)
+  - full-width page sections without visual boundaries
+
+variants:
+  default: static content container at rest
+  interactive: hover shadow elevation for clickable cards
+
+key_rules:
+  - shadow-card at rest, shadow-card-hover on interactive variants
+  - no nested cards
+  - use for grouping related content
+
+embedding_hint: >
+  card container surface panel tile group
+  content section box wrapper

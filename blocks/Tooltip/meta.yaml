@@ -1,0 +1,40 @@
+id: Tooltip
+status: active
+component_type: overlay
+level: primitive
+structural_family: info-tooltip
+family_invariants:
+  - "Content: rounded-md shadow-sm z-60"
+  - "Style: bg-foreground text-background text-sm px-3 py-1.5"
+  - "Width: max-w-[220px]"
+confidence: 0.85
+version: 1.0.0
+
+summary: >
+  Hover and focus hint text that appears near a trigger element.
+  Provides brief supplementary information without cluttering the
+  interface. Keyboard accessible via focus.
+
+when:
+  - explaining an icon-only button's purpose
+  - providing supplementary context for a UI element
+  - abbreviation or truncated text needs full expansion
+
+not_when:
+  - essential information (hover is unreliable on touch devices)
+  - rich or interactive content (use Popover)
+  - error messages or validation (use inline form errors)
+
+variants:
+  default: dark inverted tooltip
+
+key_rules:
+  - open delay 400ms to prevent accidental triggers
+  - close delay 100ms for smooth transitions
+  - keyboard accessible via focus (not hover-only)
+  - never for essential info (hover not reliable on touch)
+  - single line preferred, max-w-[220px] for wrapping
+
+embedding_hint: >
+  tooltip hint hover focus info label
+  icon explain context supplementary popup

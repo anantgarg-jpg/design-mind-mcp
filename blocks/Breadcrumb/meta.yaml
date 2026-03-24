@@ -1,0 +1,40 @@
+id: Breadcrumb
+status: active
+component_type: navigation
+level: primitive
+structural_family: wayfinding
+family_invariants:
+  - "text-sm text-muted-foreground for inactive items"
+  - "/ separator between levels"
+  - "gap-1.5 between items"
+  - "last item text-foreground (current page)"
+confidence: 0.85
+version: 1.0.0
+
+summary: >
+  Hierarchical location trail showing the user's position within a
+  navigation structure. Wraps shadcn Breadcrumb with enforced max
+  depth and ellipsis overflow for deep hierarchies.
+
+when:
+  - showing location within a multi-level navigation hierarchy
+  - enabling quick traversal back to parent sections
+  - surfaces deeper than two levels in the information architecture
+
+not_when:
+  - flat navigation with no hierarchy (use tabs or links)
+  - step-based flows (use StepIndicator)
+  - fewer than two navigation levels
+
+variants:
+  default: standard slash-separated trail
+  collapsed: ellipsis for middle items when depth exceeds 4-5 levels
+
+key_rules:
+  - last item is current page and not a link
+  - max 4-5 visible levels before collapsing middle items
+  - use ellipsis for overflow in deep hierarchies
+
+embedding_hint: >
+  breadcrumb navigation hierarchy trail path
+  wayfinding location crumb parent

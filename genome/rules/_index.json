@@ -85,24 +85,24 @@
       "renders_total": 0,
       "override_rate": 0.0
     },
-    "ClinicalAlertBanner": {
-      "file": "blocks/ClinicalAlertBanner/meta.yaml",
+    "AlertBanner": {
+      "file": "blocks/AlertBanner/meta.yaml",
       "level": "composite",
       "confidence": 0.80,
       "status": "active",
       "renders_total": 0,
       "override_rate": 0.0
     },
-    "PatientContextHeader": {
-      "file": "blocks/PatientContextHeader/meta.yaml",
+    "EntityContextHeader": {
+      "file": "blocks/EntityContextHeader/meta.yaml",
       "level": "composite",
       "confidence": 0.90,
       "status": "active",
       "renders_total": 0,
       "override_rate": 0.0
     },
-    "PatientRow": {
-      "file": "blocks/PatientRow/meta.yaml",
+    "EntityRow": {
+      "file": "blocks/EntityRow/meta.yaml",
       "level": "composite",
       "confidence": 0.92,
       "status": "active",
@@ -117,26 +117,394 @@
       "renders_total": 0,
       "override_rate": 0.0
     },
-    "InlinePatientCard": {
-      "file": "blocks/InlinePatientCard/meta.yaml",
+    "InlineEntityCard": {
+      "file": "blocks/InlineEntityCard/meta.yaml",
       "level": "domain",
       "confidence": 0.85,
       "status": "active",
       "renders_total": 0,
       "override_rate": 0.0
     },
-    "OutreachLogRow": {
-      "file": "blocks/OutreachLogRow/meta.yaml",
+    "ActivityLogRow": {
+      "file": "blocks/ActivityLogRow/meta.yaml",
       "level": "domain",
       "confidence": 0.85,
       "status": "active",
       "renders_total": 0,
       "override_rate": 0.0
     },
-    "SdohAssessmentTab": {
-      "file": "blocks/SdohAssessmentTab/meta.yaml",
+    "AssessmentTab": {
+      "file": "blocks/AssessmentTab/meta.yaml",
       "level": "domain",
       "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Accordion": {
+      "file": "blocks/Accordion/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Alert": {
+      "file": "blocks/Alert/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "AlertDialog": {
+      "file": "blocks/AlertDialog/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Avatar": {
+      "file": "blocks/Avatar/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Badge": {
+      "file": "blocks/Badge/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Button": {
+      "file": "blocks/Button/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Breadcrumb": {
+      "file": "blocks/Breadcrumb/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Calendar": {
+      "file": "blocks/Calendar/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Card": {
+      "file": "blocks/Card/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Checkbox": {
+      "file": "blocks/Checkbox/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Collapsible": {
+      "file": "blocks/Collapsible/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "ContextMenu": {
+      "file": "blocks/ContextMenu/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Dialog": {
+      "file": "blocks/Dialog/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Drawer": {
+      "file": "blocks/Drawer/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "DropdownMenu": {
+      "file": "blocks/DropdownMenu/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "HoverCard": {
+      "file": "blocks/HoverCard/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Input": {
+      "file": "blocks/Input/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "InputOTP": {
+      "file": "blocks/InputOTP/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Label": {
+      "file": "blocks/Label/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "NavigationMenu": {
+      "file": "blocks/NavigationMenu/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Popover": {
+      "file": "blocks/Popover/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Progress": {
+      "file": "blocks/Progress/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "RadioGroup": {
+      "file": "blocks/RadioGroup/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Resizable": {
+      "file": "blocks/Resizable/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "ScrollArea": {
+      "file": "blocks/ScrollArea/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Select": {
+      "file": "blocks/Select/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Separator": {
+      "file": "blocks/Separator/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Sheet": {
+      "file": "blocks/Sheet/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Skeleton": {
+      "file": "blocks/Skeleton/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Slider": {
+      "file": "blocks/Slider/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Sonner": {
+      "file": "blocks/Sonner/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Switch": {
+      "file": "blocks/Switch/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Table": {
+      "file": "blocks/Table/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Tabs": {
+      "file": "blocks/Tabs/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Textarea": {
+      "file": "blocks/Textarea/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Toggle": {
+      "file": "blocks/Toggle/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "ToggleGroup": {
+      "file": "blocks/ToggleGroup/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Tooltip": {
+      "file": "blocks/Tooltip/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Command": {
+      "file": "blocks/Command/meta.yaml",
+      "level": "composition",
+      "confidence": 0.80,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Combobox": {
+      "file": "blocks/Combobox/meta.yaml",
+      "level": "composition",
+      "confidence": 0.80,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "DatePicker": {
+      "file": "blocks/DatePicker/meta.yaml",
+      "level": "composition",
+      "confidence": 0.80,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "DataTable": {
+      "file": "blocks/DataTable/meta.yaml",
+      "level": "composition",
+      "confidence": 0.80,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Form": {
+      "file": "blocks/Form/meta.yaml",
+      "level": "composition",
+      "confidence": 0.80,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Chart": {
+      "file": "blocks/Chart/meta.yaml",
+      "level": "composition",
+      "confidence": 0.80,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Carousel": {
+      "file": "blocks/Carousel/meta.yaml",
+      "level": "composition",
+      "confidence": 0.80,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Pagination": {
+      "file": "blocks/Pagination/meta.yaml",
+      "level": "composition",
+      "confidence": 0.80,
       "status": "active",
       "renders_total": 0,
       "override_rate": 0.0

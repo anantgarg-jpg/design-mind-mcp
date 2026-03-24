@@ -1,0 +1,41 @@
+id: Resizable
+status: active
+component_type: layout
+level: primitive
+structural_family: resizable-layout
+family_invariants:
+  - "Layout: flex h-full"
+  - "Handle: w-1 bg-border hover:bg-primary/50 cursor-col-resize"
+  - "Min/max size constraints enforced on each panel"
+confidence: 0.85
+version: 1.0.0
+
+summary: >
+  Resizable split-pane layout that allows users to drag a handle
+  to adjust the relative sizes of adjacent panels. Supports
+  horizontal and vertical orientations.
+
+when:
+  - side-by-side panels where the user needs to control width ratio
+  - IDE-style layouts with resizable sidebar and content area
+  - split view for comparison or detail panels
+
+not_when:
+  - fixed layout — use CSS grid or flexbox
+  - collapsible sidebar — use a toggle-based layout
+  - mobile context — panels should stack vertically
+
+variants:
+  horizontal: left-right split (default)
+  vertical: top-bottom split
+
+key_rules:
+  - min/max size constraints on each panel
+  - handle visible on hover (bg-primary/50)
+  - keyboard resizable (arrow keys adjust panel sizes)
+  - persist sizes across sessions when possible
+  - focus-visible ring on handle never suppressed (rule 20)
+
+embedding_hint: >
+  resizable split pane panel layout drag handle
+  sidebar content resize divider adjustable width

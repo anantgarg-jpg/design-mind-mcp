@@ -11,10 +11,9 @@ last_evolved: refactor-v1
 summary: >
   The single actionable unit for any entity that appears in a list and needs
   a primary action, optional secondary actions, and status display. Covers
-  care gaps, tasks, protocols, assessments, patients — anything that follows
-  the "scan → act" coordinator workflow. Two layout variants share identical
-  interaction invariants: row (border-l-2 accent stripe, border-b divider)
-  and card (rounded-lg border, standalone shadow).
+  any entity type that follows the "scan → act" workflow. Two layout variants
+  share identical interaction invariants: row (border-l-2 accent stripe,
+  border-b divider) and card (rounded-lg border, standalone shadow).
 
   Rule: use ActionableRow. Do NOT create a new pattern just because the entity
   domain changes. New pattern only when the STRUCTURE changes — different
@@ -22,14 +21,14 @@ summary: >
 
 when:
   - displaying any entity in a list where the user can take a primary action
-  - worklist rows: care gaps, tasks, protocols, assessments
+  - worklist rows: tasks, protocols, assessments, items
   - variant="row" when rows live inside a shared container (bg-card rounded-lg border)
   - variant="card" when each row is a standalone card (its own border + shadow)
 
 not_when:
   - summary counts or metrics → use StatCard
-  - patient identity header → use PatientContextHeader
-  - clinical alert requiring immediate acknowledgment → use ClinicalAlertBanner
+  - entity identity header → use EntityContextHeader
+  - alert requiring immediate acknowledgment → use AlertBanner
   - read-only display with no actions (no primaryAction, no onExpand) — just use a plain div
 
 variants:
@@ -44,7 +43,7 @@ variants:
     slots:
       - title (required)
       - label (optional monospace badge above title)
-      - contextLabel (optional patient name when not in patient-scoped view)
+      - contextLabel (optional entity name when not in entity-scoped view)
       - status (optional StatusBadge)
       - meta[] (icon + text pairs, up to ~3)
       - primaryAction (right-aligned button)
@@ -60,7 +59,7 @@ variants:
     slots:
       - title (required)
       - label (optional monospace badge above title)
-      - contextLabel (optional patient name)
+      - contextLabel (optional entity name)
       - status (optional StatusBadge)
       - meta[] (icon + text pairs)
       - primaryAction (right-aligned button)
@@ -80,7 +79,7 @@ props:
   titleMono: "boolean — renders title in monospace (for codes like PHQ-9)"
   label: "string — small badge above title (e.g. measure code HBD)"
   labelMono: "boolean — renders label in monospace"
-  contextLabel: "string — patient name when outside patient-scoped view"
+  contextLabel: "string — entity name when outside entity-scoped view"
   status: "StatusKey — passed to StatusBadge"
   accent: '"warning" | "accent" | "success" | "none" — row stripe color'
   meta: "MetaItem[] — [{icon?, text, urgent?, success?}]"
@@ -90,13 +89,8 @@ props:
   onRowClick: "() => void — makes full row clickable (e.g., open tab)"
   dimmed: "boolean — opacity-50, no actions, no hover"
 
-ontology_refs:
-  entities: [CareGap, Task, CareProtocol, Assessment, Patient]
-  states: [CareGapStatus, TaskStatus, ProtocolStatus]
-  actions: [CloseGap, Complete, Activate, View, Assign, AddNote, Exclude, StartAssessment]
-
 embedding_hint: >
-  actionable row card list worklist care gap task protocol assessment
-  coordinator close gap complete assign exclude add note overdue status
+  actionable row card list worklist task protocol assessment
+  complete assign exclude add note overdue status
   accent stripe variant row card entity action unit scan act workflow
-  patient name context label meta icon primary action secondary dropdown
+  context label meta icon primary action secondary dropdown

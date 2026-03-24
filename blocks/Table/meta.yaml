@@ -1,0 +1,41 @@
+id: Table
+status: active
+component_type: data-display
+level: primitive
+structural_family: data-table
+family_invariants:
+  - "Root: w-full text-base"
+  - "Header: text-sm font-semibold text-muted-foreground uppercase tracking-wide"
+  - "Cell: py-3 px-4 border-b"
+  - "Row hover: hover:bg-muted/50"
+confidence: 0.85
+version: 1.0.0
+
+summary: >
+  Structured data grid for tabular information. Renders a standard
+  HTML table with styled headers, rows, and cells. Supports sticky
+  headers, numeric alignment, and hover states.
+
+when:
+  - displaying structured data with consistent columns
+  - comparing items across multiple attributes
+  - data has a natural row-column structure
+
+not_when:
+  - simple key-value pairs (use KeyValueList)
+  - single-column list of items (use a list component)
+  - nested or hierarchical data (use a tree or accordion)
+
+variants:
+  default: standard table with header row
+  striped: alternating row backgrounds for dense data
+
+key_rules:
+  - tabular-nums for all numeric columns
+  - sticky header when table is scrollable
+  - column alignment left for text, right for numbers
+  - never nest tables within tables
+
+embedding_hint: >
+  table data grid structured columns rows
+  header cell tabular numeric list compare

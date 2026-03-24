@@ -1,0 +1,40 @@
+id: Avatar
+status: active
+component_type: data-display
+level: primitive
+structural_family: identity-indicator
+family_invariants:
+  - "rounded-full always"
+  - "bg-muted fallback background"
+  - "text-muted-foreground fallback text color"
+confidence: 0.85
+version: 1.0.0
+
+summary: >
+  Circular identity indicator displaying a user image or initials fallback.
+  Wraps shadcn Avatar with deterministic fallback colors derived from the
+  display name, ensuring stable visual identity across sessions.
+
+when:
+  - displaying a user or entity identity alongside a name
+  - list items, headers, or cards that reference a person
+  - comment threads or activity feeds with attributed content
+
+not_when:
+  - decorative imagery unrelated to identity (use an img)
+  - icon-only indicators without identity context
+  - logo or brand marks
+
+variants:
+  sm: small size h-6 w-6 for compact rows
+  md: medium size h-8 w-8 default for lists
+  lg: large size h-10 w-10 for headers and profiles
+
+key_rules:
+  - always rounded-full regardless of size
+  - stable fallback color derived from name (deterministic hash)
+  - never decorative-only — must represent an identifiable entity
+
+embedding_hint: >
+  avatar user profile image initials fallback
+  identity indicator person photo circle

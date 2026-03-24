@@ -1,0 +1,41 @@
+id: HoverCard
+status: active
+component_type: overlay
+level: primitive
+structural_family: hover-preview
+family_invariants:
+  - "Container: rounded-lg shadow-md z-20 bg-card border border-border p-4 max-w-[320px]"
+  - "Open delay: 200ms; close delay: 100ms"
+  - "Must be keyboard-accessible via focus"
+confidence: 0.85
+version: 1.0.0
+
+summary: >
+  Hover-triggered content preview card that appears when the user
+  hovers over or focuses a trigger element. Provides supplementary
+  context without navigating away from the current view.
+
+when:
+  - previewing a linked entity (user profile, resource summary)
+  - showing supplementary info on hover without navigation
+  - augmenting a text link or avatar with richer context
+
+not_when:
+  - content is critical — hover is not accessible on touch devices
+  - interactive content inside the preview — use Popover instead
+  - mobile-first context — hover is unavailable
+
+variants:
+  default: simple text preview with optional avatar
+  rich: preview with image, title, description, and metadata
+
+key_rules:
+  - never used for critical information (hover unavailable on touch)
+  - open delay 200ms to avoid accidental triggers
+  - close delay 100ms to allow cursor re-entry
+  - keyboard accessible via focus on the trigger element
+  - color never sole differentiator for meaning (rule 19)
+
+embedding_hint: >
+  hover card preview tooltip popover entity
+  profile summary link context peek

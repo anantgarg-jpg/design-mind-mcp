@@ -1,0 +1,40 @@
+id: Switch
+status: active
+component_type: input
+level: primitive
+structural_family: form-input
+family_invariants:
+  - "Root: h-5 w-9 rounded-full"
+  - "Track: bg-input checked:bg-primary"
+  - "Thumb: h-4 w-4 rounded-full bg-card shadow-sm"
+confidence: 0.85
+version: 1.0.0
+
+summary: >
+  Binary toggle control for on/off settings. Renders a small track
+  with a sliding thumb. State change is immediate and does not
+  require form submission.
+
+when:
+  - toggling a boolean setting on or off
+  - enabling or disabling a feature in real time
+  - binary preference that takes effect immediately
+
+not_when:
+  - part of a form that requires explicit submission (use Checkbox)
+  - selecting from more than two options (use Select or RadioGroup)
+  - toggling a toolbar button state (use Toggle)
+
+variants:
+  default: standard switch with label
+
+key_rules:
+  - 44px touch target including label area (rule 21)
+  - always paired with a visible Label
+  - state change is immediate (no submit required)
+  - never use for form submission flows (use Checkbox)
+  - focus-visible ring never suppressed (rule 20)
+
+embedding_hint: >
+  switch toggle binary on off boolean
+  setting enable disable flip control

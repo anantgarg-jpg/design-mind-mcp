@@ -1,0 +1,44 @@
+id: RadioGroup
+status: active
+component_type: input
+level: primitive
+structural_family: form-input
+family_invariants:
+  - "Layout: flex flex-col gap-3"
+  - "Each radio: h-4 w-4 rounded-full border border-input"
+  - "Checked: border-primary fill-primary"
+  - "Touch target: 44px min on label+radio combined (rule 21)"
+confidence: 0.85
+version: 1.0.0
+
+summary: >
+  Exclusive single-choice selection from a group of options.
+  Each option is a radio button paired with a label. Always
+  contains at least two options.
+
+when:
+  - selecting exactly one option from a small set (2-6 items)
+  - the user needs to see all options at once
+  - form field requiring mutually exclusive choice
+
+not_when:
+  - many options (7+) — use Select
+  - multiple selections allowed — use Checkbox group
+  - binary toggle — use Switch
+
+variants:
+  default: vertical stack of radio options
+  horizontal: inline row of radio options
+  withDescription: each option includes a description below the label
+
+key_rules:
+  - 44px combined touch target on label+radio (rule 21)
+  - always paired with Labels (htmlFor association)
+  - always in a group of 2 or more options
+  - error state uses border-destructive (rule 13)
+  - focus-visible ring never suppressed (rule 20)
+  - color never sole differentiator (rule 19) — fill + border change
+
+embedding_hint: >
+  radio group button option select choice exclusive
+  single form toggle pick one option list

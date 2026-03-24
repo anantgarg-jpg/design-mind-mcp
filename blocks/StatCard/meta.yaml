@@ -14,8 +14,8 @@ version: 1.0.0
 summary: >
   Metric display card for dashboard summary rows. Shows a label,
   a large numeric value, and an optional subtitle. Used in the
-  artifact content header area to give coordinators their daily
-  snapshot at a glance.
+  artifact content header area to give users a summary snapshot
+  at a glance.
 
 when:
   - showing summary counts at the top of a dashboard artifact
@@ -40,4 +40,4 @@ key_rules:
 
 embedding_hint: >
   stat card metric dashboard summary count number value
-  patients tasks care gaps overdue attention daily snapshot
+  items tasks overdue attention daily snapshot

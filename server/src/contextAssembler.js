@@ -956,7 +956,7 @@ function loadExistingCandidates(candidatesDir) {
 
 // Composite text for similarity: name carries 3x weight by repetition,
 // description and intent carry 1x each. This means two patterns with
-// very different names (SdohAssessmentTab vs ClinicalAssessmentForm) but
+// very different names (AssessmentTab vs ClinicalAssessmentForm) but
 // similar descriptions and intents will still score as similar.
 function compositeText(pattern_name, description = '', intent_it_serves = '') {
   return [pattern_name, pattern_name, pattern_name, description, intent_it_serves]

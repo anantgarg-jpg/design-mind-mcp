@@ -1,0 +1,39 @@
+id: Skeleton
+status: active
+component_type: layout
+level: primitive
+structural_family: loading-placeholder
+family_invariants:
+  - "bg-muted rounded-md animate-pulse"
+confidence: 0.85
+version: 1.0.0
+
+summary: >
+  Placeholder shimmer element for content loading states. Renders a
+  pulsing shape that matches the expected layout of the content it
+  replaces. Swaps instantly to real content when loaded.
+
+when:
+  - content is loading asynchronously and layout shape is known
+  - preserving layout stability during data fetches
+  - skeleton screen pattern for cards, lists, or text blocks
+
+not_when:
+  - action feedback needed (use a spinner)
+  - indeterminate loading with no layout shape known
+  - alongside text like "Loading..." (skeleton alone is sufficient)
+
+variants:
+  text: single-line text placeholder
+  circle: circular avatar placeholder
+  card: rectangular card placeholder
+
+key_rules:
+  - match expected content shape and size for layout stability
+  - never use for action feedback (use spinner instead)
+  - no text "Loading..." alongside skeleton elements
+  - instant swap to content with no fade transition
+
+embedding_hint: >
+  skeleton loading placeholder shimmer pulse
+  content async fetch placeholder shape layout

@@ -1,0 +1,42 @@
+id: Popover
+status: active
+component_type: overlay
+level: primitive
+structural_family: overlay-panel
+family_invariants:
+  - "Container: rounded-md shadow-md z-20 bg-popover border border-border p-4"
+  - "Positioned relative to trigger element"
+  - "ESC closes; focus trapped when open"
+  - "Click outside closes"
+confidence: 0.85
+version: 1.0.0
+
+summary: >
+  Click-triggered floating panel for rich interactive content such as
+  mini-forms, filters, or configuration panels. Positioned relative
+  to its trigger element with focus management.
+
+when:
+  - inline editing or configuration panel triggered by a button
+  - filter or search refinement panel
+  - rich content that needs focus trapping but not a full modal
+
+not_when:
+  - simple text preview — use HoverCard or Tooltip
+  - action list — use DropdownMenu
+  - full-page interruption — use Dialog
+
+variants:
+  default: standard floating panel with arbitrary content
+  form: panel containing a compact form with submit action
+
+key_rules:
+  - positioned relative to trigger element
+  - ESC closes the popover
+  - focus trapped inside when open
+  - click outside closes
+  - focus-visible ring never suppressed (rule 20)
+
+embedding_hint: >
+  popover floating panel overlay click trigger
+  filter settings form inline configuration

@@ -8,8 +8,12 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
       '@blocks': path.resolve(__dirname, '../blocks'),
-      // Redirect lucide-react imports from block files to our local install
+      // Redirect external imports from block files to our local installs
       'lucide-react': path.resolve(__dirname, './node_modules/lucide-react'),
+      'date-fns': path.resolve(__dirname, './node_modules/date-fns'),
+      'recharts': path.resolve(__dirname, './node_modules/recharts'),
+      'sonner': path.resolve(__dirname, './node_modules/sonner'),
+      'react-hook-form': path.resolve(__dirname, './node_modules/react-hook-form'),
     },
   },
   server: {

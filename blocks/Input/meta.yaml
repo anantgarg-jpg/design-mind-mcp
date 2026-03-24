@@ -1,0 +1,43 @@
+id: Input
+status: active
+component_type: input
+level: primitive
+structural_family: form-input
+family_invariants:
+  - "Container: h-9 rounded-md border border-input bg-background px-3 text-base"
+  - "Focus: focus-visible:ring-2 ring-ring"
+  - "Error state: border-destructive (rule 13)"
+  - "Disabled: opacity-50 cursor-not-allowed"
+confidence: 0.85
+version: 1.0.0
+
+summary: >
+  Standard single-line text input field for forms. Supports error,
+  disabled, and placeholder states. Always paired with a Label
+  component for accessibility.
+
+when:
+  - collecting single-line text input (name, email, search)
+  - form field requiring free-text entry
+  - inline editable value
+
+not_when:
+  - multi-line text — use Textarea
+  - constrained choices — use Select or RadioGroup
+  - code or OTP entry — use InputOTP
+
+variants:
+  default: standard text input
+  withIcon: input with a leading or trailing icon
+  error: input in error state with border-destructive
+
+key_rules:
+  - error state uses border-destructive, NOT severity-critical (rule 13)
+  - disabled state uses opacity-50
+  - placeholder text uses text-muted-foreground
+  - always paired with a Label (htmlFor association)
+  - focus-visible ring never suppressed (rule 20)
+
+embedding_hint: >
+  input text field form entry search name email
+  password placeholder disabled error validation

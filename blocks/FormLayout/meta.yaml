@@ -14,15 +14,15 @@ summary: >
 
 when:
   - structured data entry form with multiple fields
-  - creating or editing an entity (Task, Note, Care Protocol)
+  - creating or editing an entity (Task, Note, Protocol)
   - form needs consistent field spacing, grouping, and footer actions
 
 not_when:
-  - clinical assessment instrument — use SdohAssessmentTab or equivalent
+  - structured assessment instrument — use AssessmentTab or equivalent
   - single inline field with no group structure — no layout wrapper needed
   - read-only display of form data — use KeyValueList
 
 embedding_hint: >
   form layout shell data entry fields groups labels submit cancel footer
-  create edit task note care protocol structured input spacing field width
+  create edit task note protocol structured input spacing field width
   label placement standard form wrapper

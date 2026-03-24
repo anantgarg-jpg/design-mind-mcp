@@ -1,0 +1,41 @@
+id: Toggle
+status: active
+component_type: input
+level: primitive
+structural_family: form-input
+family_invariants:
+  - "Root: rounded-md h-9 px-3"
+  - "Pressed: bg-muted"
+  - "Hover: hover:bg-muted/50"
+  - "Focus: focus-visible:ring-2"
+confidence: 0.85
+version: 1.0.0
+
+summary: >
+  Single pressable toggle button with on/off states. Used for
+  toolbar-style actions or view mode toggles. Provides clear
+  visual distinction between pressed and unpressed states.
+
+when:
+  - toggling a single toolbar option (bold, italic, grid view)
+  - view mode switching (list vs grid)
+  - activating a tool or mode
+
+not_when:
+  - boolean setting with a label (use Switch)
+  - selecting from a group of options (use ToggleGroup)
+  - form submission checkbox (use Checkbox)
+
+variants:
+  default: subtle border toggle
+  outline: border with bg-muted fill on active
+
+key_rules:
+  - aria-pressed state always set
+  - 44px minimum touch target (rule 21)
+  - clear visual distinction between on and off states
+  - focus-visible ring never suppressed (rule 20)
+
+embedding_hint: >
+  toggle button press on off toolbar
+  mode view switch active state control

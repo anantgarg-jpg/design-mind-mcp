@@ -8,8 +8,8 @@ version: 0.0.0
 
 summary: >
   Placeholder — not yet ratified. Inline informational, warning, or success
-  message block within page content. Distinct from ClinicalAlertBanner
-  (clinical safety interrupts) — this is for non-urgent contextual messaging
+  message block within page content. Distinct from AlertBanner
+  (safety interrupts) — this is for non-urgent contextual messaging
   embedded in a surface section.
 
 when:
@@ -18,7 +18,7 @@ when:
   - empty-state guidance or inline onboarding hints
 
 not_when:
-  - clinical alert requiring acknowledgment — use ClinicalAlertBanner
+  - alert requiring acknowledgment — use AlertBanner
   - transient feedback after an action — use Toast
   - inline field validation — use FormFieldError
 

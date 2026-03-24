@@ -1,0 +1,36 @@
+id: Combobox
+status: active
+component_type: action
+level: composition
+structural_family: searchable-select
+family_invariants:
+  - "Trigger: h-9 rounded-md border border-input px-3 text-sm"
+  - "Popover: rounded-md shadow-md z-20 bg-card border border-border"
+  - "Items: py-1.5 px-2 rounded-sm cursor-pointer"
+confidence: 0.80
+version: 1.0.0
+
+summary: >
+  Searchable dropdown select with type-ahead filtering. Combines a
+  trigger button with a popover containing a filterable command list.
+  Supports single selection with checkmark indicator.
+
+when:
+  - selecting from a list of >7 options that benefits from search
+  - options are dynamic or loaded asynchronously
+  - user needs type-ahead to find values quickly
+
+not_when:
+  - fewer than 5 static options — use a plain Select
+  - multi-select with tags — use a dedicated MultiSelect
+
+key_rules:
+  - placeholder "Select..." shown in text-muted-foreground when empty
+  - checkmark icon on the currently selected item
+  - keyboard navigable via ArrowUp/ArrowDown/Enter
+  - error state applies border-destructive to trigger (rule 13)
+  - clear button visible when a value is selected
+
+embedding_hint: >
+  combobox searchable select dropdown filter typeahead
+  popover command autocomplete pick choose

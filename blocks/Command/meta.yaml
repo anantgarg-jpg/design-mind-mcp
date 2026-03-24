@@ -1,0 +1,36 @@
+id: Command
+status: active
+component_type: action
+level: composition
+structural_family: command-palette
+family_invariants:
+  - "Container: rounded-lg shadow-lg z-40 border border-border bg-card"
+  - "Input: h-10 border-b px-3 text-sm placeholder:text-muted-foreground"
+  - "Item: py-2 px-3 rounded-md cursor-pointer"
+confidence: 0.80
+version: 1.0.0
+
+summary: >
+  Searchable command palette for quick action discovery and execution.
+  Appears as a centered modal overlay triggered by keyboard shortcut.
+  Groups actions under headings with instant type-ahead filtering.
+
+when:
+  - user needs to search and execute actions quickly
+  - application has many navigable pages or executable commands
+  - power-user keyboard-driven workflow is expected
+
+not_when:
+  - simple dropdown menu with <10 static items
+  - form field selection — use Combobox instead
+
+key_rules:
+  - Cmd+K (or Ctrl+K) opens the palette
+  - search input filters items instantly as user types
+  - keyboard navigation with ArrowUp/ArrowDown/Enter
+  - items grouped under headings via CommandGroup
+  - empty state displays "No results found." in muted text
+
+embedding_hint: >
+  command palette action launcher search keyboard shortcut
+  cmdk quick actions navigate execute filter

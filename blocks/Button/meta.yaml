@@ -1,0 +1,45 @@
+id: Button
+status: active
+component_type: action
+level: primitive
+structural_family: action-trigger
+family_invariants:
+  - "rounded-md border radius"
+  - "min-h-[44px] touch target (rule 21)"
+  - "whitespace-nowrap label never wraps (rule 18)"
+  - "focus-visible:ring-2 focus-visible:ring-ring"
+confidence: 0.85
+version: 1.0.0
+
+summary: >
+  Primary interactive trigger for user actions. Wraps shadcn Button with
+  enforced touch targets, CTA hierarchy rules, and non-wrapping labels.
+  Supports six visual variants and four sizes.
+
+when:
+  - triggering a form submission, navigation, or state change
+  - primary call-to-action on a surface
+  - destructive actions like delete or remove
+
+not_when:
+  - navigation that looks like a text link (use an anchor)
+  - toggle or selection (use Toggle or Checkbox)
+  - icon-only action without accessible label (add aria-label)
+
+variants:
+  default: bg-primary for the single primary CTA on a surface
+  destructive: bg-destructive for delete and remove actions only
+  outline: bordered for secondary actions
+  secondary: bg-muted for tertiary actions
+  ghost: transparent for inline or toolbar actions
+  link: underline for in-text navigational triggers
+
+key_rules:
+  - only one primary CTA per surface (rule 14)
+  - destructive variant only for delete/remove actions
+  - label never wraps (rule 18)
+  - disabled state reduces opacity, not contrast
+
+embedding_hint: >
+  button cta action trigger submit primary
+  destructive outline ghost link click

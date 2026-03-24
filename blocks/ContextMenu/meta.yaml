@@ -1,0 +1,41 @@
+id: ContextMenu
+status: active
+component_type: overlay
+level: primitive
+structural_family: context-menu
+family_invariants:
+  - "rounded-md shadow-md z-20"
+  - "bg-popover text-popover-foreground"
+  - "py-1 item padding"
+  - "min-w-[8rem]"
+confidence: 0.85
+version: 1.0.0
+
+summary: >
+  Right-click triggered floating menu for contextual actions on an element.
+  Wraps shadcn ContextMenu with enforced keyboard navigation, destructive
+  item styling, and the rule that context menu actions are never the sole
+  access path to functionality.
+
+when:
+  - providing secondary actions on a row, card, or item via right-click
+  - power-user shortcuts for common operations
+  - supplementary actions that are also available through other UI paths
+
+not_when:
+  - the only way to access an action (must have alternative)
+  - primary navigation (use a nav bar or sidebar)
+  - mobile-first surfaces where right-click is unavailable
+
+variants:
+  default: standard context menu with grouped items
+
+key_rules:
+  - destructive items use text-destructive
+  - separator between logical groups
+  - fully keyboard navigable
+  - never the only way to access an action
+
+embedding_hint: >
+  context menu right-click contextual actions
+  secondary overlay popover dropdown

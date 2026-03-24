@@ -1,0 +1,42 @@
+id: Calendar
+status: active
+component_type: data-display
+level: primitive
+structural_family: date-selector
+family_invariants:
+  - "rounded-md container"
+  - "p-3 internal padding"
+  - "text-sm date labels"
+  - "today ring-accent indicator"
+  - "selected bg-primary text-primary-foreground"
+confidence: 0.85
+version: 1.0.0
+
+summary: >
+  Month grid calendar for date selection and display. Wraps shadcn Calendar
+  with enforced tabular-nums for alignment, muted outside-month dates, and
+  keyboard navigation support.
+
+when:
+  - selecting a single date from a monthly grid
+  - date range selection within a form
+  - displaying a visual month view with selectable days
+
+not_when:
+  - picking date and time together (use DateTimePicker)
+  - simple text-based date input (use a date input field)
+  - scheduling across long ranges (use a timeline or gantt)
+
+variants:
+  single: select a single date (default)
+  range: select a start and end date
+
+key_rules:
+  - tabular-nums for date number alignment
+  - outside-month dates rendered muted
+  - today always visually indicated
+  - fully keyboard navigable
+
+embedding_hint: >
+  calendar date picker month grid day selector
+  schedule appointment range selection

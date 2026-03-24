@@ -1,0 +1,43 @@
+id: ScrollArea
+status: active
+component_type: layout
+level: primitive
+structural_family: scroll-container
+family_invariants:
+  - "Container: overflow-hidden"
+  - "Scrollbar: w-2.5 rounded-full bg-border"
+  - "Thumb: bg-muted-foreground/30 rounded-full"
+  - "Native scrolling behavior preserved"
+confidence: 0.85
+version: 1.0.0
+
+summary: >
+  Custom scrollbar container that wraps overflowing content with
+  styled scrollbars. Preserves native scrolling behavior while
+  providing a consistent visual appearance.
+
+when:
+  - content area that may overflow and needs custom scrollbar styling
+  - lists, panels, or code blocks with bounded height
+  - side panels or drawers with scrollable content
+
+not_when:
+  - page-level scrolling — use native body scroll
+  - horizontal-only scrolling of a small set — use CSS overflow-x
+  - content fits without scrolling
+
+variants:
+  vertical: vertical scrollbar only (default)
+  horizontal: horizontal scrollbar only
+  both: both vertical and horizontal scrollbars
+
+key_rules:
+  - native scrolling behavior preserved
+  - scrollbar auto-hides after inactivity
+  - both vertical and horizontal orientations supported
+  - keyboard scrollable (arrow keys, Page Up/Down)
+  - focus-visible ring never suppressed (rule 20)
+
+embedding_hint: >
+  scroll area container scrollbar overflow custom
+  list panel content bounded height vertical horizontal
