@@ -162,7 +162,7 @@ if (tools.length > 0) {
 lines.push(section('Genome hierarchy'));
 lines.push(`| Level | Location | Encodes |
 |-------|----------|---------|
-| **Tokens** | \`genome/rules/styling-tokens.rule.md\` | MDS colors, DM Sans, 4px grid, elevation, z-index, motion |
+| **Tokens** | \`genome/rules/styling-tokens.rule.md\` | Design tokens, DM Sans, 4px grid, elevation, z-index, motion |
 | **Blocks** | \`blocks/*/meta.yaml\` | Reusable structures with product decisions — from status badge to form layout |
 | **Surfaces** | \`surfaces/*.surface.yaml\` | Full artifacts: intent, omissions, ordering, actions, hard never rules |`);
 

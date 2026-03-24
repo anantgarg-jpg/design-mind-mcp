@@ -2,10 +2,10 @@ import { cn } from "@/lib/utils"
 
 // ── Genome sources ────────────────────────────────────────────────────────────
 // Status values:   ontology/states.yaml
-// Color tokens:    genome/rules/styling-tokens.rule.md (MDS tokens)
+// Color tokens:    genome/rules/styling-tokens.rule.md (design tokens)
 // Safety:          safety/severity-schema.yaml (AlertSeverity rendering)
 //
-// NEVER use hardcoded Tailwind color classes — all color decisions use MDS tokens.
+// NEVER use hardcoded Tailwind color classes — all color decisions use design tokens.
 //
 // NOTE ON ENTITY-SCOPED STATUS:
 // CareGapStatus.open maps to --status-warning (amber) per ontology/states.yaml.
@@ -57,9 +57,9 @@ const STATUS_CONFIG = {
   },
 
   // ── Alert severity (safety/severity-schema.yaml → AlertSeverity) ─────────
-  // --destructive = MDS Red = Critical severity (NOT the Alert entity)
-  // --alert       = MDS Orange = High severity
-  // --warning     = MDS Yellow = Medium severity
+  // --destructive = Red = Critical severity (NOT the Alert entity)
+  // --alert       = Orange = High severity
+  // --warning     = Yellow = Medium severity
   // --accent      = Blue tint = Low severity
   critical: {
     label: "Critical",

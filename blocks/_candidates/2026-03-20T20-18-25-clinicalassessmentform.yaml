@@ -9,7 +9,7 @@ status: logged
 frequency_count: 1
 
 description: >
-  A scored clinical assessment instrument form. Renders verbatim instrument questions with a frequency/severity response grid, computes a running total score, maps the score to a severity classification using MDS severity tokens, and submits the completed assessment. Q9-style safety flag for any self-harm indicator answer.
+  A scored clinical assessment instrument form. Renders verbatim instrument questions with a frequency/severity response grid, computes a running total score, maps the score to a severity classification using severity tokens, and submits the completed assessment. Q9-style safety flag for any self-harm indicator answer.
 
 intent_it_serves: >
   Coordinator or clinician needs to administer a standardised screening instrument (PHQ-9, GAD-7, etc.) and record the result against a patient record.

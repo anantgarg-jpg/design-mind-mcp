@@ -35,7 +35,7 @@
       "ratified_by": "design-leadership",
       "mutation_count": 1,
       "last_challenged": "v2-expansion",
-      "note": "v2.0.0 — expanded from color-only tokens to full styling system: typography (DM Sans), spacing (4px grid), border-radius, elevation, z-index, motion. Colors updated to MDS Updated Colors Pallet. Single comprehensive file. Load this rule for ANY styling decision."
+      "note": "v2.0.0 — expanded from color-only tokens to full styling system: typography (DM Sans), spacing (4px grid), border-radius, elevation, z-index, motion. Colors updated to the color palette defined in theme.css. Single comprehensive file. Load this rule for ANY styling decision."
     }
   },
   "blocks": {
@@ -161,7 +161,7 @@
   "notes": {
     "token_file": "theme.css",
     "font": "DM Sans via --font-sans, DM Mono via --font-mono",
-    "critical_disambiguation": "--alert token = MDS Orange = High severity. NOT the Alert clinical entity.",
+    "critical_disambiguation": "--alert token = Orange = High severity. NOT the Alert clinical entity.",
     "destructive_dual_use": "--destructive = delete actions AND Critical severity \u2014 same color, both are highest-stakes."
   }
 }

@@ -271,7 +271,7 @@ output:
 
 | Level | Location | Encodes |
 |-------|----------|---------|
-| **Tokens** | `genome/rules/styling-tokens.rule.md` | MDS colors, DM Sans, 4px grid, elevation, z-index, motion |
+| **Tokens** | `genome/rules/styling-tokens.rule.md` | Design tokens, DM Sans, 4px grid, elevation, z-index, motion |
 | **Decisions** | `patterns/*/meta.yaml` | Atomic UI choices (StatusBadge, ClinicalAlertBanner, StatCard, SectionHeader) |
 | **Compositions** | `patterns/*/meta.yaml` | Governed combinations (ActionableRow, PatientContextHeader, PatientRow) |
 | **Surfaces** | `surfaces/*.surface.yaml` | Full artifacts: intent, omissions, ordering, actions, hard never rules |
@@ -282,7 +282,7 @@ output:
 - `navigation-patterns` — confidence 0.92 — v2.0 — rewritten for 3-panel shell. Removed horizontal top-nav assumptions from v1.
 - `destructive-actions` — confidence 0.95
 - `data-density` — confidence 0.88
-- `styling-tokens` — confidence 0.97 — v2.0.0 — expanded from color-only tokens to full styling system: typography (DM Sans), spacing (4px grid), border-radius, elevation, z-index, motion. Colors updated to MDS Updated Colors Pallet. Single comprehensive file. Load this rule for ANY styling decision.
+- `styling-tokens` — confidence 0.97 — v2.0.0 — expanded from color-only tokens to full styling system: typography (DM Sans), spacing (4px grid), border-radius, elevation, z-index, motion. Colors updated to the color palette defined in theme.css. Single comprehensive file. Load this rule for ANY styling decision.
 
 ---
 
@@ -797,10 +797,10 @@ APPLIES_TO: every component, every surface, every generated UI
 
 # ── THE ONLY STYLING SOURCE OF TRUTH ─────────────────────────────────────────
 
-The platform uses MDS (Masala Design System) tokens defined in theme.css.
-Color primitives are sourced from the MDS Updated Colors Pallet.
+The platform uses the design system tokens defined in theme.css.
+Color primitives are sourced from the color palette defined in theme.css.
 Tailwind's default color palette (red-600, amber-100, blue-500, etc.) is
-NEVER used directly. All color decisions go through MDS tokens.
+NEVER used directly. All color decisions go through design tokens.
 
 Font: DM Sans — loaded via --font-sans in theme.css.
 Mono: DM Mono — loaded via --font-mono in theme.css.
@@ -815,7 +815,7 @@ FONT RULES:
 
 # ── TOKEN MAP: SURFACES ──────────────────────────────────────────────────────
 
-SURFACES (MDS gray "stone" and "night" semantic families):
+SURFACES (Gray "stone" and "night" semantic families):
   --background       #F7F7F7  (gray-100 / stone lightest) — page background
   --card             #FFFFFF  — card and panel surfaces, sits above background
   --foreground       #1A1A1A  (gray-1400 / night) — primary text on background
@@ -835,10 +835,10 @@ BRAND:
 
 # ── TOKEN MAP: NEUTRAL / GRAY SCALE ─────────────────────────────────────────
 
-MDS gray primitives use a 100–1400 scale with two semantic families:
+Gray primitives use a 100–1400 scale with two semantic families:
 "stone" (lighter, for surfaces) and "night" (darker, for text).
 
-  TOKEN        HEX      MDS SEMANTIC       USE
+  TOKEN        HEX      SEMANTIC           USE
   ───────────  ───────  ─────────────────  ──────────────────────────────────
   --gray-100   #F7F7F7  stone lightest     backgrounds, zebra-stripe (= --background)
   --gray-200   #EBEBEB  stone lighter      hover on muted surfaces (= --muted)
@@ -898,9 +898,9 @@ INFO (Cyan — non-severity informational callouts):
 
 # ── TOKEN MAP: ACCENT PALETTE ────────────────────────────────────────────────
 
-Eight MDS accent families for charts, category tags, and avatar fallback colors.
+Eight accent families for charts, category tags, and avatar fallback colors.
 Only base (default) shades listed — each has ultra-light through darker variants
-in the MDS token map.
+in the token map.
 
   NAME               HEX      PRIMITIVE
   ─────────────────  ───────  ─────────────
@@ -933,7 +933,7 @@ SIDEBAR:
 # ── CRITICAL NAMING DISAMBIGUATION ───────────────────────────────────────────
 
 "Alert" (capitalized) = a clinical Alert entity (ontology/entities.yaml)
-"--alert" (token) = MDS Orange = High clinical severity color
+"--alert" (token) = Orange = High clinical severity color
 These are DIFFERENT things. Never confuse them.
 
 "--destructive" = BOTH "delete action" AND "Critical severity"
@@ -1170,7 +1170,7 @@ NEVER:
 
 # ── DARK MODE ────────────────────────────────────────────────────────────────
 
-All MDS tokens have dark mode variants defined in theme.css (.dark class).
+All design tokens have dark mode variants defined in theme.css (.dark class).
 Never write manual dark: overrides for semantic colors — the tokens handle it.
 The only exception: physical color scenes (charts, illustrations) that must
 not invert should use explicit @media (prefers-color-scheme: dark) or
@@ -1292,21 +1292,21 @@ NEVER:
 ```yaml
 # Severity schema — machine-readable
 # Single source of truth for severity rendering across all surfaces.
-# Updated to use MDS (Masala Design System) tokens from theme.css.
+# Updated to use the design system tokens from theme.css.
 # Referenced by: ClinicalAlertBanner/meta.yaml, StatusBadge/meta.yaml,
 # runtime generation layer, conversational layer.
 
 # IMPORTANT NAMING NOTE:
-# The CSS token --alert is MDS Orange and maps to HIGH clinical severity.
+# The CSS token --alert is Orange and maps to HIGH clinical severity.
 # It does NOT mean "any clinical alert" — that is an entity in ontology/entities.yaml.
-# The CSS token --destructive is MDS Red and maps to CRITICAL clinical severity.
+# The CSS token --destructive is Red and maps to CRITICAL clinical severity.
 # --destructive serves both "destructive UI actions" AND "Critical severity" — same color, two contexts.
 
 severity_levels:
   critical:
-    mds_token: "--destructive"
-    mds_token_light: null                        # no --destructive-light in MDS — use inline bg
-    hex_reference: "#D62400"                     # MDS Red — WCAG AA on white
+    token: "--destructive"
+    token_light: null                        # no --destructive-light defined — use inline bg
+    hex_reference: "#D62400"                     # Red — WCAG AA on white
     tailwind_equivalent: "text-destructive"
     bg_class: "bg-destructive/10"                # 10% opacity destructive for banner bg
     text_class: "text-destructive"
@@ -1320,8 +1320,8 @@ severity_levels:
     sla_hours: 1
 
   high:
-    mds_token: "--alert"                         # MDS Orange — NOT the same as the Alert entity
-    mds_token_light: "--alert-light"             # #FFF2DB
+    token: "--alert"                         # Orange — NOT the same as the Alert entity
+    token_light: "--alert-light"             # #FFF2DB
     hex_reference: "#B24D00"                     # WCAG AA accessible foreground
     tailwind_equivalent: "text-alert"
     bg_class: "bg-[var(--alert-light)]"
@@ -1336,8 +1336,8 @@ severity_levels:
     sla_hours: 4
 
   medium:
-    mds_token: "--warning"
-    mds_token_light: "--warning-light"           # #FFF9E5
+    token: "--warning"
+    token_light: "--warning-light"           # #FFF9E5
     hex_reference: "#AD8200"                     # WCAG AA accessible foreground
     tailwind_equivalent: "text-warning"
     bg_class: "bg-[var(--warning-light)]"
@@ -1351,8 +1351,8 @@ severity_levels:
     sla_hours: 24
 
   low:
-    mds_token: "--accent"
-    mds_token_light: "--accent"                  # accent is already the light bg
+    token: "--accent"
+    token_light: "--accent"                  # accent is already the light bg
     hex_reference: "#0051AD"                     # accent-foreground — WCAG AA
     tailwind_equivalent: "text-accent-foreground"
     bg_class: "bg-accent"
@@ -2056,7 +2056,7 @@ import { AlertOctagon, AlertTriangle, AlertCircle, Info, X, ArrowUpRight } from 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 
-// Severity colors use MDS tokens from theme.css — NOT Tailwind defaults
+// Severity colors use design tokens from theme.css — NOT Tailwind defaults
 // Full severity spec in safety/severity-schema.yaml
 // Token disambiguation in genome/rules/styling-tokens.rule.md
 
@@ -2064,7 +2064,7 @@ type Severity = "critical" | "high" | "medium" | "low"
 
 const SEVERITY_CONFIG = {
   critical: {
-    // --destructive = MDS Red = Critical severity
+    // --destructive = Red = Critical severity
     containerClass: "bg-destructive/10 border-l-4 border-destructive",
     iconClass: "text-destructive",
     titleClass: "text-destructive",
@@ -2075,7 +2075,7 @@ const SEVERITY_CONFIG = {
     requiresDismissReason: false,
   },
   high: {
-    // --alert = MDS Orange = High severity (NOT the Alert entity)
+    // --alert = Orange = High severity (NOT the Alert entity)
     containerClass: "bg-[var(--alert-light)] border-l-4 border-alert",
     iconClass: "text-alert",
     titleClass: "text-alert",
@@ -2086,7 +2086,7 @@ const SEVERITY_CONFIG = {
     requiresDismissReason: true,
   },
   medium: {
-    // --warning = MDS Yellow = Medium severity
+    // --warning = Yellow = Medium severity
     containerClass: "bg-[var(--warning-light)] border-l-4 border-warning",
     iconClass: "text-warning",
     titleClass: "text-warning",
@@ -2320,7 +2320,7 @@ summary: >
   (initials, risk-tinted), patient name (Last, First), related Care Gap or Task name,
   outreach type (Phone Call / Portal Message / Letter) with icon, outcome
   (Reached / Left Voicemail / No Answer / Declined / Sent) with colored icon and
-  MDS token, coordinator name, and relative timestamp. No-answer rows get a
+  design token, coordinator name, and relative timestamp. No-answer rows get a
   left-border warning accent. Used inside OutreachLogArtifact — a full-panel artifact
   with type and outcome filters and a summary header.
 
@@ -3052,8 +3052,8 @@ embedding_hint: >
 import { cn } from "@/lib/utils"
 
 // Status values from ontology/states.yaml
-// Color tokens from genome/rules/styling-tokens.rule.md (MDS tokens)
-// NEVER use hardcoded Tailwind color classes — always use MDS semantic tokens
+// Color tokens from genome/rules/styling-tokens.rule.md (design tokens)
+// NEVER use hardcoded Tailwind color classes — always use semantic tokens
 
 const STATUS_CONFIG = {
   // Task states

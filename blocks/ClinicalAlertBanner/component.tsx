@@ -27,7 +27,7 @@ type Severity = "critical" | "high" | "medium" | "low"
 
 const SEVERITY_CONFIG = {
   critical: {
-    // --destructive = MDS Red = Critical severity
+    // --destructive = Red = Critical severity
     containerClass: "bg-destructive/10 border-l-4 border-destructive",
     iconClass:      "text-destructive",
     titleClass:     "text-destructive",
@@ -38,7 +38,7 @@ const SEVERITY_CONFIG = {
     auditRequired:          true,    // severity-schema.yaml audit_required
   },
   high: {
-    // --alert = MDS Orange = High severity (≠ Alert entity)
+    // --alert = Orange = High severity (≠ Alert entity)
     containerClass: "bg-[var(--alert-light)] border-l-4 border-alert",
     iconClass:      "text-alert",
     titleClass:     "text-alert",
@@ -49,7 +49,7 @@ const SEVERITY_CONFIG = {
     auditRequired:          true,
   },
   medium: {
-    // --warning = MDS Yellow = Medium severity
+    // --warning = Yellow = Medium severity
     containerClass: "bg-[var(--warning-light)] border-l-4 border-warning",
     iconClass:      "text-warning",
     titleClass:     "text-warning",

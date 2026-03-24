@@ -70,3 +70,18 @@
 
 13. Form and input error states must use the designated error token. `--severity-critical`
     must not be used for routine validation errors.
+
+---
+
+## CTA hierarchy rules
+
+14. Only one primary CTA may be visible to the user on any single page or surface
+    at a time. No surface may render two or more simultaneously visible primary CTAs —
+    not in wizards, multi-action surfaces, or modals.
+    Exception: row-level or item-level primary CTAs that appear exclusively on hover are
+    permitted, because only one can be visible at a time. This exception applies only when
+    the CTA is fully hidden at rest (opacity-0 or not rendered) and revealed solely on
+    hover of its parent row or item. A primary CTA that is visible at rest — even at
+    reduced opacity — does not qualify for this exception.
+    Secondary and tertiary actions must use visually subordinate treatments regardless
+    of hover state.

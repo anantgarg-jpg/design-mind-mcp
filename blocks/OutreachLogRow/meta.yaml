@@ -18,7 +18,7 @@ summary: >
   (initials, risk-tinted), patient name (Last, First), related Care Gap or Task name,
   outreach type (Phone Call / Portal Message / Letter) with icon, outcome
   (Reached / Left Voicemail / No Answer / Declined / Sent) with colored icon and
-  MDS token, coordinator name, and relative timestamp. No-answer rows get a
+  design token, coordinator name, and relative timestamp. No-answer rows get a
   left-border warning accent. Used inside OutreachLogArtifact — a full-panel artifact
   with type and outcome filters and a summary header.
 

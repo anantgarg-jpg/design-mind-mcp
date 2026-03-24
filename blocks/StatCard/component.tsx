@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils"
 //   Value: text-2xl font-semibold tabular-nums leading-none
 //   Max 4 StatCards per row.
 //
-// Variant tokens map to MDS semantic colors — never use Tailwind default colors.
+// Variant tokens map to semantic colors — never use Tailwind default colors.
 //   urgent  → --destructive (Critical severity / highest-stakes data)
 //   warning → --warning     (Overdue / at-risk)
 //   success → --success     (Positive outcomes)

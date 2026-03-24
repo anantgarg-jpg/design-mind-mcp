@@ -24,9 +24,9 @@ type RiskTier = "high" | "medium" | "low"
 type BandLevel = 1 | 2 | 3 | 4
 
 const RISK_CONFIG: Record<RiskTier, { label: string; className: string; dot: string }> = {
-  // --destructive = MDS Red
+  // --destructive = Red
   high:   { label: "High", className: "text-destructive font-semibold", dot: "bg-destructive" },
-  // --alert = MDS Orange
+  // --alert = Orange
   medium: { label: "Med",  className: "text-alert font-semibold",       dot: "bg-alert" },
   // neutral for low risk
   low:    { label: "Low",  className: "text-muted-foreground",           dot: "bg-border" },

@@ -6,10 +6,10 @@ APPLIES_TO: every component, every surface, every generated UI
 
 # ── THE ONLY STYLING SOURCE OF TRUTH ─────────────────────────────────────────
 
-The platform uses MDS (Masala Design System) tokens defined in theme.css.
-Color primitives are sourced from the MDS Updated Colors Pallet.
+The platform uses design tokens defined in theme.css.
+Color primitives are sourced from the color palette defined in theme.css.
 Tailwind's default color palette (red-600, amber-100, blue-500, etc.) is
-NEVER used directly. All color decisions go through MDS tokens.
+NEVER used directly. All color decisions go through design tokens.
 
 Font: DM Sans — loaded via --font-sans in theme.css.
 Mono: DM Mono — loaded via --font-mono in theme.css.
@@ -24,7 +24,7 @@ FONT RULES:
 
 # ── TOKEN MAP: SURFACES ──────────────────────────────────────────────────────
 
-SURFACES (MDS gray "stone" and "night" semantic families):
+SURFACES (gray "stone" and "night" semantic families):
   --background       #F7F7F7  (gray-100 / stone lightest) — page background
   --card             #FFFFFF  — card and panel surfaces, sits above background
   --foreground       #1A1A1A  (gray-1400 / night) — primary text on background
@@ -44,10 +44,10 @@ BRAND:
 
 # ── TOKEN MAP: NEUTRAL / GRAY SCALE ─────────────────────────────────────────
 
-MDS gray primitives use a 100–1400 scale with two semantic families:
+Gray primitives use a 100–1400 scale with two semantic families:
 "stone" (lighter, for surfaces) and "night" (darker, for text).
 
-  TOKEN        HEX      MDS SEMANTIC       USE
+  TOKEN        HEX      SEMANTIC           USE
   ───────────  ───────  ─────────────────  ──────────────────────────────────
   --gray-100   #F7F7F7  stone lightest     backgrounds, zebra-stripe (= --background)
   --gray-200   #EBEBEB  stone lighter      hover on muted surfaces (= --muted)
@@ -107,9 +107,9 @@ INFO (Cyan — non-severity informational callouts):
 
 # ── TOKEN MAP: ACCENT PALETTE ────────────────────────────────────────────────
 
-Eight MDS accent families for charts, category tags, and avatar fallback colors.
+Eight accent families for charts, category tags, and avatar fallback colors.
 Only base (default) shades listed — each has ultra-light through darker variants
-in the MDS token map.
+in the token map.
 
   NAME               HEX      PRIMITIVE
   ─────────────────  ───────  ─────────────
@@ -142,7 +142,7 @@ SIDEBAR:
 # ── CRITICAL NAMING DISAMBIGUATION ───────────────────────────────────────────
 
 "Alert" (capitalized) = a clinical Alert entity (ontology/entities.yaml)
-"--alert" (token) = MDS Orange = High clinical severity color
+"--alert" (token) = Orange = High clinical severity color
 These are DIFFERENT things. Never confuse them.
 
 "--destructive" = BOTH "delete action" AND "Critical severity"
@@ -379,7 +379,7 @@ NEVER:
 
 # ── DARK MODE ────────────────────────────────────────────────────────────────
 
-All MDS tokens have dark mode variants defined in theme.css (.dark class).
+All design tokens have dark mode variants defined in theme.css (.dark class).
 Never write manual dark: overrides for semantic colors — the tokens handle it.
 The only exception: physical color scenes (charts, illustrations) that must
 not invert should use explicit @media (prefers-color-scheme: dark) or

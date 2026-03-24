@@ -622,7 +622,7 @@ const HARD_CONSTRAINT_CHECKS = [
     check: (code) => /#[0-9A-Fa-f]{3,8}(?!\s*\/\/)/.test(code),
     problem: 'Hardcoded hex color found in component code',
     rule_violated: 'genome/rules/styling-tokens.rule.md',
-    correction: 'Replace all hex colors with MDS token classes (text-destructive, bg-[var(--alert-light)], etc.)',
+    correction: 'Replace all hex colors with design token classes (text-destructive, bg-[var(--alert-light)], etc.)',
   },
   {
     id: 'c-tailwind-colors',
@@ -632,7 +632,7 @@ const HARD_CONSTRAINT_CHECKS = [
     },
     problem: 'Tailwind default color classes found (e.g. red-600, amber-100)',
     rule_violated: 'genome/rules/styling-tokens.rule.md',
-    correction: 'Use MDS semantic token classes only. See styling-tokens.rule.md for the full token map.',
+    correction: 'Use semantic token classes only. See styling-tokens.rule.md for the full token map.',
   },
   {
     id: 'c8-patient-name',
@@ -709,7 +709,7 @@ function checkHonored(code, patternResults, kb) {
   // Token-based checks
   if (/text-destructive|text-alert|text-warning|bg-destructive|bg-\[var\(--/.test(code)) {
     honored.push({
-      observation: 'Uses MDS semantic color tokens correctly',
+      observation: 'Uses semantic color tokens correctly',
       rule_or_pattern_ref: 'genome/rules/styling-tokens.rule.md',
     });
   }
