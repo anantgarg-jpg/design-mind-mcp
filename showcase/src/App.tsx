@@ -2,7 +2,6 @@ import React, { useState } from 'react'
 import { cn } from '@/lib/utils'
 
 // ── Existing custom showcase pages ──────────────────────────────────────────
-import { StatusBadgePage } from '@/blocks/StatusBadgePage'
 import { SectionHeaderPage } from '@/blocks/SectionHeaderPage'
 import { StatCardPage } from '@/blocks/StatCardPage'
 import { EntityContextHeaderPage } from '@/blocks/EntityContextHeaderPage'
@@ -78,7 +77,6 @@ interface BlockMeta {
 
 const BLOCKS: BlockMeta[] = [
   // ── Original primitives ──
-  { id: 'StatusBadge', label: 'StatusBadge', level: 'primitive' },
   { id: 'SectionHeader', label: 'SectionHeader', level: 'primitive' },
   { id: 'StatCard', label: 'StatCard', level: 'primitive' },
 
@@ -152,7 +150,6 @@ const GROUPS: { label: string; level: BlockMeta['level'] }[] = [
 ]
 
 const PAGE_MAP: Record<string, React.FC> = {
-  StatusBadge: StatusBadgePage,
   SectionHeader: SectionHeaderPage,
   StatCard: StatCardPage,
   AlertBanner: AlertBannerPage,
@@ -227,7 +224,7 @@ function renderPage(id: BlockId, blocks: BlockMeta[]) {
 
 export default function App() {
   const [activeView, setActiveView] = useState<ActiveView>('published')
-  const [selectedBlock, setSelectedBlock] = useState<BlockId>('StatusBadge')
+  const [selectedBlock, setSelectedBlock] = useState<BlockId>('Badge')
   const [selectedCandidate, setSelectedCandidate] = useState<string>(CANDIDATES[0].candidate_id)
   const [localRatified, setLocalRatified] = useState<Set<string>>(new Set())
 

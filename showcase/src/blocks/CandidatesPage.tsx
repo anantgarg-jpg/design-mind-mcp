@@ -910,11 +910,8 @@ function RatifyDialog({
 
 function CandidateStatusBadge({ status }: { status: Candidate['status'] }) {
   return (
-    <Badge variant="outline" className={cn(
+    <Badge badgeColor={status === 'ratified' ? 'green' : 'grey'} badgeStyle="subtle" className={cn(
       'text-xs font-semibold capitalize',
-      status === 'ratified'
-        ? 'border-success/40 bg-success/10 text-success'
-        : 'border-muted-foreground/30 bg-muted text-muted-foreground'
     )}>
       {status === 'ratified' ? '✓ ratified' : 'logged'}
     </Badge>
@@ -986,7 +983,7 @@ export function CandidateDetailPane({
         <MetaRow label="Ontology refs">
           <span className="flex flex-wrap gap-1">
             {candidate.ontology_refs.map((ref) => (
-              <Badge key={ref} variant="secondary" className="text-xs font-normal">{ref}</Badge>
+              <Badge key={ref} badgeColor="grey" badgeStyle="subtle" className="text-xs font-normal">{ref}</Badge>
             ))}
           </span>
         </MetaRow>

@@ -14,29 +14,49 @@ import { Badge as ShadcnBadge } from "@/components/ui/badge"
 //
 // Rule 19: color never sole differentiator — text label always present.
 
+type BadgeColor = "blue" | "red" | "yellow" | "orange" | "green" | "grey"
+
 interface BadgeProps {
   children: React.ReactNode
-  variant?: "default" | "secondary" | "destructive" | "outline"
-  /** Optional icon rendered before the label — does not replace the text */
-  icon?: React.ReactNode
+  color?: BadgeColor
+  /** When true, renders a small dot before the label */
+  dot?: boolean
   className?: string
+}
+
+const dotColorMap: Record<BadgeColor, string> = {
+  blue:   "bg-primary",
+  red:    "bg-destructive",
+  yellow: "bg-warning-text",
+  orange: "bg-alert-text",
+  green:  "bg-success-text",
+  grey:   "bg-muted-foreground",
 }
 
 export function Badge({
   children,
-  variant = "default",
-  icon,
+  color = "blue",
+  dot = false,
   className,
 }: BadgeProps) {
   return (
     <ShadcnBadge
-      variant={variant}
+      badgeColor={color}
+      badgeStyle="subtle"
       className={cn(
-        "rounded-full text-sm font-semibold px-2.5 py-0.5 inline-flex items-center gap-1",
+        "rounded-full text-sm font-semibold px-2.5 py-0.5 inline-flex items-center gap-1.5",
         className,
       )}
     >
-      {icon && <span className="shrink-0">{icon}</span>}
+      {dot && (
+        <span
+          className={cn(
+            "shrink-0 size-1.5 rounded-full",
+            dotColorMap[color],
+          )}
+          aria-hidden="true"
+        />
+      )}
       {children}
     </ShadcnBadge>
   )

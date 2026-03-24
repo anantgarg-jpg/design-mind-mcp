@@ -22,36 +22,56 @@ FONT RULES:
   - Never use system-ui, Arial, Inter, Nunito Sans, or any other font family
   - Components do not need an explicit font class — they inherit from root
 
-# ── TOKEN VALUES ─────────────────────────────────────────────────────────────
+# ── TOKEN MAP: SURFACES ──────────────────────────────────────────────────────
 
-Token values (hex, oklch, CSS custom properties) live in `theme.css` in the
-consuming project. Read that file for actual color values.
-
-Surface tokens: --background, --foreground, --card, --card-foreground,
-  --muted, --muted-foreground, --popover, --popover-foreground,
-  --border, --input, --ring
-Brand tokens: --primary, --primary-foreground
-Semantic tokens: --destructive, --destructive-foreground, --destructive-light,
-  --success, --success-foreground, --success-light,
-  --warning, --warning-foreground, --warning-light, --warning-surface,
-  --alert, --alert-foreground, --alert-light,
-  --accent, --accent-foreground,
-  --info, --info-foreground, --info-light
-Accent tokens: --accent1 through --accent8 (charts, tags, avatar fallback)
-Sidebar tokens: --sidebar* (Panel 1 only — see below)
+SURFACES (gray "stone" and "night" semantic families):
+  --background       #F7F7F7  (gray-100 / stone lightest) — page background
+  --card             #FFFFFF  — card and panel surfaces, sits above background
+  --foreground       #1A1A1A  (gray-1400 / night) — primary text on background
+  --card-foreground  #1A1A1A  — primary text on cards
+  --muted            #EBEBEB  (gray-200 / stone lighter) — subtle backgrounds for inactive areas
+  --muted-foreground #636363  (gray-900 / night lighter) — secondary and hint text
+  --popover          #FFFFFF  — dropdown and tooltip surfaces
+  --border           #D4D4D4  (gray-400 / stone) — all borders and dividers
+  --input            #C4C4C4  (gray-500 / stone dark) — input field borders
+  --ring             #9DC0F6  (blue-300) — focus ring color
 
 FOCUS RING TREATMENT:
-  Focus rings use the base --ring color at reduced opacity for a softer,
-  less intrusive appearance while remaining clearly visible:
-    - Default:      ring-primary/40  (all non-destructive elements)
-    - Destructive:  ring-destructive/40  (destructive buttons and actions)
+  Focus rings use --ring (blue-300) at full opacity — the light blue is
+  soft enough on its own without an additional opacity modifier:
+    - Default:      ring-ring  (all non-destructive elements)
+    - Destructive:  ring-ring-destructive  (destructive buttons and actions)
   Structure: focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none
   The ring color is set per-variant, not globally, so destructive actions
   get a red-tinted ring that matches their intent.
 
-# ── GRAY SCALE USAGE ─────────────────────────────────────────────────────────
+# ── TOKEN MAP: BRAND ─────────────────────────────────────────────────────────
 
-Gray primitives use a 100–1400 scale. Values in theme.css.
+BRAND:
+  --primary            #0060D6  (blue-600 / primary-default) — CTAs, active states, links, focus rings
+  --primary-foreground #FFFFFF  — text on primary backgrounds
+
+# ── TOKEN MAP: NEUTRAL / GRAY SCALE ─────────────────────────────────────────
+
+Gray primitives use a 100–1400 scale with two semantic families:
+"stone" (lighter, for surfaces) and "night" (darker, for text).
+
+  TOKEN        HEX      SEMANTIC           USE
+  ───────────  ───────  ─────────────────  ──────────────────────────────────
+  --gray-100   #F7F7F7  stone lightest     backgrounds, zebra-stripe (= --background)
+  --gray-200   #EBEBEB  stone lighter      hover on muted surfaces (= --muted)
+  --gray-300   #E0E0E0  stone light        light dividers, disabled input bg
+  --gray-400   #D4D4D4  stone              borders, dividers (= --border)
+  --gray-500   #C4C4C4  stone dark         input field borders (= --input)
+  --gray-600   #B5B5B5  —                  disabled state backgrounds
+  --gray-700   #A3A3A3  night lightest     placeholder text, disabled icons
+  --gray-800   #858585  —                  stronger disabled states
+  --gray-900   #636363  night lighter      secondary text (= --muted-foreground)
+  --gray-1000  #575757  —                  emphasis secondary text
+  --gray-1100  #424242  night light        strong secondary, sub-headings
+  --gray-1200  #333333  —                  near-primary text
+  --gray-1300  #242424  —                  headings
+  --gray-1400  #1A1A1A  night              primary text (= --foreground)
 
 USAGE: Prefer semantic tokens (--muted, --border, --foreground, --muted-foreground)
 over raw --gray-* values. The gray scale exists as a reference for edge cases
@@ -59,11 +79,184 @@ where semantic tokens don't cover the need — chart axis labels, skeleton
 placeholders, disabled states. If you're reaching for --gray-* in a component,
 ask first whether a semantic token already handles it.
 
-# ── ACCENT PALETTE USAGE ─────────────────────────────────────────────────────
+# ── TOKEN MAP: BLUE / PRIMARY SCALE ───────────────────────────────────────────
 
-Eight accent families (--accent1 through --accent8) for charts, category tags,
-and avatar fallback colors. Each has ultra-light through darker variants.
-Values in theme.css.
+Blue primitives use a 100–1200 scale. Semantic tokens reference specific stops.
+
+  TOKEN        HEX      SEMANTIC           USE
+  ───────────  ───────  ─────────────────  ──────────────────────────────────
+  --blue-100   #E8F1FD  primary-ultra-lt   accent bg, low-severity bg (= --accent)
+  --blue-200   #C5DAFA  —                  hover on accent surfaces
+  --blue-300   #9DC0F6  —                  selected row tint, light interactive
+  --blue-400   #70A3F0  —                  progress bar fill, chart secondary
+  --blue-500   #3C82E8  —                  mid-range decorative, chart primary
+  --blue-600   #0060D6  primary-default    CTAs, links, active states (= --primary)
+  --blue-700   #0051B5  —                  primary hover state
+  --blue-800   #004294  —                  primary active/pressed state
+  --blue-900   #003374  —                  text on accent bg (= --accent-foreground)
+  --blue-1000  #002555  —                  dark headings on blue surfaces
+  --blue-1100  #001839  —                  near-black blue
+  --blue-1200  #000E22  —                  deepest blue
+
+USAGE: Prefer semantic tokens (--primary, --accent, --accent-foreground) over
+raw --blue-* values. The blue scale exists as a reference for edge cases like
+chart fills, progress indicators, and interactive state gradations. If you're
+reaching for --blue-* in a component, ask first whether a semantic token
+already handles it.
+
+# ── TOKEN MAP: RED / DESTRUCTIVE SCALE ─────────────────────────────────────────
+
+Red primitives use a 100–1200 scale. Semantic tokens reference specific stops.
+
+  TOKEN        HEX      SEMANTIC           USE
+  ───────────  ───────  ─────────────────  ──────────────────────────────────
+  --red-100    #FFF2F0  destructive-ultra  banner/card bg (= --destructive-light)
+  --red-200    #FDDAD5  —                  hover on destructive-light surfaces
+  --red-300    #FABCB3  —                  selected row tint, light error state
+  --red-400    #F59788  —                  progress bar fill, chart error
+  --red-500    #EC6750  —                  mid-range decorative, chart secondary
+  --red-600    #D62400  destructive-def    delete actions, critical severity (= --destructive)
+  --red-700    #B51F00  —                  destructive hover state
+  --red-800    #941900  —                  destructive active/pressed state
+  --red-900    #731400  —                  dark text on destructive-light bg
+  --red-1000   #540F00  —                  dark headings on red surfaces
+  --red-1100   #380A00  —                  near-black red
+  --red-1200   #200600  —                  deepest red
+
+USAGE: Prefer semantic tokens (--destructive, --destructive-foreground,
+--destructive-light) over raw --red-* values. The red scale exists as a
+reference for edge cases like chart error states, heatmaps, and interactive
+state gradations. If you're reaching for --red-* in a component, ask first
+whether a semantic token already handles it.
+
+# ── TOKEN MAP: YELLOW / WARNING SCALE ──────────────────────────────────────────
+
+Yellow primitives use a 100–1200 scale. Semantic tokens reference specific stops.
+
+  TOKEN          HEX      SEMANTIC           USE
+  ─────────────  ───────  ─────────────────  ──────────────────────────────────
+  --yellow-100   #FFF8E6  warning-ultra-lt   banner/card bg (= --warning-light)
+  --yellow-200   #FFEFC2  —                  hover on warning-light surfaces
+  --yellow-300   #FFE38D  —                  selected row tint, light warning state
+  --yellow-400   #FFD75C  —                  progress bar fill, chart secondary
+  --yellow-500   #FACB30  —                  mid-range decorative, chart primary
+  --yellow-600   #F5BA0A  warning-default    fills, indicators (= --warning)
+  --yellow-700   #D6A208  —                  warning hover state
+  --yellow-800   #B78A07  —                  warning active/pressed state
+  --yellow-900   #987206  —                  legacy warning-text (replaced by 1100)
+  --yellow-1000  #7A5B04  —                  dark headings on yellow surfaces
+  --yellow-1100  #5C4403  warning-text       accessible text on white (= --warning-text)
+  --yellow-1200  #3D2D02  —                  deepest yellow
+
+USAGE: Prefer semantic tokens (--warning, --warning-surface, --warning-light)
+over raw --yellow-* values. The yellow scale exists as a reference for edge
+cases like chart fills, heatmaps, and interactive state gradations. If you're
+reaching for --yellow-* in a component, ask first whether a semantic token
+already handles it.
+
+# ── TOKEN MAP: GREEN / SUCCESS SCALE ──────────────────────────────────────────
+
+Green primitives use a 100–1200 scale. Semantic tokens reference specific stops.
+
+  TOKEN          HEX      SEMANTIC           USE
+  ─────────────  ───────  ─────────────────  ──────────────────────────────────
+  --green-100    #E8FCE8  success-ultra-lt   banner/card bg (= --success-light)
+  --green-200    #C2F5C6  —                  hover on success-light surfaces
+  --green-300    #90EA99  —                  selected row tint, light success state
+  --green-400    #5CD86A  —                  progress bar fill, chart secondary
+  --green-500    #30C442  —                  mid-range decorative, chart primary
+  --green-600    #07A61A  success-default    fills, indicators (= --success)
+  --green-700    #069016  —                  success hover state
+  --green-800    #057A13  success-text       accessible text on white (= --success-text)
+  --green-900    #04640F  —                  dark text on success-light bg
+  --green-1000   #034E0C  —                  dark headings on green surfaces
+  --green-1100   #023808  —                  near-black green
+  --green-1200   #012405  —                  deepest green
+
+USAGE: Prefer semantic tokens (--success, --success-foreground, --success-light)
+over raw --green-* values. The green scale exists as a reference for edge cases
+like chart fills, progress indicators, and interactive state gradations. If
+you're reaching for --green-* in a component, ask first whether a semantic
+token already handles it.
+
+# ── TOKEN MAP: ORANGE / ALERT SCALE ───────────────────────────────────────────
+
+Orange primitives use a 100–1200 scale. Semantic tokens reference specific stops.
+
+  TOKEN           HEX      SEMANTIC           USE
+  ──────────────  ───────  ─────────────────  ──────────────────────────────────
+  --orange-100    #FFF3E6  alert-ultra-lt     banner/card bg (= --alert-light)
+  --orange-200    #FFE0C2  —                  hover on alert-light surfaces
+  --orange-300    #FFCA8F  —                  selected row tint, light alert state
+  --orange-400    #FFB35C  —                  progress bar fill, chart secondary
+  --orange-500    #FF9A30  —                  mid-range decorative, chart primary
+  --orange-600    #FF8000  alert-default      fills, indicators (= --alert)
+  --orange-700    #DB6E00  —                  alert hover state
+  --orange-800    #B85C00  —                  alert active/pressed state
+  --orange-900    #944A00  alert-text         accessible text on white (= --alert-text)
+  --orange-1000   #713900  —                  dark headings on orange surfaces
+  --orange-1100   #4F2800  —                  near-black orange
+  --orange-1200   #301800  —                  deepest orange
+
+USAGE: Prefer semantic tokens (--alert, --alert-foreground, --alert-light)
+over raw --orange-* values. The orange scale exists as a reference for edge
+cases like chart fills, heatmaps, and interactive state gradations. If you're
+reaching for --orange-* in a component, ask first whether a semantic token
+already handles it.
+
+# ── TOKEN MAP: SEMANTIC COLORS ───────────────────────────────────────────────
+
+Each semantic color has a foreground (accessible text), foreground-on-color,
+and light (ultra-light background) variant.
+
+DESTRUCTIVE (Red — Critical severity, delete actions):
+  --destructive            #D62400  (red-600 / destructive-default)
+  --destructive-foreground #FFFFFF  text on destructive backgrounds
+  --destructive-light      #FFF2F0  (red-100 / destructive-ultra-light) — banner/card bg
+
+SUCCESS (Green):
+  --success                #07A61A  (green-600 / success-default) — fills, indicators
+  --success-foreground     #1A1A1A  text on success backgrounds (dark for contrast)
+  --success-text           #057A13  (green-800) — accessible fg on white/light bg
+  --success-light          #E8FCE8  (green-100 / success-ultra-light) — banner/card bg
+
+WARNING (Yellow — Overdue, Medium severity):
+  --warning                #F5BA0A  (yellow-600 / warning-default) — fills, indicators
+  --warning-foreground     #1A1A1A  text on warning backgrounds (dark for contrast)
+  --warning-text           #5C4403  (yellow-1100) — accessible fg on white/light bg
+  --warning-light          #FFF8E6  (yellow-100 / warning-ultra-light) — banner/card bg
+
+ALERT (Orange — High severity ONLY):
+  --alert                  #FF8000  (orange-600 / alert-default) — fills, indicators
+  --alert-foreground       #1A1A1A  text on alert backgrounds (dark for contrast)
+  --alert-text             #944A00  (orange-900) — accessible fg on white/light bg
+  --alert-light            #FFF3E6  (orange-100 / alert-ultra-light) — banner/card bg
+
+ACCENT (Blue tint — Low severity, info states):
+  --accent                 #E8F1FD  (blue-100 / primary-ultra-light) — background
+  --accent-foreground      #003374  (blue-900) — foreground text
+
+INFO (Cyan — non-severity informational callouts):
+  --info                   #0FABD2  (cyan-1000 / accent5-default)
+  --info-foreground        #FFFFFF  text on info backgrounds
+  --info-light             #DBFAFF  (cyan-100 / accent5-ultra-light) — help surfaces
+
+# ── TOKEN MAP: ACCENT PALETTE ────────────────────────────────────────────────
+
+Eight accent families for charts, category tags, and avatar fallback colors.
+Only base (default) shades listed — each has ultra-light through darker variants
+in the token map.
+
+  NAME               HEX      PRIMITIVE
+  ─────────────────  ───────  ─────────────
+  accent1 (Orange)   #FF8000  orange-600
+  accent2 (Violet)   #6F21E4  violet-1000
+  accent3 (Indigo)   #3B48DE  indigo-1000
+  accent4 (Lime)     #70BC06  lime-900
+  accent5 (Cyan)     #0FABD2  cyan-1000
+  accent6 (Sea)      #0CA79F  sea-1000
+  accent7 (Magenta)  #E40763  magenta-1100
+  accent8 (Pink)     #ED68ED  pink-1000
 
 WHEN TO USE ACCENTS:
   - Chart series colors (use in order: accent1 through accent8)
@@ -76,10 +269,11 @@ NEVER:
   - Use accents for status badges — use the status color reference below
   - Mix accent base shades with their light/dark variants in the same context
 
-# ── SIDEBAR ──────────────────────────────────────────────────────────────────
+# ── TOKEN MAP: SIDEBAR ───────────────────────────────────────────────────────
 
---sidebar* is a parallel token set for Panel 1 styling — always use sidebar
-tokens when styling Panel 1 content. Values in theme.css.
+SIDEBAR:
+  --sidebar*       parallel token set for Panel 1 styling — always use sidebar
+                   tokens when styling Panel 1 content
 
 # ── CRITICAL NAMING DISAMBIGUATION ───────────────────────────────────────────
 
@@ -99,19 +293,19 @@ Low clinical severity. Never swap them.
 # ── SEVERITY COLOR FAST REFERENCE ────────────────────────────────────────────
 # Full spec in safety/severity-schema.yaml
 
-  Critical  → text-destructive / bg-destructive-light / border-destructive/30
-  High      → text-alert / bg-alert-light / border-alert/30
-  Medium    → text-warning / bg-warning-light / border-warning/30
-  Low       → text-accent-foreground / bg-accent / border-accent-foreground/20
+  Critical  → text-destructive (#D62400) / bg-destructive-light (#FFF2F0) / border-destructive/30
+  High      → text-alert-text (#944A00) / bg-alert-light (#FFF3E6) / border-alert/30
+  Medium    → text-warning-text (#987206) / bg-warning-light (#FFF8E6) / border-warning/30
+  Low       → text-accent-foreground (#003374) / bg-accent (#E8F1FD) / border-accent-foreground/20
 
 # ── STATUS COLOR FAST REFERENCE ──────────────────────────────────────────────
 
-  Completed / Closed / Success   → text-success / bg-success-light
-  Overdue                        → text-warning / bg-warning-light
-  In Progress / In Outreach      → text-primary / bg-accent
-  Open                           → text-muted-foreground / border border-border
-  Cancelled / Excluded           → text-muted-foreground / bg-muted
-  Error / Failed                 → text-destructive / bg-destructive-light
+  Completed / Closed / Success   → text-success-text (#057A13) / bg-success-light (#E8FCE8)
+  Overdue                        → text-warning-text (#987206) / bg-warning-light (#FFF8E6)
+  In Progress / In Outreach      → text-primary (#0060D6) / bg-accent (#E8F1FD)
+  Open                           → text-muted-foreground (#636363) / border border-border
+  Cancelled / Excluded           → text-muted-foreground (#636363) / bg-muted (#EBEBEB)
+  Error / Failed                 → text-destructive (#D62400) / bg-destructive-light (#FFF2F0)
 
 # ── TYPOGRAPHY SCALE ─────────────────────────────────────────────────────────
 
@@ -210,7 +404,6 @@ NEVER:
 COMPONENT DEFAULTS:
   Cards (CareGapCard, StatCard):   rounded-lg
   Alert banners:                    rounded-r-md (left border accent, right rounded)
-  StatusBadge:                      rounded-full (always)
   ChatQuickActionChip:              rounded-full (always)
   Buttons:                          rounded-md (inherited from component library)
   Inputs:                           rounded-md
@@ -381,7 +574,7 @@ Interactive elements follow a consistent state feedback language:
   ─────────  ─────────────────────────────────────  ──────────────────────────
   hover      Background opacity shift               hover:bg-foreground/[0.04]
   active     Darker bg shift + scale(0.97)          active:bg-foreground/[0.08] active:scale-[0.97]
-  focused    Soft ring at 40% opacity               focus-visible:ring-primary/40
+  focused    Soft blue-300 ring                      focus-visible:ring-ring
   selected   Primary-tinted background              bg-primary/10 or bg-accent
   disabled   50% opacity, no pointer events          disabled:opacity-50 disabled:pointer-events-none
 

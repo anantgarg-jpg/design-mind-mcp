@@ -2,6 +2,8 @@ import React from 'react'
 import { Badge } from '@blocks/Badge/component'
 import { Fixture, PageHeader } from '@/components/Fixture'
 
+const colors = ["blue", "red", "yellow", "orange", "green", "grey"] as const
+
 export function BadgePage() {
   return (
     <div>
@@ -13,21 +15,37 @@ export function BadgePage() {
       />
 
       <div className="flex flex-col gap-6">
-        <Fixture label="All variants">
+        {/* ── Colors ───────────────────────────────────────────── */}
+        <Fixture label="Colors">
           <div className="flex flex-wrap gap-2">
-            <Badge variant="default">Default</Badge>
-            <Badge variant="secondary">Secondary</Badge>
-            <Badge variant="destructive">Destructive</Badge>
-            <Badge variant="outline">Outline</Badge>
+            {colors.map((color) => (
+              <Badge key={color} color={color}>
+                {color.charAt(0).toUpperCase() + color.slice(1)}
+              </Badge>
+            ))}
           </div>
         </Fixture>
 
+        {/* ── With left dot ────────────────────────────────────── */}
+        <Fixture label="With left dot">
+          <div className="flex flex-wrap gap-2">
+            {colors.map((color) => (
+              <Badge key={color} color={color} dot>
+                {color.charAt(0).toUpperCase() + color.slice(1)}
+              </Badge>
+            ))}
+          </div>
+        </Fixture>
+
+        {/* ── Contextual usage ───────────────────────────────── */}
         <Fixture label="Contextual usage">
           <div className="flex flex-wrap gap-2">
-            <Badge variant="default">Active</Badge>
-            <Badge variant="secondary">Pending review</Badge>
-            <Badge variant="destructive">Overdue</Badge>
-            <Badge variant="outline">Draft</Badge>
+            <Badge color="green" dot>Active</Badge>
+            <Badge color="yellow" dot>Pending review</Badge>
+            <Badge color="red" dot>Overdue</Badge>
+            <Badge color="grey">Draft</Badge>
+            <Badge color="orange">Urgent</Badge>
+            <Badge color="blue">New</Badge>
           </div>
         </Fixture>
       </div>
