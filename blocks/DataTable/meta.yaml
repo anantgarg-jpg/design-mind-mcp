@@ -1,7 +1,7 @@
 id: DataTable
 status: active
 component_type: data-display
-level: composition
+level: composite
 structural_family: data-table
 family_invariants:
   - "Container: w-full rounded-lg border border-border overflow-hidden"

@@ -447,7 +447,7 @@
     },
     "Command": {
       "file": "blocks/Command/meta.yaml",
-      "level": "composition",
+      "level": "composite",
       "confidence": 0.80,
       "status": "active",
       "renders_total": 0,
@@ -455,7 +455,7 @@
     },
     "Combobox": {
       "file": "blocks/Combobox/meta.yaml",
-      "level": "composition",
+      "level": "composite",
       "confidence": 0.80,
       "status": "active",
       "renders_total": 0,
@@ -463,7 +463,7 @@
     },
     "DatePicker": {
       "file": "blocks/DatePicker/meta.yaml",
-      "level": "composition",
+      "level": "composite",
       "confidence": 0.80,
       "status": "active",
       "renders_total": 0,
@@ -471,7 +471,7 @@
     },
     "DataTable": {
       "file": "blocks/DataTable/meta.yaml",
-      "level": "composition",
+      "level": "composite",
       "confidence": 0.80,
       "status": "active",
       "renders_total": 0,
@@ -479,7 +479,7 @@
     },
     "Form": {
       "file": "blocks/Form/meta.yaml",
-      "level": "composition",
+      "level": "composite",
       "confidence": 0.80,
       "status": "active",
       "renders_total": 0,
@@ -487,7 +487,7 @@
     },
     "Chart": {
       "file": "blocks/Chart/meta.yaml",
-      "level": "composition",
+      "level": "composite",
       "confidence": 0.80,
       "status": "active",
       "renders_total": 0,
@@ -495,7 +495,7 @@
     },
     "Carousel": {
       "file": "blocks/Carousel/meta.yaml",
-      "level": "composition",
+      "level": "composite",
       "confidence": 0.80,
       "status": "active",
       "renders_total": 0,
@@ -503,7 +503,7 @@
     },
     "Pagination": {
       "file": "blocks/Pagination/meta.yaml",
-      "level": "composition",
+      "level": "composite",
       "confidence": 0.80,
       "status": "active",
       "renders_total": 0,

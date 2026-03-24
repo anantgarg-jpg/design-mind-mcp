@@ -1,7 +1,7 @@
 id: Combobox
 status: active
 component_type: action
-level: composition
+level: composite
 structural_family: searchable-select
 family_invariants:
   - "Trigger: h-9 rounded-md border border-input px-3 text-sm"

@@ -1,7 +1,7 @@
 id: Carousel
 status: active
 component_type: layout
-level: composition
+level: composite
 structural_family: content-carousel
 family_invariants:
   - "Container: overflow-hidden relative"

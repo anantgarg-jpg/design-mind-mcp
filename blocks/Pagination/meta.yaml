@@ -1,7 +1,7 @@
 id: Pagination
 status: active
 component_type: navigation
-level: composition
+level: composite
 structural_family: page-navigation
 family_invariants:
   - "Container: flex items-center gap-1"

@@ -50,7 +50,7 @@ import { TogglePage } from '@/blocks/TogglePage'
 import { ToggleGroupPage } from '@/blocks/ToggleGroupPage'
 import { TooltipPage } from '@/blocks/TooltipPage'
 
-// ── shadcn/ui composition pages ─────────────────────────────────────────────
+// ── shadcn/ui composite pages ───────────────────────────────────────────────
 import { CommandPage } from '@/blocks/CommandPage'
 import { ComboboxPage } from '@/blocks/ComboboxPage'
 import { DatePickerPage } from '@/blocks/DatePickerPage'
@@ -65,7 +65,7 @@ type BlockId = string
 interface BlockMeta {
   id: BlockId
   label: string
-  level: 'primitive' | 'composite' | 'domain' | 'composition'
+  level: 'primitive' | 'composite' | 'domain'
   shell?: boolean
   shellPath?: string
 }
@@ -122,15 +122,15 @@ const BLOCKS: BlockMeta[] = [
   { id: 'EntityContextHeader', label: 'EntityContextHeader', level: 'composite' },
   { id: 'EntityRow', label: 'EntityRow', level: 'composite' },
 
-  // ── shadcn/ui compositions ──
-  { id: 'Carousel', label: 'Carousel', level: 'composition' },
-  { id: 'Chart', label: 'Chart', level: 'composition' },
-  { id: 'Combobox', label: 'Combobox', level: 'composition' },
-  { id: 'Command', label: 'Command', level: 'composition' },
-  { id: 'DataTable', label: 'DataTable', level: 'composition' },
-  { id: 'DatePicker', label: 'DatePicker', level: 'composition' },
-  { id: 'Form', label: 'Form', level: 'composition' },
-  { id: 'Pagination', label: 'Pagination', level: 'composition' },
+  // ── shadcn/ui composites ──
+  { id: 'Carousel', label: 'Carousel', level: 'composite' },
+  { id: 'Chart', label: 'Chart', level: 'composite' },
+  { id: 'Combobox', label: 'Combobox', level: 'composite' },
+  { id: 'Command', label: 'Command', level: 'composite' },
+  { id: 'DataTable', label: 'DataTable', level: 'composite' },
+  { id: 'DatePicker', label: 'DatePicker', level: 'composite' },
+  { id: 'Form', label: 'Form', level: 'composite' },
+  { id: 'Pagination', label: 'Pagination', level: 'composite' },
 
   // ── Domain (shell-only) ──
   { id: 'ChatQuickActionChip', label: 'ChatQuickActionChip', level: 'domain', shell: true, shellPath: '../../shell/panels/ChatPanel' },
@@ -142,7 +142,6 @@ const BLOCKS: BlockMeta[] = [
 const GROUPS: { label: string; level: BlockMeta['level'] }[] = [
   { label: 'PRIMITIVE', level: 'primitive' },
   { label: 'COMPOSITE', level: 'composite' },
-  { label: 'COMPOSITION', level: 'composition' },
   { label: 'DOMAIN', level: 'domain' },
 ]
 
@@ -193,7 +192,7 @@ const PAGE_MAP: Record<string, React.FC> = {
   Toggle: TogglePage,
   ToggleGroup: ToggleGroupPage,
   Tooltip: TooltipPage,
-  // shadcn compositions
+  // shadcn composites
   Carousel: CarouselPage,
   Chart: ChartPage,
   Combobox: ComboboxPage,

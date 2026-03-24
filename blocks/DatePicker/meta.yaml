@@ -1,7 +1,7 @@
 id: DatePicker
 status: active
 component_type: action
-level: composition
+level: composite
 structural_family: date-selector
 family_invariants:
   - "Trigger: h-9 rounded-md border border-input px-3 text-sm"
