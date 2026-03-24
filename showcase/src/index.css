@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* RGB triplets (for Tailwind opacity modifiers) */
+  --background: 247 247 247;
+  --foreground: 26 26 26;
+  --card: 255 255 255;
+  --card-foreground: 26 26 26;
+  --muted: 235 235 235;
+  --muted-foreground: 99 99 99;
+  --border: 212 212 212;
+  --input: 196 196 196;
+  --ring: 0 96 214;
+  --primary: 0 96 214;
+  --primary-foreground: 255 255 255;
+  --destructive: 214 36 0;
+  --destructive-foreground: 255 255 255;
+  --success: 0 122 14;
+  --success-foreground: 255 255 255;
+  --warning: 173 130 0;
+  --warning-foreground: 255 255 255;
+  --alert: 178 77 0;
+  --alert-foreground: 255 255 255;
+  --accent: 240 249 255;
+  --accent-foreground: 0 81 173;
+
+  /* Plain hex (used only as var() in arbitrary values) */
+  --destructive-light: #FFF2F0;
+  --success-light: #DEFFDB;
+  --warning-light: #FFF9E5;
+  --warning-surface: #F5BA0A;
+  --alert-light: #FFF2DB;
+
+  --font-sans: 'DM Sans', system-ui, sans-serif;
+  --font-mono: 'DM Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background-color: rgb(var(--background));
+  color: rgb(var(--foreground));
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
