@@ -20,4 +20,5 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
 ENV TRANSPORT=sse
 ENV PORT=8080
 
-CMD ["node", "server/src/index.js"]
+RUN chmod +x start.sh
+CMD ["sh", "start.sh"]

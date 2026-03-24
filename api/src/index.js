@@ -14,6 +14,9 @@
  *   PORT               — default 3456
  *   API_KEY            — required, rejects requests without it
  *   SLACK_WEBHOOK_URL  — optional, posts a Slack message per new candidate
+ *   GITHUB_TOKEN       — optional, Personal Access Token with repo write scope
+ *   GITHUB_REPO        — optional, e.g. "owner/design-mind-mcp" (required if GITHUB_TOKEN set)
+ *   GITHUB_BRANCH      — optional, branch to commit to (default: "main")
  */
 
 import { createServer } from 'node:http';
@@ -27,7 +30,10 @@ const DATA_DIR   = join(__dirname, '..', 'data');
 
 const PORT     = parseInt(process.env.PORT || '3456', 10);
 const API_KEY  = process.env.API_KEY || 'dm-local-dev-key';
-const SLACK_WEBHOOK = process.env.SLACK_WEBHOOK_URL || '';
+const SLACK_WEBHOOK  = process.env.SLACK_WEBHOOK_URL || '';
+const GITHUB_TOKEN   = process.env.GITHUB_TOKEN || '';
+const GITHUB_REPO    = process.env.GITHUB_REPO || '';
+const GITHUB_BRANCH  = process.env.GITHUB_BRANCH || 'main';
 
 // ── Similarity helpers ────────────────────────────────────────────────────────
 
@@ -78,6 +84,101 @@ function withFrequency(candidates) {
     ...c,
     frequency_count: freq[c.pattern_name?.toLowerCase().trim()] || 1,
   }));
+}
+
+// ── GitHub commit ─────────────────────────────────────────────────────────────
+
+function buildCandidateYaml(record) {
+  const ontologyLines = Array.isArray(record.ontology_refs) && record.ontology_refs.length > 0
+    ? record.ontology_refs.map(r => `  - ${r}`)
+    : ['  []'];
+
+  const projectLines = Array.isArray(record.reporting_projects) && record.reporting_projects.length > 0
+    ? record.reporting_projects.map(p => `  - project_id: "${p.project_id}"\n    last_active: "${p.last_active}"`)
+    : ['  []'];
+
+  return [
+    `# Design Mind Pattern Candidate`,
+    `# Generated: ${record.submitted_at}`,
+    `# Status: ${record.status}`,
+    ``,
+    `candidate_id: "${record.candidate_id}"`,
+    `pattern_name: "${record.pattern_name}"`,
+    `status: ${record.status}`,
+    `frequency_count: ${record.frequency_count}`,
+    ``,
+    `reporting_projects:`,
+    ...projectLines,
+    ``,
+    `description: >`,
+    `  ${record.description.replace(/\n/g, '\n  ')}`,
+    ``,
+    `intent_it_serves: >`,
+    `  ${record.intent_it_serves.replace(/\n/g, '\n  ')}`,
+    ``,
+    `why_existing_patterns_didnt_fit: >`,
+    `  ${record.why_existing_patterns_didnt_fit.replace(/\n/g, '\n  ')}`,
+    ``,
+    record.implementation_ref
+      ? `implementation_ref: "${record.implementation_ref}"`
+      : `implementation_ref: null`,
+    ``,
+    `ontology_refs:`,
+    ...ontologyLines,
+    ``,
+    `# Instructions for human ratification:`,
+    `# 1. Review the description and intent`,
+    `# 2. Check similar_candidates — merge if duplicate`,
+    `# 3. If valid: create blocks/${record.pattern_name}/ with meta.yaml`,
+    `# 4. Run: node server/src/seed.js to re-index`,
+  ].join('\n');
+}
+
+async function commitToGitHub(record) {
+  if (!GITHUB_TOKEN || !GITHUB_REPO) return;
+
+  const filePath = `blocks/_candidates/${record.candidate_id}.yaml`;
+  const content  = Buffer.from(buildCandidateYaml(record)).toString('base64');
+  const message  = `chore: log pattern candidate ${record.pattern_name}`;
+
+  const body = JSON.stringify({ message, content, branch: GITHUB_BRANCH });
+
+  const { request } = await import('node:https');
+  const options = {
+    hostname: 'api.github.com',
+    path: `/repos/${GITHUB_REPO}/contents/${filePath}`,
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${GITHUB_TOKEN}`,
+      'Content-Type': 'application/json',
+      'Content-Length': Buffer.byteLength(body),
+      'User-Agent': 'design-mind-mcp',
+      'Accept': 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+    },
+  };
+
+  return new Promise((resolve) => {
+    const req = request(options, res => {
+      let data = '';
+      res.on('data', chunk => { data += chunk; });
+      res.on('end', () => {
+        if (res.statusCode === 201) {
+          console.log(`[api] GitHub commit: ${filePath}`);
+        } else {
+          console.error(`[api] GitHub commit failed (${res.statusCode}):`, data.substring(0, 200));
+        }
+        resolve();
+      });
+    });
+    req.on('error', err => {
+      console.error('[api] GitHub commit error:', err.message);
+      resolve();
+    });
+    req.setTimeout(8000, () => { req.destroy(); resolve(); });
+    req.write(body);
+    req.end();
+  });
 }
 
 // ── Slack notification ─────────────────────────────────────────────────────────
@@ -235,8 +336,9 @@ async function handleRequest(req, res) {
     appendCandidate(record);
     console.log(`[api] Candidate received: ${candidate_id} (${status}, ${frequency_count}x)`);
 
-    // Fire-and-forget Slack notification
+    // Fire-and-forget — neither blocks the 201 response
     notifySlack(record).catch(() => {});
+    commitToGitHub(record).catch(() => {});
 
     return send(res, 201, { candidate_id, status, frequency_count });
   }
