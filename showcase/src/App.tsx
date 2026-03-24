@@ -9,6 +9,7 @@ import { EntityContextHeaderPage } from '@/blocks/EntityContextHeaderPage'
 import { EntityRowPage } from '@/blocks/EntityRowPage'
 import { AlertBannerPage } from '@/blocks/AlertBannerPage'
 import { ShellOnlyPage } from '@/blocks/ShellOnlyPage'
+import { CandidateDetailPane, CANDIDATES } from '@/blocks/CandidatesPage'
 
 // ── shadcn/ui primitive pages ───────────────────────────────────────────────
 import { AccordionPage } from '@/blocks/AccordionPage'
@@ -60,7 +61,10 @@ import { ChartPage } from '@/blocks/ChartPage'
 import { CarouselPage } from '@/blocks/CarouselPage'
 import { PaginationPage } from '@/blocks/PaginationPage'
 
+// ── Types ────────────────────────────────────────────────────────────────────
+
 type BlockId = string
+type ActiveView = 'published' | 'candidates'
 
 interface BlockMeta {
   id: BlockId
@@ -69,6 +73,8 @@ interface BlockMeta {
   shell?: boolean
   shellPath?: string
 }
+
+// ── Block registry ───────────────────────────────────────────────────────────
 
 const BLOCKS: BlockMeta[] = [
   // ── Original primitives ──
@@ -146,14 +152,12 @@ const GROUPS: { label: string; level: BlockMeta['level'] }[] = [
 ]
 
 const PAGE_MAP: Record<string, React.FC> = {
-  // Original
   StatusBadge: StatusBadgePage,
   SectionHeader: SectionHeaderPage,
   StatCard: StatCardPage,
   AlertBanner: AlertBannerPage,
   EntityContextHeader: EntityContextHeaderPage,
   EntityRow: EntityRowPage,
-  // shadcn primitives
   Accordion: AccordionPage,
   Alert: AlertPage,
   AlertDialog: AlertDialogPage,
@@ -192,7 +196,7 @@ const PAGE_MAP: Record<string, React.FC> = {
   Toggle: TogglePage,
   ToggleGroup: ToggleGroupPage,
   Tooltip: TooltipPage,
-  // shadcn composites
+  // shadcn compositions
   Carousel: CarouselPage,
   Chart: ChartPage,
   Combobox: ComboboxPage,
@@ -205,7 +209,6 @@ const PAGE_MAP: Record<string, React.FC> = {
 
 function renderPage(id: BlockId, blocks: BlockMeta[]) {
   const meta = blocks.find((b) => b.id === id)
-
   if (meta?.shell) {
     return (
       <ShellOnlyPage
@@ -215,67 +218,162 @@ function renderPage(id: BlockId, blocks: BlockMeta[]) {
       />
     )
   }
-
   const Page = PAGE_MAP[id]
   if (Page) return <Page />
   return null
 }
 
+// ── App ──────────────────────────────────────────────────────────────────────
+
 export default function App() {
-  const [selected, setSelected] = useState<BlockId>('StatusBadge')
+  const [activeView, setActiveView] = useState<ActiveView>('published')
+  const [selectedBlock, setSelectedBlock] = useState<BlockId>('StatusBadge')
+  const [selectedCandidate, setSelectedCandidate] = useState<string>(CANDIDATES[0].candidate_id)
+  const [localRatified, setLocalRatified] = useState<Set<string>>(new Set())
+
+  function ratify(id: string) {
+    setLocalRatified((prev) => new Set(prev).add(id))
+  }
+
+  function isCandidateRatified(id: string) {
+    const c = CANDIDATES.find((c) => c.candidate_id === id)
+    return c?.status === 'ratified' || localRatified.has(id)
+  }
+
+  const pending = CANDIDATES.filter((c) => !isCandidateRatified(c.candidate_id))
+  const ratified = CANDIDATES.filter((c) => isCandidateRatified(c.candidate_id))
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background font-sans">
-      {/* Sidebar */}
-      <aside className="w-56 flex-shrink-0 bg-card border-r border-border flex flex-col overflow-y-auto">
-        {/* Logo / title */}
-        <div className="px-4 py-4 border-b border-border">
-          <p className="text-sm font-semibold text-foreground tracking-wide">Design Mind</p>
-          <p className="text-sm text-muted-foreground mt-0.5">Block Showcase</p>
-        </div>
+    <div className="flex flex-col h-screen overflow-hidden bg-background font-sans">
 
-        {/* Nav groups */}
-        <nav className="flex-1 py-3">
-          {GROUPS.map((group) => {
-            const groupBlocks = BLOCKS.filter((b) => b.level === group.level)
-            return (
-              <div key={group.label} className="mb-4">
-                <p className="px-4 py-1.5 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                  {group.label}
-                </p>
-                {groupBlocks.map((block) => (
-                  <button
-                    key={block.id}
-                    onClick={() => setSelected(block.id)}
-                    className={cn(
-                      'w-full text-left px-4 py-1.5 text-base transition-colors flex items-center gap-1.5',
-                      selected === block.id
-                        ? 'bg-primary/10 text-primary font-semibold'
-                        : block.shell
-                        ? 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                        : 'text-foreground hover:bg-muted'
-                    )}
-                  >
-                    {block.shell && (
-                      <span className="text-muted-foreground" aria-hidden="true">·</span>
-                    )}
-                    <span className={cn(block.shell && 'text-muted-foreground text-sm')}>
-                      {block.label}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )
-          })}
+      {/* ── Top nav ── */}
+      <header className="h-11 flex-shrink-0 border-b border-border bg-card flex items-center px-4">
+        <span className="text-sm font-semibold text-foreground mr-6">Design Mind</span>
+        <nav className="flex h-full">
+          {(['published', 'candidates'] as ActiveView[]).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveView(tab)}
+              className={cn(
+                'h-full px-4 text-sm font-medium capitalize border-b-2 transition-colors',
+                activeView === tab
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {tab}
+            </button>
+          ))}
         </nav>
-      </aside>
+      </header>
 
-      {/* Main content */}
-      <main className="flex-1 overflow-y-auto">
-        <div className="max-w-3xl mx-auto px-8 py-8">
-          {renderPage(selected, BLOCKS)}
-        </div>
-      </main>
+      {/* ── Sidebar + content ── */}
+      <div className="flex flex-1 overflow-hidden">
+
+        {/* Sidebar */}
+        <aside className="w-56 flex-shrink-0 bg-card border-r border-border overflow-y-auto">
+          <nav className="py-3">
+
+            {activeView === 'published' ? (
+              // ── Published: block groups ──
+              GROUPS.map((group) => {
+                const groupBlocks = BLOCKS.filter((b) => b.level === group.level)
+                return (
+                  <div key={group.label} className="mb-4">
+                    <p className="px-4 py-1.5 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                      {group.label}
+                    </p>
+                    {groupBlocks.map((block) => (
+                      <button
+                        key={block.id}
+                        onClick={() => setSelectedBlock(block.id)}
+                        className={cn(
+                          'w-full text-left px-4 py-1.5 text-base transition-colors flex items-center gap-1.5',
+                          selectedBlock === block.id
+                            ? 'bg-primary/10 text-primary font-semibold'
+                            : block.shell
+                            ? 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                            : 'text-foreground hover:bg-muted'
+                        )}
+                      >
+                        {block.shell && (
+                          <span className="text-muted-foreground" aria-hidden="true">·</span>
+                        )}
+                        <span className={cn(block.shell && 'text-muted-foreground text-sm')}>
+                          {block.label}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )
+              })
+            ) : (
+              // ── Candidates: pending / ratified groups ──
+              <>
+                {pending.length > 0 && (
+                  <div className="mb-4">
+                    <p className="px-4 py-1.5 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                      Pending
+                    </p>
+                    {pending.map((c) => (
+                      <button
+                        key={c.candidate_id}
+                        onClick={() => setSelectedCandidate(c.candidate_id)}
+                        className={cn(
+                          'w-full text-left px-4 py-1.5 text-base transition-colors',
+                          selectedCandidate === c.candidate_id
+                            ? 'bg-primary/10 text-primary font-semibold'
+                            : 'text-foreground hover:bg-muted'
+                        )}
+                      >
+                        {c.pattern_name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {ratified.length > 0 && (
+                  <div className="mb-4">
+                    <p className="px-4 py-1.5 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                      Ratified
+                    </p>
+                    {ratified.map((c) => (
+                      <button
+                        key={c.candidate_id}
+                        onClick={() => setSelectedCandidate(c.candidate_id)}
+                        className={cn(
+                          'w-full text-left px-4 py-1.5 text-base transition-colors flex items-center gap-1.5',
+                          selectedCandidate === c.candidate_id
+                            ? 'bg-primary/10 text-primary font-semibold'
+                            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                        )}
+                      >
+                        <span className="text-success text-xs leading-none">✓</span>
+                        <span className="text-sm">{c.pattern_name}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </nav>
+        </aside>
+
+        {/* Main content */}
+        <main className="flex-1 overflow-y-auto">
+          <div className="max-w-3xl mx-auto px-8 py-8">
+            {activeView === 'published' ? (
+              renderPage(selectedBlock, BLOCKS)
+            ) : (
+              <CandidateDetailPane
+                candidateId={selectedCandidate}
+                isRatified={isCandidateRatified(selectedCandidate)}
+                onRatify={() => ratify(selectedCandidate)}
+              />
+            )}
+          </div>
+        </main>
+
+      </div>
     </div>
   )
 }

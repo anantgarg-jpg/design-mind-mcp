@@ -559,6 +559,27 @@ function startHttp(port) {
       }
     }
 
+    // ── Seed / re-index ─────────────────────────────────────────────────────
+    if (req.method === 'POST' && url.pathname === '/seed') {
+      try {
+        process.stderr.write('[design-mind] /seed triggered via showcase UI\n');
+        mkdirSync(INDEX_DIR, { recursive: true });
+        const kb = loadKnowledge(BASE_PATH);
+        const { patternIndex, ruleIndex } = buildKnowledgeIndexes(kb);
+        saveIndex(patternIndex, join(INDEX_DIR, 'patterns.json'));
+        saveIndex(ruleIndex,    join(INDEX_DIR, 'rules.json'));
+        process.stderr.write(`[design-mind] Re-indexed: ${patternIndex.documents.length} patterns, ${ruleIndex.documents.length} rules\n`);
+        return sendJson(res, 200, {
+          status:   'ok',
+          patterns: patternIndex.documents.length,
+          rules:    ruleIndex.documents.length,
+        });
+      } catch (err) {
+        process.stderr.write(`[design-mind] /seed error: ${err.message}\n`);
+        return sendJson(res, 500, { error: err.message });
+      }
+    }
+
     sendJson(res, 404, { error: 'Not found' });
   });
 

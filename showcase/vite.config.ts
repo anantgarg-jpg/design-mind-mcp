@@ -20,5 +20,8 @@ export default defineConfig({
     fs: {
       allow: ['..'],
     },
+    proxy: {
+      '/seed': 'http://localhost:8080',
+    },
   },
 })
