@@ -4,12 +4,12 @@ component_type: row
 level: composite
 structural_family: actionable-list-row
 family_invariants:
-  - "Layout: flex items-start gap-3 px-4 py-3.5"
-  - "Container: border-b border-border/40 last:border-0 bg-card hover:bg-muted/60 transition-colors"
+  - "Layout: flex items-start gap-3 px-4 py-3"
+  - "Container: bg-card hover:bg-muted/50 transition-colors (row separation is a parent concern via divide-y)"
   - "Left accent: border-l-2 (warning for overdue, accent for active/available, transparent for neutral)"
-  - "Primary action: Button variant='outline' size='sm' className='h-7 text-xs'"
+  - "Primary action: Button variant='outline' or 'default' size='sm' className='h-7 text-sm'"
   - "Secondary actions: Button variant='ghost' size='sm' className='h-7 w-7 p-0 text-muted-foreground'"
-  - "Meta row: flex items-center gap-3 mt-1.5 with text-xs text-muted-foreground"
+  - "Meta row: flex items-center gap-3 mt-1 with text-sm text-muted-foreground"
 confidence: 0.92
 version: 1.0.0
 

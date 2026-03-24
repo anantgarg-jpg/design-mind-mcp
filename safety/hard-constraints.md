@@ -99,3 +99,12 @@
 
 17. Secondary buttons on modals, interstitials, and popovers
     must use "Close", not "Cancel".
+
+---
+
+## CTA display rules
+
+18. CTA label text must never wrap. Button labels are always single-line
+    (whitespace-nowrap). When space is constrained, other content columns — such as
+    names, descriptions, or metadata — must shrink or truncate to preserve the full
+    visibility of the CTA label.

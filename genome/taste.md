@@ -112,6 +112,7 @@ Animation is not personality. It's spatial communication.
 
 - **Predictable regions, surprising content.** Users should always know where to look for navigation, primary content, and supporting context. Within those predictable zones, the content itself can be rich and varied.
 - **Alignment is non-negotiable.** Every element should sit on a grid line or be deliberately offset from one. Approximate alignment is worse than no grid at all — it creates a feeling of "almost right" that's more distracting than chaos. In lists and repeated-item layouts, this extends to positional consistency: actions, badges, and recurring elements must occupy the same slot across every item — content variation in one part of a row must never shift an element's position in another.
+- **Column alignment in repeated-item layouts.** In lists, rows, and repeated-item layouts, every data column must have a fixed width so that values align vertically across items. A single flexible column (typically the primary label) absorbs width variance by truncating. Variable-width content — such as action buttons or status badges — must be contained within a fixed-width group so they cannot shift adjacent columns. The flexible column is always the one closest to the user's reading entry point (typically the name or title), because truncation there is least disruptive to scanning.
 - **Responsive design preserves hierarchy, not just layout.** Focus on web viewports — ensure layouts adapt gracefully across common desktop and laptop screen widths. Reflowing content without re-prioritizing is a missed opportunity. What's most important at a wide viewport should still be most prominent at a narrow one.
 
 ---
@@ -124,6 +125,7 @@ The difference between good and great is in the details no one consciously notic
 - **Border radius consistency.** Radii are defined in the token system. Use them consistently — mixing values across a screen reads as indecisive, even if no one can pinpoint why.
 - **Shadows and elevation with intent.** Elevation tokens are defined in the system. Every use of a shadow should have a clear reason — distinguishing a floating element from the surface beneath it, signalling interactivity, or creating visual grouping. Arbitrary shadows are visual noise.
 - **Pixel-level precision.** Subpixel alignment, consistent padding, optical centering of icons within buttons. These things are invisible when right and quietly wrong when not. Sweat them.
+- **List scanability test.** In any list or table, cover the leftmost column and check: can you still read each remaining column as a vertical stripe? If column edges waver across rows, the layout fails the scanability test regardless of how individual rows look in isolation.
 
 ---
 

@@ -39,6 +39,7 @@ export function PatientRowPage() {
               riskTier="medium"
               band={2}
               primaryAction="Schedule Visit"
+              primaryActionVariant="outline"
               riskTrend="stable"
             />
           </div>
@@ -81,6 +82,7 @@ export function PatientRowPage() {
               riskTier="medium"
               band={2}
               primaryAction="Schedule Visit"
+              primaryActionVariant="outline"
               riskTrend="stable"
             />
             <PatientRow

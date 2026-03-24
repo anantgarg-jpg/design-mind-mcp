@@ -15,7 +15,7 @@ import { ChevronRight } from "lucide-react"
 //
 // INVARIANTS (meta.yaml):
 //   flex items-center gap-3 px-4 py-3.5
-//   border-b border-border/40 last:border-0 bg-card hover:bg-muted/50
+//   bg-card hover:bg-muted/50 (row separation is parent concern via divide-y)
 //   border-l-2: warning for overdue, accent for active, transparent for neutral
 //   Primary action: Button variant="outline" or "default" size="sm" h-7 text-sm
 //   Risk score: tabular-nums for column alignment across rows
@@ -83,7 +83,7 @@ export function PatientRow({
 
   return (
     <div className={cn(
-      "flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors cursor-default group",
+      "flex items-start gap-3 px-4 py-3 bg-card hover:bg-muted/50 transition-colors cursor-default group",
       // Overdue left border accent — amber per meta.yaml key_rules
       isOverdue  ? "border-l-2 border-warning" : "border-l-2 border-transparent",
       className
@@ -96,35 +96,38 @@ export function PatientRow({
         {initials}
       </div>
 
-      {/* Name + condition */}
+      {/* Name + condition — fills available space */}
       <div className="flex-1 min-w-0">
-        <p className="text-base font-semibold text-foreground leading-tight">{name}</p>
+        <p className="text-base font-semibold text-foreground leading-tight truncate">{name}</p>
         <p className="text-sm text-muted-foreground mt-1 truncate">{displayCondition}</p>
       </div>
 
-      {/* Risk score — tabular-nums for column alignment */}
-      <div className="flex items-center gap-1 w-16 flex-shrink-0">
-        <span className={cn("text-base tabular-nums", risk.className)}>{riskScore}</span>
-        {riskTrend === "up"   && <span className="text-destructive text-sm" aria-label="trending up">↑</span>}
-        {riskTrend === "down" && <span className="text-success text-sm"     aria-label="trending down">↓</span>}
-      </div>
+      {/* Right columns — fixed-width group so risk/band/CTA align across rows */}
+      <div className="flex items-center gap-3 w-72 flex-shrink-0 self-center">
+        {/* Risk score — tabular-nums for column alignment */}
+        <div className="flex items-center gap-1 w-16 flex-shrink-0">
+          <span className={cn("text-base tabular-nums", risk.className)}>{riskScore}</span>
+          {riskTrend === "up"   && <span className="text-destructive text-sm" aria-label="trending up">↑</span>}
+          {riskTrend === "down" && <span className="text-success text-sm"     aria-label="trending down">↓</span>}
+        </div>
 
-      {/* Band */}
-      <div className="flex items-center gap-1.5 w-20 flex-shrink-0">
-        <span className={cn("w-2 h-2 rounded-full flex-shrink-0", risk.dot)} aria-hidden="true" />
-        <span className="text-sm text-muted-foreground">Band {band}</span>
-      </div>
+        {/* Band */}
+        <div className="flex items-center gap-1.5 w-20 flex-shrink-0">
+          <span className={cn("w-2 h-2 rounded-full flex-shrink-0", risk.dot)} aria-hidden="true" />
+          <span className="text-sm text-muted-foreground">Band {band}</span>
+        </div>
 
-      {/* Primary action — label must be context-specific, never generic "View" */}
-      <div className="flex-shrink-0">
-        <Button
-          size="sm"
-          variant={primaryActionVariant}
-          onClick={onPrimaryAction}
-          className="h-7 text-sm"
-        >
-          {primaryAction}
-        </Button>
+        {/* Primary action — right-aligned */}
+        <div className="flex-1 flex justify-end">
+          <Button
+            size="sm"
+            variant={primaryActionVariant}
+            onClick={onPrimaryAction}
+            className="h-7 text-sm whitespace-nowrap"
+          >
+            {primaryAction}
+          </Button>
+        </div>
       </div>
 
       {/* Expand — visible on hover only */}
