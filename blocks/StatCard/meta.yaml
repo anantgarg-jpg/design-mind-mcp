@@ -38,6 +38,17 @@ key_rules:
   - label always uppercase tracking-wide (wayfinding, not a headline)
   - max 4 StatCards in a single row for readability
 
+frozen:
+  - "zones: label (text-xs uppercase tracking-wide) and value (text-2xl tabular-nums) — both always present"
+  - "max density: no more than 4 StatCards in a single row"
+  - "value: always tabular-nums — numeric alignment across a row of cards is non-negotiable"
+
+free:
+  - label: "any metric label string"
+  - value: "any numeric value"
+  - subtitle: "any supporting string, or absent"
+  - variant: "default | urgent | warning | success"
+
 embedding_hint: >
   stat card metric dashboard summary count number value
   items tasks overdue attention daily snapshot

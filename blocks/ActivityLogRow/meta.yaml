@@ -30,6 +30,17 @@ not_when:
   - entity-scoped surfaces showing activity for a single entity — use ActionableRow
   - population-level activity metrics — use a stat/chart component
 
+frozen:
+  - "interaction: read-only display only — no action buttons, no data modification on click"
+  - "density: compact row (flex items-center gap-3 px-4 py-3) — padding must not be expanded"
+  - "ordering: chronological order is a parent concern — this block does not control sort or grouping"
+
+free:
+  - activityType: "any activity type label and icon"
+  - outcome: "any outcome label and color token"
+  - actor: "any actor name string"
+  - timestamp: "any formatted timestamp string"
+
 because: >
   Users need a fast daily audit of activity. The compact row density
   (per data-density rule) lets them scan the full day at once. Flagged left-border

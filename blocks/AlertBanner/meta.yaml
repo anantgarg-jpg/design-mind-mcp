@@ -49,6 +49,20 @@ safety_refs:
   - safety/hard-constraints.md rules 1, 5, 6
   - safety/severity-schema.yaml
 
+frozen:
+  - "safety: safety/severity-schema.yaml — severity drives all color, never custom colors"
+  - "safety: safety/hard-constraints.md#rule-5 — Critical cannot be dismissed, only Acknowledged"
+  - "safety: safety/hard-constraints.md#rule-1 — Critical and High require onAcknowledge callback"
+  - "position: always above page content — never inline, never in sidebar"
+  - "stacking: Critical first, then High, Medium, Low"
+
+free:
+  - title: "any alert title string"
+  - body: "any supporting detail"
+  - contextLabel: "entity name if alert is entity-scoped"
+  - triggeredAt: "any formatted timestamp"
+  - onEscalate: "present or absent depending on workflow"
+
 usage_signal:
   renders_total: 0
   products: []

@@ -31,6 +31,18 @@ key_rules:
   - row hover state hover:bg-muted/50
   - column alignment follows convention (text left, numbers right)
 
+frozen:
+  - "header: sticky top-0 bg-muted/50 — always visible during scroll, never removed"
+  - "numeric columns: tabular-nums class required — alignment must not break between rows"
+  - "row hover: hover:bg-muted/50 — always present, never overridden"
+  - "column alignment: text-left for text columns, text-right for numeric columns"
+
+free:
+  - columns: "any column definitions with any field names, labels, and types"
+  - data: "any row data shape"
+  - pagination: "present or absent depending on data volume"
+  - sort: "any sort handler per column, or none"
+
 embedding_hint: >
   data table grid sort filter paginate columns rows
   tabular list records structured display

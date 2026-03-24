@@ -50,28 +50,8 @@ function structuralBoost(patternComponentType, queryComponentType) {
   return related.includes(patternComponentType) ? 0.35 : 0;
 }
 
-// Design Mind improvement: Change 2 — two-stage ranking using structural_family
-// Maps incoming component_type to expected structural_family values for re-ranking.
-// Family match: +0.2 boost. Families defined but no match: -0.1 penalty. No families: 0.
-const FAMILY_MAP = {
-  row:    ['actionable-list-row', 'readonly-list-row'],
-  card:   ['actionable-list-row', 'inline-chat-card', 'stat-metric-card'],
-  banner: ['severity-alert-banner'],
-  badge:  ['status-indicator'],
-  header: ['patient-context-header', 'section-divider'],
-  button: ['quick-action-chip'],
-  form:   ['assessment-form'],
-  panel:  ['patient-context-header'],
-  list:   ['actionable-list-row', 'readonly-list-row'],
-};
-
-function familyRankScore(patternStructuralFamily, queryComponentType) {
-  if (!patternStructuralFamily || !queryComponentType) return 0;
-  const expected = FAMILY_MAP[queryComponentType] ?? [];
-  if (expected.length === 0) return 0;
-  if (expected.includes(patternStructuralFamily)) return 0.2;
-  return -0.1;   // families defined for this type but this pattern's family is not one of them
-}
+// FAMILY_MAP and familyRankScore removed — structural_family is deprecated for scoring.
+// component_type structural boost (stage1 via structuralBoost) remains active.
 
 // ── Change 1: not_when penalty ────────────────────────────────────────────────
 // Demotes blocks whose not_when text overlaps strongly with the intent.
@@ -383,24 +363,21 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
   // ── Vector search (Qdrant semantic or TF-IDF fallback) ──────────────────────
   const patternResults = await queryPatterns(searchText, 8, patternIndex);
 
-  // Design Mind improvement: Change 2 — two-stage ranking
-  // Stage 1: component_type structural boost (existing)
-  // Stage 2: structural_family re-rank using FAMILY_MAP (new)
-  // Raw scores and adjusted scores both preserved for _debug (Change 6)
-  // Change 1: not_when penalty applied before top-5 slice
+  // Ranking: component_type structural boost (stage1 via TYPE_FAMILIES).
+  // structural_family FAMILY_MAP boost removed — deprecated.
+  // not_when penalty applied before top-5 slice (Change 1).
   const _rawBoosted = patternResults
     .map(r => {
-      const raw_score = r.score;
-      const stage1    = structuralBoost(r.metadata?.component_type, component_type);
-      const stage2    = familyRankScore(r.metadata?.structural_family, component_type);
-      const adjusted_score = raw_score + stage1 + stage2;
+      const raw_score      = r.score;
+      const stage1         = structuralBoost(r.metadata?.component_type, component_type);
+      const adjusted_score = raw_score + stage1;
       return {
         ...r,
         raw_score,
         adjusted_score,
         score: adjusted_score,
-        structurally_matched: stage1 > 0 || stage2 > 0,
-        family_match: stage2 > 0,
+        structurally_matched: stage1 > 0,
+        family_match: false,
       };
     })
     .sort((a, b) => b.score - a.score);
@@ -582,8 +559,41 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
   // ── Change 3: structure-vs-content gap probe ─────────────────────────────────
   const gap_probe = buildGapProbe(patterns[0] || null);
 
+  // ── Change 3 (surface hierarchy): build_mode ─────────────────────────────────
+  // Surface match ≥ 0.7 → surface-first. Agent anchors to surface spec.
+  // No match ≥ 0.7 → block-composition. Agent composes from blocks directly.
+  const SURFACE_FIRST_THRESHOLD = 0.7;
+  let build_mode;
+  if (surfaceMatch && surfaceMatch.score >= SURFACE_FIRST_THRESHOLD) {
+    const baseInstruction =
+      `Build to the ${surfaceMatch.surface.id} surface spec. The surface defines ` +
+      `what goes in, what's forbidden, and what ordering is required. Select blocks ` +
+      `to fulfil its sections. Surface never-rules override block defaults.`;
+    const mismatchNote = component_type !== 'page'
+      ? ` Note: your component_type was '${component_type}' but this intent matches ` +
+        `the ${surfaceMatch.surface.id} surface. If you are building a section within ` +
+        `${surfaceMatch.surface.id}, anchor to the surface spec. If you are building a ` +
+        `standalone component, ignore the surface match.`
+      : '';
+    build_mode = {
+      mode: 'surface-first',
+      anchor: {
+        surface_id:       surfaceMatch.surface.id,
+        relevance_score:  parseFloat(surfaceMatch.score.toFixed(3)),
+        instruction:      baseInstruction + mismatchNote,
+      },
+    };
+  } else {
+    build_mode = {
+      mode: 'block-composition',
+      anchor: null,
+      instruction: 'No surface match. Compose directly from blocks. Use the top-ranked blocks and apply genome rules.',
+    };
+  }
+
   // ── Assemble response — block if safety violations detected ─────────────────
   const response = {
+    build_mode,
     surface,
     structural_guidance: structuralGuidance,
     patterns,
@@ -1067,6 +1077,139 @@ function stringSimilarity(a, b) {
   return union.size > 0 ? intersection.size / union.size : 0;
 }
 
+// ── Change 2 (new): report_pattern structural gate ────────────────────────────
+
+// Load frozen and free arrays from a block's meta.yaml using line-by-line parsing.
+function loadBlockContract(blockId, basePath) {
+  if (!blockId || blockId === 'none') return null;
+  const metaPath = join(basePath, 'blocks', blockId, 'meta.yaml');
+  if (!existsSync(metaPath)) return null;
+  const lines = readFileSync(metaPath, 'utf-8').split('\n');
+
+  const extractList = (startKey) => {
+    const items = [];
+    let inside = false;
+    for (const line of lines) {
+      if (line.match(new RegExp(`^${startKey}:`))) { inside = true; continue; }
+      if (inside) {
+        if (line.match(/^  - /)) {
+          // Strip leading `  - ` and surrounding quotes
+          items.push(line.replace(/^  - /, '').replace(/^"/, '').replace(/"$/, '').trim());
+        } else if (line.match(/^\S/) && line.trim()) {
+          break; // new top-level key
+        }
+      }
+    }
+    return items;
+  };
+
+  const frozen = extractList('frozen');
+  const freeRaw = extractList('free');
+  // free entries are "key: description" strings
+  const free = freeRaw.map(entry => {
+    const colonIdx = entry.indexOf(':');
+    return colonIdx > 0
+      ? { slot: entry.substring(0, colonIdx).trim(), description: entry.substring(colonIdx + 1).trim() }
+      : { slot: entry, description: '' };
+  });
+
+  return frozen.length > 0 || free.length > 0 ? { frozen, free } : null;
+}
+
+// Structural signals — if any appear in why_existing_patterns_didnt_fit, the delta is structural.
+const STRUCTURAL_SIGNALS = [
+  'drag', 'multi-select', 'multiselect', 'inline edit', 'inline editing', 'inline-edit',
+  'different container', 'different layout', 'does not support', "doesn't support",
+  'cannot express', "can't express", 'different interaction', 'interaction model',
+  'transforms into', 'transform into', 'different slot', 'new slot', 'slot arrangement',
+  'cannot be expressed', 'not supported by', 'layout that cannot', 'reorder', 'resizable',
+];
+
+// Check whether a why text contains structural signals.
+function hasStructuralSignal(why) {
+  const lower = why.toLowerCase();
+  return STRUCTURAL_SIGNALS.some(sig => lower.includes(sig));
+}
+
+// Check whether a why text conflicts with a safety frozen entry (prefix match on key terms).
+function hasSafetyConflict(why, frozenEntry) {
+  // Extract description text after " — " in the entry
+  const descPart = frozenEntry.includes(' — ') ? frozenEntry.split(' — ').slice(1).join(' — ') : frozenEntry;
+  const entryTokens = tokenize(descPart).filter(t => t.length >= 4);
+  const whyTokens   = tokenize(why).filter(t => t.length >= 4);
+  // Match on 5-char prefix to catch inflected forms (dismiss/dismissed/dismissable)
+  const conflicts = entryTokens.filter(et =>
+    whyTokens.some(wt => wt.substring(0, 5) === et.substring(0, 5))
+  );
+  return conflicts.length >= 2;
+}
+
+// Run the structural gate for a report_pattern submission.
+// Returns { pass: true, structural_delta } or a blocked/probe response object.
+function runStructuralGate(params, basePath) {
+  const { closest_match_block_id: blockId, why_existing_patterns_didnt_fit: why = '' } = params;
+
+  // "none" → no probe, proceed
+  if (!blockId || blockId === 'none') return { pass: true, structural_delta: why };
+
+  const contract = loadBlockContract(blockId, basePath);
+
+  // No frozen field → advisory generic probe only, no hard block
+  if (!contract || contract.frozen.length === 0) {
+    return {
+      pass: false,
+      probe: true,
+      probe_questions: [
+        `Does your intent require a different container or layout structure than ${blockId} provides?`,
+        `Does your intent require a different interaction model (e.g. drag-and-drop, multi-select, inline edit, different action placement)?`,
+        `Does your intent require slots or data zones that ${blockId} has no equivalent for?`,
+      ],
+      probe_instruction:
+        `If all answers are NO, your delta is content — use ${blockId} as-is. ` +
+        `Fill its free slots with your domain content. ` +
+        `If any answer is YES, state which one specifically, then resubmit.`,
+    };
+  }
+
+  const safetyEntries    = contract.frozen.filter(e => e.startsWith('safety:'));
+  const nonSafetyEntries = contract.frozen.filter(e => !e.startsWith('safety:'));
+
+  // Check safety conflicts first — these hard-block regardless of structural argument
+  const conflictingEntry = safetyEntries.find(e => hasSafetyConflict(why, e));
+  if (conflictingEntry) {
+    return {
+      pass: false,
+      blocked: true,
+      reason: `Safety constraint — not a structural debate. The constraint referenced below is immovable.`,
+      use_instead: blockId,
+      safety_reminder: safetyEntries.map(e => e.replace(/^safety:\s*/, '').trim()),
+    };
+  }
+
+  // If why describes a structural change → pass through
+  if (hasStructuralSignal(why)) {
+    return { pass: true, structural_delta: why, safety_reminder: safetyEntries.length > 0 ? safetyEntries.map(e => e.replace(/^safety:\s*/, '').trim()) : undefined };
+  }
+
+  // No structural signal → content variation, block
+  const freeSlots = contract.free.length > 0
+    ? contract.free.map(f => f.slot)
+    : ['title', 'label', 'status', 'meta', 'primaryAction', 'contextLabel'];
+
+  return {
+    pass: false,
+    blocked: true,
+    reason: `Content variation, not structural. Use ${blockId} as-is.`,
+    use_instead: blockId,
+    free_slots: freeSlots,
+    probe_questions: nonSafetyEntries.map(e => `Does your intent require changing: ${e}?`),
+    probe_instruction:
+      `Answer each question. If all answers are NO, your delta is content — ` +
+      `use ${blockId} as-is. If any answer is YES, state which one and why, then resubmit.`,
+    ...(safetyEntries.length > 0 ? { safety_reminder: safetyEntries.map(e => e.replace(/^safety:\s*/, '').trim()) } : {}),
+  };
+}
+
 // ── Change 4: structural family deduplication helpers ─────────────────────────
 
 // Build a map of block_name (lowercase) → structural_family from the blocks directory.
@@ -1308,6 +1451,10 @@ function localFallback(params, basePath, reason) {
     `why_existing_patterns_didnt_fit: >`,
     `  ${why_existing_patterns_didnt_fit.replace(/\n/g, '\n  ')}`,
     ``,
+    params.structural_delta
+      ? `structural_delta: >\n  ${params.structural_delta.replace(/\n/g, '\n  ')}`
+      : null,
+    params.structural_delta ? `` : null,
     implementation_ref ? `implementation_ref: "${implementation_ref}"` : `implementation_ref: null`,
     ``,
     `ontology_refs:`,
@@ -1325,7 +1472,7 @@ function localFallback(params, basePath, reason) {
     `# 2. Check similar_candidates — merge if duplicate`,
     `# 3. If valid: create blocks/${pattern_name}/ with meta.yaml and component.tsx`,
     `# 4. Run: node server/src/seed.js to re-index`,
-  ].join('\n');
+  ].filter(line => line !== null).join('\n');
 
   writeFileSync(join(candidatesDir, `${candidateId}.yaml`), yamlContent, 'utf-8');
 
@@ -1342,6 +1489,22 @@ function localFallback(params, basePath, reason) {
  * Falls back to local file write if the API is unreachable.
  */
 export async function reportPattern(params, basePath) {
+  // ── Change 2: structural gate — runs before API submission ───────────────────
+  const gateResult = runStructuralGate(params, basePath);
+  if (!gateResult.pass) {
+    // Probe (advisory, no frozen) — return questions but do not block hard
+    if (gateResult.probe) return gateResult;
+    // Blocked — content variation or safety conflict
+    return gateResult;
+  }
+
+  // Gate passed — attach structural_delta for the candidate record
+  const paramsWithDelta = {
+    ...params,
+    structural_delta: gateResult.structural_delta || params.why_existing_patterns_didnt_fit,
+    safety_reminder:  gateResult.safety_reminder,
+  };
+
   const payload = {
     pattern_name:                    params.pattern_name,
     type:                            params.type || 'decision',
@@ -1359,9 +1522,9 @@ export async function reportPattern(params, basePath) {
       process.stderr.write(`[reportPattern] Submitted to API: ${result.body.candidate_id} (${result.body.status})\n`);
       return result.body;
     }
-    return localFallback(params, basePath, `API returned ${result.status}`);
+    return localFallback(paramsWithDelta, basePath, `API returned ${result.status}`);
   } catch (err) {
-    return localFallback(params, basePath, err.message);
+    return localFallback(paramsWithDelta, basePath, err.message);
   }
 }
 

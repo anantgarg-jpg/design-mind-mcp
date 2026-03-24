@@ -49,6 +49,19 @@ layout:
 safety_refs:
   - safety/hard-constraints.md (formatting rules applied by consuming surfaces)
 
+frozen:
+  - "scope: always entity-scoped — never used on population-level or admin surfaces"
+  - "identity: always left-anchored, never truncated, never collapsed to icon-only"
+  - "alert indicator: always right-aligned when present"
+  - "position: always the topmost element of any entity-scoped surface"
+
+free:
+  - entityType: "any entity type (patient, provider, member, etc.)"
+  - identityFields: "primary and secondary identifier labels configurable via props"
+  - tier: "present or absent"
+  - teamName: "present or absent"
+  - alertCount: "any count value"
+
 usage_signal:
   renders_total: 0
   products: []

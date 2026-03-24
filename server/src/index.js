@@ -137,8 +137,15 @@ const TOOLS = [
       'Structure = call this tool and log the candidate for human ratification.',
     inputSchema: {
       type: 'object',
-      required: ['pattern_name', 'description', 'intent_it_serves', 'why_existing_patterns_didnt_fit'],
+      required: ['pattern_name', 'description', 'intent_it_serves', 'why_existing_patterns_didnt_fit', 'closest_match_block_id'],
       properties: {
+        closest_match_block_id: {
+          type: 'string',
+          description:
+            'The ID of the block from consult_before_build that came closest to covering this intent. ' +
+            'Used to generate the structural probe that gates submission. ' +
+            'If no block matched at all, pass "none".',
+        },
         pattern_name: {
           type: 'string',
           description: 'A short descriptive name for the block (e.g. "BulkActionToolbar").',
@@ -168,6 +175,16 @@ const TOOLS = [
           type: 'array',
           items: { type: 'string' },
           description: 'Entities, states, or actions from the ontology this block touches.',
+        },
+        preview_code: {
+          type: 'string',
+          description:
+            'Optional but strongly encouraged: a self-contained React component that visually ' +
+            'previews this pattern in the design-mind showcase. Must be a complete TypeScript/TSX ' +
+            'file with a default export (React.FC). Allowed imports: react, lucide-react, ' +
+            '@/components/ui/* (shadcn primitives), and Tailwind classes. No imports from the ' +
+            'client project. Write a faithful visual approximation of the pattern using realistic ' +
+            'placeholder data — the same fidelity as the existing showcase previews.',
         },
       },
     },

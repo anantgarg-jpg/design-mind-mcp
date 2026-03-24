@@ -73,6 +73,21 @@ variation_rule: >
   (e.g., drag-and-drop, multi-select, inline edit), different slot arrangement,
   or a layout that cannot be expressed as row or card variant.
 
+frozen:
+  - "container: row variant uses shared bg-card container with divide-y; card variant uses standalone rounded-lg border — no other containers permitted"
+  - "interaction: scan-and-act only — no drag-and-drop, no multi-select, no inline edit"
+  - "slot positions: title always left, primary action always right, border-l-2 accent stripe always present on row variant"
+  - "primary action: single Button, variant outline or default, h-7 text-sm — no other action control shapes"
+
+free:
+  - title: "any entity name or label"
+  - status: "any StatusKey value"
+  - meta: "any icon/text pairs up to ~3"
+  - primaryAction: "any action verb appropriate to the domain"
+  - accent: "warning | accent | success | none"
+  - contextLabel: "any entity name for non-entity-scoped surfaces"
+  - label: "any small badge above title (e.g. measure code)"
+
 props:
   variant: '"row" | "card" — default "row"'
   title: "string — primary label (required)"
