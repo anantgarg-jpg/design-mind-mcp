@@ -5,21 +5,27 @@ level: primitive
 structural_family: action-trigger
 family_invariants:
   - "rounded-md border radius"
-  - "min-h-[44px] touch target (rule 21)"
   - "whitespace-nowrap label never wraps (rule 18)"
-  - "focus-visible:ring-2 focus-visible:ring-ring"
+  - "focus-visible:ring-2 focus-visible:ring-offset-1 (rule 20)"
+  - "font-normal (400 weight)"
+  - "transition-[color,background-color,border-color,transform] duration-100"
 confidence: 0.85
-version: 1.0.0
+version: 3.0.0
 
 summary: >
-  Primary interactive trigger for user actions. Wraps shadcn Button with
-  enforced touch targets, CTA hierarchy rules, and non-wrapping labels.
-  Supports six visual variants and four sizes.
+  Primary interactive trigger for user actions. Linear-inspired flat aesthetic
+  with font-weight 400, no shadows, tight padding, and subtle scale-down on
+  press. Supports six visual types (primary, destructive, basic, outline,
+  transparent, link), three explicit heights (sm=24px, default=32px, lg=40px),
+  four content layouts (text, text+left icon, text+right icon, icon-only),
+  and five interactive states (default, hover, pressed, focused, disabled).
+  Icon-only is not available for the link type.
 
 when:
   - triggering a form submission, navigation, or state change
-  - primary call-to-action on a surface
-  - destructive actions like delete or remove
+  - primary call-to-action on a surface (use primary type)
+  - destructive actions like delete or remove (use destructive type)
+  - secondary or tertiary actions (use basic, outline, or transparent)
 
 not_when:
   - navigation that looks like a text link (use an anchor)
@@ -27,19 +33,40 @@ not_when:
   - icon-only action without accessible label (add aria-label)
 
 variants:
-  default: bg-primary for the single primary CTA on a surface
-  destructive: bg-destructive for delete and remove actions only
-  outline: bordered for secondary actions
-  secondary: bg-muted for tertiary actions
-  ghost: transparent for inline or toolbar actions
-  link: underline for in-text navigational triggers
+  primary: bg-primary, flat fill, single primary CTA per surface
+  destructive: bg-destructive, flat fill, delete and remove actions only
+  basic: bg-foreground/6%, subtle tinted fill for secondary actions
+  outline: border-border, transparent bg, for tertiary actions
+  transparent: no background or border, inline or toolbar actions
+  link: text-primary, underlined on hover, in-text navigational triggers
+
+sizes:
+  sm: h-6 (24px), px-1.5, text-xs — compact, dense UIs
+  default: h-8 (32px), px-2.5, text-[13px] — standard usage
+  lg: h-10 (40px), px-3.5, text-[15px] — prominent or hero CTAs
+
+content_variants:
+  text: label only
+  left-icon: icon before label (leftIcon prop)
+  right-icon: icon after label (rightIcon prop)
+  icon-only: square icon button, no label (iconOnly prop; not for link type)
+
+states:
+  default: resting state, flat appearance
+  hover: subtle background opacity shift (primary/90, foreground/4-10%)
+  pressed: slightly darker bg + scale(0.97) on all types except link
+  focused: focus-visible:ring-2 with per-variant ring color (primary/40 or destructive/40)
+  disabled: opacity-50, pointer-events-none
 
 key_rules:
   - only one primary CTA per surface (rule 14)
-  - destructive variant only for delete/remove actions
+  - destructive type only for delete/remove actions
   - label never wraps (rule 18)
   - disabled state reduces opacity, not contrast
+  - icon-only buttons must have aria-label for accessibility
+  - focus ring uses primary/40 for all types except destructive which uses destructive/40
 
 embedding_hint: >
-  button cta action trigger submit primary
-  destructive outline ghost link click
+  button cta action trigger submit primary destructive basic
+  outline transparent link click icon left right small large
+  hover pressed focused disabled state flat linear scale

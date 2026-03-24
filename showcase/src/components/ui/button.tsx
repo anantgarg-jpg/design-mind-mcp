@@ -5,26 +5,48 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md font-normal transition-[color,background-color,border-color,transform] duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground shadow hover:bg-primary/90",
+          "bg-primary text-primary-foreground" +
+          " focus-visible:ring-primary/40" +
+          " hover:bg-primary/90" +
+          " active:bg-primary/85 active:scale-[0.97]",
         destructive:
-          "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
+          "bg-destructive text-destructive-foreground" +
+          " focus-visible:ring-destructive/40" +
+          " hover:bg-destructive/90" +
+          " active:bg-destructive/85 active:scale-[0.97]",
         outline:
-          "border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground",
+          "border border-border bg-transparent text-foreground" +
+          " focus-visible:ring-primary/40" +
+          " hover:bg-foreground/[0.04]" +
+          " active:bg-foreground/[0.08] active:scale-[0.97]",
         secondary:
-          "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
+          "bg-foreground/[0.06] text-foreground/80" +
+          " focus-visible:ring-primary/40" +
+          " hover:bg-foreground/[0.1] hover:text-foreground" +
+          " active:bg-foreground/[0.14] active:scale-[0.97]",
+        ghost:
+          "text-foreground/70" +
+          " focus-visible:ring-primary/40" +
+          " hover:bg-foreground/[0.06] hover:text-foreground" +
+          " active:bg-foreground/[0.1] active:scale-[0.97]",
+        link:
+          "text-primary underline-offset-2" +
+          " focus-visible:ring-primary/40" +
+          " hover:underline hover:text-primary/80" +
+          " active:text-primary/70",
       },
       size: {
-        default: "h-9 px-4 py-2",
-        sm: "h-8 rounded-md px-3 text-xs",
-        lg: "h-10 rounded-md px-8",
-        icon: "h-9 w-9",
+        sm:        "h-6 px-1.5 text-xs [&_svg]:size-3",
+        default:   "h-8 px-2.5 text-[13px] [&_svg]:size-4",
+        lg:        "h-10 px-3.5 text-[15px] [&_svg]:size-[18px]",
+        "icon-sm": "h-6 w-6 p-0 [&_svg]:size-3",
+        icon:      "h-8 w-8 p-0 [&_svg]:size-4",
+        "icon-lg": "h-10 w-10 p-0 [&_svg]:size-[18px]",
       },
     },
     defaultVariants: {
