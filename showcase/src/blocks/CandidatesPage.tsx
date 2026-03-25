@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import _candidatesData from 'virtual:candidates'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -61,128 +62,8 @@ export interface Candidate {
   similar_candidates: string[]
 }
 
-export const CANDIDATES: Candidate[] = [
-  {
-    candidate_id: '2026-03-20T11-39-52-sdohassessmenttab',
-    pattern_name: 'SdohAssessmentTab',
-    status: 'ratified',
-    frequency_count: 1,
-    description:
-      'A two-view component for SDOH (Social Determinants of Health) screening in a patient detail context. View 1: scored questionnaire across 5 domains (Housing, Food Security, Transportation, Social Isolation, Financial Strain) using AHC HRSN-inspired questions with radio-button responses. View 2: results summary showing per-domain need level (flagged/clear/not screened) with warning/success tokens and a Create Task CTA on flagged domains. Supports re-screening and links into the Task workflow.',
-    intent_it_serves:
-      'Care coordinator needs to screen a patient for social determinants of health, record identified needs, and create follow-up tasks for flagged domains — all within the patient detail view without leaving context.',
-    why_existing_patterns_didnt_fit:
-      'consult_before_build returned confidence 0.23 with no relevant matches. Closest patterns (PatientContextHeader, PatientRow, ClinicalAlertBanner) are display/identity patterns, not assessment forms. No form pattern exists in the genome.',
-    implementation_ref: 'shell/artifacts/SdohAssessmentTab.tsx',
-    ontology_refs: ['Patient', 'Task'],
-    similar_candidates: [],
-  },
-  {
-    candidate_id: '2026-03-20T11-50-13-outreachlogrow',
-    pattern_name: 'OutreachLogRow',
-    status: 'ratified',
-    frequency_count: 1,
-    description:
-      "A compact list artifact showing all outreach activity across a coordinator's patient panel in a rolling 24-hour window. Each row shows: patient avatar + name (Last, First), related Care Gap or Task, outreach type (Phone Call / Portal Message / Letter) with icon, outcome (Reached / Left Voicemail / No Answer / Declined / Sent) with colored icon and token, coordinator name, and relative timestamp. Filterable by outreach type and outcome. No-answer rows get a left-border warning accent. Header summarises reached/no-answer/voicemail counts. Read-only — no actions modify records.",
-    intent_it_serves:
-      "Care coordinator needs a quick audit of all outreach performed across their patient panel today — who was contacted, what happened, and what still needs follow-up (no-answer rows).",
-    why_existing_patterns_didnt_fit:
-      'consult_before_build returned confidence 0.29. PatientRow (best match, 0.29) is a worklist row with risk scoring and CTA — not an audit log. No log/activity pattern exists in the genome.',
-    implementation_ref: 'shell/artifacts/OutreachLogArtifact.tsx',
-    ontology_refs: ['Patient', 'CareGap', 'Task'],
-    similar_candidates: [],
-  },
-  {
-    candidate_id: '2026-03-20T11-53-02-chatquickactionchip',
-    pattern_name: 'ChatQuickActionChip',
-    status: 'ratified',
-    frequency_count: 1,
-    description:
-      'A persistent strip of pill-shaped chip buttons above the chat input in Panel 2. Each chip triggers a structured assistant response inline in the conversation — no artifact tab opened. The response is a typed card (InlineOutreachCard, etc.) rendered inside the assistant message bubble below the reply text.',
-    intent_it_serves:
-      'Coordinator needs a one-tap shortcut to surface structured clinical data (last outreach, recent task, etc.) inline in the chat without navigating to a new artifact tab or typing a query.',
-    why_existing_patterns_didnt_fit:
-      'No chat interaction pattern exists in the genome. consult_before_build returned 0.30 confidence with no relevant matches. PatientRow and ClinicalAlertBanner are Panel 3 display patterns.',
-    implementation_ref: 'shell/panels/ChatPanel.tsx',
-    ontology_refs: ['Patient', 'CareGap'],
-    similar_candidates: [],
-  },
-  {
-    candidate_id: '2026-03-20T11-56-47-inlinenextpatientcard',
-    pattern_name: 'InlineNextPatientCard',
-    status: 'ratified',
-    frequency_count: 1,
-    description:
-      'An inline chat card showing the next priority patient for a coordinator. Displays: initials avatar with risk-tier tinted color, patient name (Last, First), risk tier with colored dot and label, open care gap count, a "Next up" section with the upcoming care gap name + due date + canonical status, and a suggested action footer with AlertTriangle icon. Rendered inside an assistant message bubble via the ChatQuickActionChip pattern.',
-    intent_it_serves:
-      'Coordinator needs a one-tap way to see who they should work on next — patient identity, risk context, the specific item due, and what action to take — without opening the worklist artifact.',
-    why_existing_patterns_didnt_fit:
-      'PatientRow (best match 0.39) is a Panel 3 list row with CTA button — not an inline chat card. PatientContextHeader is a full patient identity header for artifact surfaces.',
-    implementation_ref: 'shell/panels/ChatPanel.tsx',
-    ontology_refs: ['Patient', 'CareGap', 'Task'],
-    similar_candidates: [],
-  },
-  {
-    candidate_id: '2026-03-20T12-07-28-mobilechatdrawer',
-    pattern_name: 'MobileChatDrawer',
-    status: 'logged',
-    frequency_count: 1,
-    description:
-      'A right-side drawer overlay containing a mobile phone frame that renders a coordinator-patient message thread. Outgoing messages (coordinator) appear right-aligned with bg-primary, incoming (patient) left-aligned with bg-muted. Includes phone chrome (status bar, app bar, read-only input footer). Opened by clicking any outreach log row.',
-    intent_it_serves:
-      'Coordinator wants to review the full message exchange behind an outreach log entry without leaving the outreach log surface.',
-    why_existing_patterns_didnt_fit:
-      'consult_before_build returned OutreachLogRow (read-only list row) and ChatQuickActionChip (action chip inside chat panel) — neither covers a mobile-framed conversation thread drawer.',
-    implementation_ref: 'shell/artifacts/OutreachLogArtifact.tsx',
-    ontology_refs: ['Patient', 'OutreachRecord', 'Coordinator'],
-    similar_candidates: [],
-  },
-  {
-    candidate_id: '2026-03-20T18-46-17-intakeform',
-    pattern_name: 'IntakeForm',
-    status: 'logged',
-    frequency_count: 1,
-    description:
-      'A multi-section coordinator intake form for logging outreach attempts. Sections: Patient identity (Last, First, MRN), Outreach details (type, outcome, related gap/task, preferred contact), Log details (coordinator, datetime, notes). Includes client-side validation with inline errors, sticky submit bar, and a success confirmation state.',
-    intent_it_serves:
-      'Coordinator needs to log a new outreach attempt — capturing patient identity, outreach type, outcome, and related care gap — from within the artifact panel without switching to a separate tool.',
-    why_existing_patterns_didnt_fit:
-      'consult_before_build returned OutreachLogRow (read-only log display), PatientContextHeader (patient identity header), and InlinePatientCard — none cover a writable intake form.',
-    implementation_ref: 'shell/artifacts/IntakeFormArtifact.tsx',
-    ontology_refs: ['Patient', 'OutreachRecord', 'Coordinator', 'CareGap', 'Task'],
-    similar_candidates: [],
-  },
-  {
-    candidate_id: '2026-03-20T20-18-25-clinicalassessmentform',
-    pattern_name: 'ClinicalAssessmentForm',
-    status: 'logged',
-    frequency_count: 1,
-    description:
-      'A scored clinical assessment instrument form. Renders verbatim instrument questions with a frequency/severity response grid, computes a running total score, maps the score to a severity classification using severity tokens, and submits the completed assessment. Q9-style safety flag for any self-harm indicator answer.',
-    intent_it_serves:
-      'Coordinator or clinician needs to administer a standardised screening instrument (PHQ-9, GAD-7, etc.) and record the result against a patient record.',
-    why_existing_patterns_didnt_fit:
-      'consult_before_build returned ClinicalAlertBanner (display-only), InlinePatientCard (identity display), PatientRow (list row) — none cover a scored multi-question assessment form with severity classification output.',
-    implementation_ref: 'shell/artifacts/PHQ9Artifact.tsx',
-    ontology_refs: ['Patient', 'Coordinator'],
-    similar_candidates: [],
-  },
-  {
-    candidate_id: '2026-03-20T20-50-58-assessmentinstrumentlist',
-    pattern_name: 'AssessmentInstrumentList',
-    status: 'logged',
-    frequency_count: 1,
-    description:
-      'A patient-scoped list surface showing available clinical screening instruments (PHQ-9, GAD-7, SDOH, AUDIT-C, etc.) with canonical instrument codes, full verbatim names, domain, estimated time, question count, and last-administered date. Each row follows the established flat list pattern.',
-    intent_it_serves:
-      "Coordinator or clinician needs to select and administer a screening instrument for the current patient. The list surfaces what's available, what's been done, and lets them navigate into the instrument in one click.",
-    why_existing_patterns_didnt_fit:
-      'consult_before_build returned ClinicalAlertBanner (0.20), PatientContextHeader (0.20), and PatientRow (0.19) — none cover a list of assessment instruments.',
-    implementation_ref: 'shell/artifacts/AssessmentsListArtifact.tsx',
-    ontology_refs: ['Patient', 'ClinicalAssessment', 'PHQ-9', 'GAD-7', 'SDOH', 'AUDIT-C'],
-    similar_candidates: [],
-  },
-]
+export const CANDIDATES: Candidate[] = _candidatesData as Candidate[]
+
 
 // ── Preview renders ──────────────────────────────────────────────────────────
 
@@ -761,6 +642,23 @@ function AssessmentInstrumentListPreview() {
   )
 }
 
+// Auto-discover previews written alongside candidate YAML files (.preview.tsx)
+const _discoveredPreviews = import.meta.glob(
+  '../../../blocks/_candidates/*.preview.tsx',
+  { eager: true }
+) as Record<string, { default: React.FC }>
+
+const _discoveredPreviewMap: Partial<Record<string, React.FC>> = Object.fromEntries(
+  Object.entries(_discoveredPreviews)
+    .map(([path, mod]) => {
+      const id = path.match(/([^/]+)\.preview\.tsx$/)?.[1] ?? ''
+      return [id, mod.default] as [string, React.FC]
+    })
+    .filter(([id]) => !!id)
+)
+
+// Hardcoded previews for candidates that pre-date auto-discovery.
+// Discovered .preview.tsx files take precedence if both exist for the same id.
 const PREVIEW_MAP: Partial<Record<string, React.FC>> = {
   '2026-03-20T11-39-52-sdohassessmenttab': SdohAssessmentTabPreview,
   '2026-03-20T11-50-13-outreachlogrow': OutreachLogRowPreview,
@@ -770,6 +668,7 @@ const PREVIEW_MAP: Partial<Record<string, React.FC>> = {
   '2026-03-20T18-46-17-intakeform': IntakeFormPreview,
   '2026-03-20T20-18-25-clinicalassessmentform': ClinicalAssessmentFormPreview,
   '2026-03-20T20-50-58-assessmentinstrumentlist': AssessmentInstrumentListPreview,
+  ..._discoveredPreviewMap,
 }
 
 // ── Ratification dialog ──────────────────────────────────────────────────────
@@ -964,14 +863,15 @@ export function CandidateDetailPane({
         <p className="text-base text-muted-foreground max-w-prose">{candidate.description}</p>
       </div>
 
-      {/* Preview — always visible */}
-      {PreviewComponent && (
-        <div className="mb-8">
-          <Fixture label="Preview">
-            <PreviewComponent />
-          </Fixture>
-        </div>
-      )}
+      {/* Preview */}
+      <div className="mb-8">
+        <Fixture label="Preview">
+          {PreviewComponent
+            ? <PreviewComponent />
+            : <div className="flex items-center justify-center h-24 text-sm text-muted-foreground">No preview — add a <code className="mx-1 text-xs bg-muted px-1.5 py-0.5 rounded font-mono">.preview.tsx</code> alongside the candidate YAML.</div>
+          }
+        </Fixture>
+      </div>
 
       {/* Meta details */}
       <div className="space-y-3">

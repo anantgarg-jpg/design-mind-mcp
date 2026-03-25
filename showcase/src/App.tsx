@@ -9,6 +9,7 @@ import { EntityRowPage } from '@/blocks/EntityRowPage'
 import { AlertBannerPage } from '@/blocks/AlertBannerPage'
 import { ShellOnlyPage } from '@/blocks/ShellOnlyPage'
 import { CandidateDetailPane, CANDIDATES } from '@/blocks/CandidatesPage'
+import { SurfaceDetailPane, SURFACES } from '@/blocks/SurfacesPage'
 
 // ── shadcn/ui primitive pages ───────────────────────────────────────────────
 import { AccordionPage } from '@/blocks/AccordionPage'
@@ -63,7 +64,7 @@ import { PaginationPage } from '@/blocks/PaginationPage'
 // ── Types ────────────────────────────────────────────────────────────────────
 
 type BlockId = string
-type ActiveView = 'published' | 'candidates'
+type ActiveView = 'published' | 'candidates' | 'surfaces'
 
 interface BlockMeta {
   id: BlockId
@@ -225,7 +226,8 @@ function renderPage(id: BlockId, blocks: BlockMeta[]) {
 export default function App() {
   const [activeView, setActiveView] = useState<ActiveView>('published')
   const [selectedBlock, setSelectedBlock] = useState<BlockId>('Badge')
-  const [selectedCandidate, setSelectedCandidate] = useState<string>(CANDIDATES[0].candidate_id)
+  const [selectedCandidate, setSelectedCandidate] = useState<string>(CANDIDATES[0]?.candidate_id ?? '')
+  const [selectedSurface, setSelectedSurface] = useState<string>(SURFACES[0]?.id ?? '')
   const [localRatified, setLocalRatified] = useState<Set<string>>(new Set())
 
   function ratify(id: string) {
@@ -247,7 +249,7 @@ export default function App() {
       <header className="h-11 flex-shrink-0 border-b border-border bg-card flex items-center px-4">
         <span className="text-sm font-semibold text-foreground mr-6">Design Mind</span>
         <nav className="flex h-full">
-          {(['published', 'candidates'] as ActiveView[]).map((tab) => (
+          {(['published', 'candidates', 'surfaces'] as ActiveView[]).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveView(tab)}
@@ -271,7 +273,28 @@ export default function App() {
         <aside className="w-56 flex-shrink-0 bg-card border-r border-border overflow-y-auto">
           <nav className="py-3">
 
-            {activeView === 'published' ? (
+            {activeView === 'surfaces' ? (
+              // ── Surfaces list ──
+              <div className="mb-4">
+                <p className="px-4 py-1.5 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                  Surfaces
+                </p>
+                {SURFACES.map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => setSelectedSurface(s.id)}
+                    className={cn(
+                      'w-full text-left px-4 py-1.5 text-base transition-colors',
+                      selectedSurface === s.id
+                        ? 'bg-primary/10 text-primary font-semibold'
+                        : 'text-foreground hover:bg-muted'
+                    )}
+                  >
+                    {s.id}
+                  </button>
+                ))}
+              </div>
+            ) : activeView === 'published' ? (
               // ── Published: block groups ──
               GROUPS.map((group) => {
                 const groupBlocks = BLOCKS.filter((b) => b.level === group.level)
@@ -358,7 +381,9 @@ export default function App() {
         {/* Main content */}
         <main className="flex-1 overflow-y-auto">
           <div className="max-w-3xl mx-auto px-8 py-8">
-            {activeView === 'published' ? (
+            {activeView === 'surfaces' ? (
+              <SurfaceDetailPane surfaceId={selectedSurface} />
+            ) : activeView === 'published' ? (
               renderPage(selectedBlock, BLOCKS)
             ) : (
               <CandidateDetailPane
