@@ -2494,6 +2494,7 @@ status: active
 component_type: row
 level: composite
 structural_family: actionable-list-row
+structural_role: "list-row"
 confidence: 0.95
 version: 1.0.0
 introduced: refactor-v1
@@ -2513,6 +2514,7 @@ summary: >
 when:
   - displaying any entity in a list where the user can take a primary action
   - worklist rows: tasks, protocols, assessments, items
+  - any severity-grouped list where each item has a primary action (Acknowledge, Dismiss, Accept, or similar) — use ActionableRow regardless of the entity domain
   - variant="row" when rows live inside a shared container (bg-card rounded-lg border)
   - variant="card" when each row is a standalone card (its own border + shadow)
 
@@ -2600,6 +2602,9 @@ embedding_hint: >
   complete assign exclude add note overdue status
   accent stripe variant row card entity action unit scan act workflow
   context label meta icon primary action secondary dropdown
+  alert queue priority queue severity grouped item row clinical alert
+  acknowledge dismiss escalate work item patient item escalated
+  care manager today view priority list action surface
 ```
 
 ---
@@ -5124,6 +5129,7 @@ status: active
 component_type: data-display
 level: composite
 structural_family: data-table
+structural_role: "list-container"
 family_invariants:
   - "Container: w-full rounded-lg border border-border overflow-hidden"
   - "Header: sticky top-0 bg-muted/50 text-sm font-medium text-muted-foreground"
@@ -6166,6 +6172,7 @@ status: active
 component_type: row
 level: composite
 structural_family: actionable-list-row
+structural_role: "list-row"
 family_invariants:
   - "Layout: flex items-start gap-3 px-4 py-3"
   - "Container: bg-card hover:bg-muted/50 transition-colors (row separation is a parent concern via divide-y)"
@@ -7140,6 +7147,7 @@ status: active
 component_type: navigation
 level: composite
 structural_family: page-navigation
+structural_role: "page-navigation"
 family_invariants:
   - "Container: flex items-center gap-1"
   - "Item: h-9 w-9 rounded-md text-sm"
@@ -7910,6 +7918,7 @@ status: active
 component_type: other
 level: primitive
 structural_family: section-divider
+structural_role: "section-divider"
 family_invariants:
   - "Typography: text-xs font-semibold uppercase tracking-wider text-muted-foreground"
   - "Never bold or large — should recede visually, not dominate"
@@ -7939,6 +7948,9 @@ key_rules:
 embedding_hint: >
   section header label group divider needs attention coming up
   items count wayfinding artifact content organizer
+  severity group critical high medium low grouped by severity
+  priority section alert group section label queue section
+  coordinator today clinical section divider urgency group
 ```
 
 #### component.tsx
@@ -9898,6 +9910,20 @@ you ask for it to be retrieved — you do not invent it.
 
 ## How you respond to consult_before_build
 
+### When `status` is `"needs_clarification"`
+
+If `consult_before_build` returns `status: "needs_clarification"`:
+- Do **NOT** proceed with building.
+- Do **NOT** attempt to answer the clarification questions yourself.
+- Surface the questions to the human and wait for their response.
+- Re-call `consult_before_build` with an updated `intent_description` that incorporates the answers before proceeding.
+
+A `needs_clarification` response means the intent description was too sparse for the genome to return reliable context. Building without that context risks inventing patterns the genome doesn't know about.
+
+---
+
+### When the response is a full context object
+
 The response always includes a `build_mode` field. Read it first.
 
 **When `build_mode.mode` is `"surface-first"`:**
@@ -9962,6 +9988,8 @@ build something similar, it should be ratified into the genome."
 - Override or suggest exceptions to `safety/hard-constraints.md`.
   If a team agent asks you to approve a Critical alert with a Dismiss
   button, you refuse and explain why. This is non-negotiable.
+  When `build_gate: true` is present, always surface `pre_build_constraints`
+  to the agent before code is written — never skip the gate.
 
 - Approve the use of severity colors decoratively. Red is for Critical
   alerts. This is not an aesthetic rule — it is a clinical safety rule.
