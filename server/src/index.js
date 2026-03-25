@@ -60,21 +60,33 @@ const INDEX_DIR  = join(__dirname, '..', '.index');
 // ── Build info ────────────────────────────────────────────────────────────────
 // Read the git SHA from .git/HEAD at startup so every response can carry it.
 // No execSync — pure file reads, works in any environment.
-function readGitSha(basePath) {
+function readGitInfo(basePath) {
   try {
     const head = readFileSync(join(basePath, '.git', 'HEAD'), 'utf-8').trim();
-    if (head.startsWith('ref: ')) {
-      return readFileSync(join(basePath, '.git', head.slice(5)), 'utf-8').trim().slice(0, 7);
-    }
-    return head.slice(0, 7); // detached HEAD (e.g. on Railway / CI)
+    const sha = head.startsWith('ref: ')
+      ? readFileSync(join(basePath, '.git', head.slice(5)), 'utf-8').trim().slice(0, 7)
+      : head.slice(0, 7); // detached HEAD (e.g. on Railway / CI)
+    const message = readFileSync(join(basePath, '.git', 'COMMIT_EDITMSG'), 'utf-8')
+      .split('\n')[0].trim(); // first line only
+    return { sha, message };
   } catch {
-    return 'unknown';
+    return { sha: 'unknown', message: '' };
   }
 }
 
+function localTimestamp() {
+  return new Date().toLocaleString('en-GB', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    hour12:    false,
+  });
+}
+
+const _gitInfo = readGitInfo(BASE_PATH);
 const BUILD_INFO = {
-  commit:     readGitSha(BASE_PATH),
-  started_at: new Date().toISOString(),
+  commit:      _gitInfo.sha,
+  commit_msg:  _gitInfo.message,
+  started_at:  localTimestamp(),
 };
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
@@ -283,6 +295,7 @@ async function handleToolCall(toolName, toolArgs) {
       return {
         server:         'design-mind-mcp',
         commit:         BUILD_INFO.commit,
+        commit_msg:     BUILD_INFO.commit_msg,
         started_at:     BUILD_INFO.started_at,
         knowledge_base: BASE_PATH,
         vector_search:  isSeeded('dm_patterns') ? 'semantic' : 'tf-idf',
