@@ -57,6 +57,26 @@ const __dirname  = dirname(__filename);
 const BASE_PATH  = join(__dirname, '..', '..');
 const INDEX_DIR  = join(__dirname, '..', '.index');
 
+// ── Build info ────────────────────────────────────────────────────────────────
+// Read the git SHA from .git/HEAD at startup so every response can carry it.
+// No execSync — pure file reads, works in any environment.
+function readGitSha(basePath) {
+  try {
+    const head = readFileSync(join(basePath, '.git', 'HEAD'), 'utf-8').trim();
+    if (head.startsWith('ref: ')) {
+      return readFileSync(join(basePath, '.git', head.slice(5)), 'utf-8').trim().slice(0, 7);
+    }
+    return head.slice(0, 7); // detached HEAD (e.g. on Railway / CI)
+  } catch {
+    return 'unknown';
+  }
+}
+
+const BUILD_INFO = {
+  commit:     readGitSha(BASE_PATH),
+  started_at: new Date().toISOString(),
+};
+
 // ── Tool definitions ──────────────────────────────────────────────────────────
 
 const TOOLS = [
@@ -189,6 +209,13 @@ const TOOLS = [
       },
     },
   },
+  {
+    name: 'ping',
+    description:
+      'Returns server build info — commit SHA, start time, and search mode. ' +
+      'Call this to confirm which build is running and whether the server is healthy.',
+    inputSchema: { type: 'object', properties: {} },
+  },
 ];
 
 // ── Server state ──────────────────────────────────────────────────────────────
@@ -243,12 +270,23 @@ async function handleToolCall(toolName, toolArgs) {
     throw new Error('Server not yet initialized — please retry in a moment');
   }
   switch (toolName) {
-    case 'consult_before_build':
-      return await consultBeforeBuild(toolArgs, kb, patternIndex, ruleIndex, kb.surfaces);
+    case 'consult_before_build': {
+      const result = await consultBeforeBuild(toolArgs, kb, patternIndex, ruleIndex, kb.surfaces);
+      result._server = { commit: BUILD_INFO.commit };
+      return result;
+    }
     case 'review_output':
       return await reviewOutput(toolArgs, kb, patternIndex);
     case 'report_pattern':
       return await reportPattern(toolArgs, BASE_PATH);
+    case 'ping':
+      return {
+        server:         'design-mind-mcp',
+        commit:         BUILD_INFO.commit,
+        started_at:     BUILD_INFO.started_at,
+        knowledge_base: BASE_PATH,
+        vector_search:  isSeeded('dm_patterns') ? 'semantic' : 'tf-idf',
+      };
     default:
       throw new Error(`Unknown tool: ${toolName}`);
   }
@@ -276,7 +314,7 @@ function handleMessage(message, reply) {
         sendResult(id, {
           protocolVersion: clientVersion,
           capabilities: { tools: { listChanged: false } },
-          serverInfo: { name: 'design-mind', version: '1.0.0' },
+          serverInfo: { name: 'design-mind', version: `1.0.0-${BUILD_INFO.commit}` },
         });
         break;
       }
