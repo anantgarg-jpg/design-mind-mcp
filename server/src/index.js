@@ -535,9 +535,21 @@ function startHttp(port) {
         'Connection':      'keep-alive',
         'X-Accel-Buffering': 'no', // disable Nginx/Railway buffering
       });
-      res.write(`event: endpoint\ndata: /messages?sessionId=${sessionId}\n\n`);
+      // Must be an absolute URL — Claude Code connects from a remote machine and
+      // cannot resolve a relative path back to the Railway domain.
+      // PUBLIC_URL env var takes priority; falls back to Host header (Railway sets this correctly).
+      const publicBase = (process.env.PUBLIC_URL || `https://${req.headers.host}`).replace(/\/$/, '');
+      res.write(`event: endpoint\ndata: ${publicBase}/messages?sessionId=${sessionId}\n\n`);
       sessions.set(sessionId, res);
+
+      // Heartbeat — Railway's proxy kills idle SSE connections after ~60s.
+      // Send a no-op comment every 30s to keep the connection alive for all clients.
+      const heartbeat = setInterval(() => {
+        if (!res.writableEnded) res.write(': ping\n\n');
+      }, 30_000);
+
       req.on('close', () => {
+        clearInterval(heartbeat);
         sessions.delete(sessionId);
         process.stderr.write(`[design-mind] SSE session closed: ${sessionId}\n`);
       });
@@ -652,7 +664,9 @@ function startHttp(port) {
     sendJson(res, 404, { error: 'Not found' });
   });
 
-  server.listen(port, () => {
+  // Explicit 0.0.0.0 — required in Docker/Railway so Railway's proxy can reach the server.
+  // Without this, Node may bind to ::1 (IPv6 loopback) only in some container environments.
+  server.listen(port, '0.0.0.0', () => {
     process.stderr.write(`[design-mind] Transport: HTTP/SSE — listening on port ${port}\n`);
     process.stderr.write(`[design-mind] MCP endpoint: http://localhost:${port}/sse\n`);
     process.stderr.write(`[design-mind] Health check: http://localhost:${port}/health\n`);
