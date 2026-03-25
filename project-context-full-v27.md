@@ -530,197 +530,6 @@ Two questions. Both must pass.
 ## Genome rules (full)
 
 
-### interface-guidelines (confidence: 0.95)
-
-RULE: interface-guidelines
-VERSION: 1.0.0
-CONFIDENCE: 0.95
-
-APPLIES_TO: all threads, chat, artifacts, navigator, and solution extension points within the shell
-
-# ── THREADS ─────────────────────────────────────────────────────────────────
-
-WHEN — thread lifecycle:
-  A thread is the user's workspace for a single goal.
-
-USE:
-  - Treat threads as persistent — messages, open artifacts, form state survive across tab switches and revisits
-  - New threads are titled "New" until context exists to rename them
-  - Renaming: AI renames once intent is clear, or shell auto-derives title from first user message on navigate-away
-  - Threads have no subtitles — the title alone must be descriptive enough
-  - Never hardcode or assume a thread's display name — titles are always derived from context
-  - URL stays as semantic entry path (e.g. /access) while thread is "New"; transitions to permalink (/threads/<id>) once thread earns a title
-  - Semantic URLs are for entry; permalinks are for identity
-
-NOT:
-  - Hardcoded thread titles
-  - Subtitles on threads
-  - Using "pin", "save", or "favourite" — everything is "star" (filled/unfilled)
-
-WHEN — starring:
-
-USE:
-  - Star (filled/unfilled) as the only bookmark-like affordance
-  - Starred threads and recent threads are personal to the user
-
-NOT:
-  - "Pin", "save", or "favourite" terminology
-
-# ── CHAT ────────────────────────────────────────────────────────────────────
-
-WHEN — intent and artifact relationship:
-
-USE:
-  - Never surface an artifact until the user's intent is clear
-  - If context is missing, ask for it in chat first
-  - Artifacts are the result of understood intent, not a starting point
-  - When an artifact opens or an action completes, the conversation must continue — acknowledge what happened and offer a next step
-  - An empty or skeletal artifact is a last resort
-
-NOT:
-  - Surfacing artifacts before intent is clear
-  - Dead-end artifact interactions with no follow-up in chat
-  - Using artifacts as a starting point instead of a result
-
-WHEN — quick-reply chips:
-
-USE:
-  - Chips when a structured response is expected from a constrained set of options
-  - Tapping a chip submits it as a message with no separate confirm step
-  - Chips are single-use — once the user sends any message after chips appear, all prior chips disappear
-
-NOT:
-  - Chips that require a separate confirm step
-  - Chips that persist after the user sends a message
-
-WHEN — pre-requisite flows:
-
-USE:
-  - Gather pre-requisites as a guided chat sequence
-  - Workspace stays hidden until all inputs are satisfied, then the artifact opens automatically
-  - Pre-requisite flows are defined per solution via the preRequisites map on the manifest, keyed by threadMode
-
-NOT:
-  - Showing the artifact workspace before all pre-requisites are satisfied
-
-# ── ARTIFACTS ───────────────────────────────────────────────────────────────
-
-WHEN — artifact lifecycle:
-
-USE:
-  - Artifact components stay mounted for the lifetime of the thread — do not rely on unmount/remount cycles for cleanup or re-initialization between tab switches
-  - Fetch data on mount, do not re-fetch on visibility change
-  - Content updates only in response to explicit events — a user action, an incoming message, or a data push
-  - If block runs timers, animations, or polling, pause them when the artifact is not the active tab (framework hides inactive artifacts via CSS — component is still alive)
-
-NOT:
-  - Re-fetching data on tab switch or visibility change
-  - Relying on unmount/remount for cleanup
-  - Running timers or polling when artifact tab is inactive
-
-WHEN — singleton vs multi-instance:
-
-USE:
-  - Singleton for blocks where only one instance makes sense per thread (e.g. dashboard, summary) — re-triggering switches to existing tab
-  - Multi-instance for entity-specific views (e.g. provider detail, appointment) — each entity gets its own tab
-
-WHEN — progressive disclosure:
-
-USE:
-  - Do not render an artifact until there is enough data to populate it meaningfully
-  - Prefer gathering missing context via chat over showing a loading skeleton
-
-WHEN — actions within artifacts:
-
-USE:
-  - Each visible section has at most one primary action — the most likely next step
-  - Row-level actions in tables and lists appear on hover only, never all at once
-  - Supporting actions (secondary, destructive, navigation) use visually lighter treatments than the primary
-
-NOT:
-  - Multiple primary actions per section
-  - Showing all row-level actions at once
-
-# ── NAVIGATOR ───────────────────────────────────────────────────────────────
-
-WHEN — solutions and default routes:
-
-USE:
-  - Each solution declares one or more default routes — pre-defined entry points visible in the sidebar
-  - If a solution has only one default route, only its header appears; multiple routes show as sub-items beneath the header
-  - Default routes can be view-first (artifact opens immediately) or chat-first (guided conversation, artifact opens later) — declare via the route's threadMode
-
-NOT:
-  - Hardcoded navigator entries outside of solution manifests
-
-WHEN — custom threads:
-
-USE:
-  - The + on each solution header creates a new custom thread for that solution
-  - Custom threads start with chat only — no artifact pre-opened
-  - Custom threads are for open-ended exploration; default routes are for known tasks
-
-NOT:
-  - Pre-opening artifacts in custom threads
-
-# ── BUILDING ON THE SHELL ───────────────────────────────────────────────────
-
-WHEN — creating a new solution:
-
-USE:
-  - Your solution directory under src/solutions/<your-solution>/
-  - Everything inside it: manifest, chat handler, pre-requisite flows, block components, types
-  - Solutions are auto-discovered at build time — place index.ts in convention directory and it registers automatically, no shell edits needed
-
-NOT:
-  - Modifying the shell (src/shell/) — layout, contexts, router, registry, AI dispatch
-  - Modifying these guidelines
-  - Modifying CLAUDE.md
-
-WHEN — solution directory structure:
-
-USE:
-  - src/solutions/<your-solution>/index.ts — single entry point, exports SolutionManifest as default
-  - src/solutions/<your-solution>/types.ts — artifact data shapes
-  - src/solutions/<your-solution>/chatHandler.ts — ChatHandler + ArtifactPreRequisiteDefinition exports
-  - src/solutions/<your-solution>/blocks/MyBlock.tsx — block components receiving ArtifactComponentProps
-
-WHEN — manifest contract:
-
-USE:
-  - index.ts default-exports a SolutionManifest with: id (globally unique), slug (URL root, lowercase hyphens only), name (display name in Navigator)
-  - blockTypes[] — each with type, label, component, and optionally singleton, urlSegment, entityKey
-  - defaultRoutes[] — each with title, urlPath, and optionally threadMode + urlSuffix
-  - defaultBlockType — which block opens when user enters the solution (must match a blockTypes[].type)
-  - defaultDataFactory — optional function producing initial data for the default artifact from user profile
-  - chatHandler — optional ChatHandler with handleMessage and fallbackResponses
-  - preRequisites — optional map of threadMode to ArtifactPreRequisiteDefinition for chat-first flows
-
-WHEN — block components:
-
-USE:
-  - Every block receives ArtifactComponentProps<TData> with: data (opaque payload), onUpdate(data), onOpenArtifact(descriptor), onClose(), onStartIntakeFlow(mode), onNewThread(title, solutionId, options?), mode ('canvas' or 'inline')
-
-WHEN — chat handlers:
-
-USE:
-  - ChatHandler.handleMessage(msg, context) receives user message and ChatHandlerContext with solutionId, threadMode, priorExchanges, activeArtifactType, activeArtifactData
-  - Return a ChatResponseSpec to surface an artifact, or null to use fallback responses
-
-WHEN — pre-requisite flows:
-
-USE:
-  - Define an ArtifactPreRequisiteDefinition with a seedMessage (opening assistant message) and handleStep(msg, step) function
-  - Each step returns a ChatResponseSpec
-  - When the spec includes a non-empty type, the flow completes and the artifact opens
-
-BECAUSE:
-  These rules define the shell's authoring contract. Threads are persistent
-  workspaces, chat drives artifact creation through understood intent, and
-  artifacts follow strict lifecycle rules. The navigator and solution
-  registration system enables extensibility without modifying the shell —
-  solutions plug in via auto-discovery and manifest contracts.
-
 ### destructive-actions (confidence: 0.95)
 
 RULE: destructive-action-confirmation
@@ -807,11 +616,12 @@ WHEN — loading states:
 
 USE:
   - skeleton screens matching the shape of the expected content
-  - loading spinner only for action feedback (e.g. button submits, not page loads)
+  - loading spinner only for action feedback (like buttons) and cases where the block or surface can have completely empty data. 
 
 NOT:
   - full-page loading spinners for partial data loads
   - "Loading..." text alone
+  - Progress bar loaders
 
 ---
 
@@ -823,11 +633,11 @@ USE:
     visible without interaction
   - progressive disclosure for contextual or supplementary data that supports but
     does not gate the primary action
-  - judgment: if a user must open a detail view to decide what to do, the surface
+  - judgment: if a user must open a detail view to decide what to do at all times, the surface
     is under-displaying
 
 NOT:
-  - hiding all secondary context behind expand or drill — this forces unnecessary
+  - hiding all secondary context behind expand or drilldown — this forces unnecessary
     navigation and is a density failure in the other direction
   - surfacing every available field indiscriminately — overload is also a
     density failure
@@ -1988,7 +1798,9 @@ Two questions. Both must pass.
 
 23. When a primitive or composite Block's component or meta.yaml is modified, all consuming Blocks and surfaces that import or compose that Block must be reviewed and updated to reflect the change. No upstream change may be committed without verifying downstream consumers remain compliant.
 
-24. Whenever updating the code (.tsx) for any block or surface, the meta.yaml must be checked and updated to align with the changes.
+24. Whenever updating the code (.tsx) for any block or surface, the meta.yaml must be checked and updated to align with the changes.Similarly, if meta.yaml is generated, the .tsx must be generated for that block. 
+
+25. Whenever using existing blocks or surfaces, implement the .tsx code for the block or surface as is - do not reimagine the code. If major changes are required, register as a new candidate block.
 
 ---
 
@@ -2495,7 +2307,7 @@ Destructive action button copy: match the action label exactly
 
 ## Blocks — ratified
 
-62 ratified blocks:
+56 ratified blocks:
 
 - **Accordion**
 - **ActionableRow**
@@ -2526,15 +2338,12 @@ Destructive action button copy: match the action label exactly
 - **EntityContextHeader**
 - **EntityRow**
 - **Form**
-- **FormLayout**
 - **HoverCard**
 - **InlineEntityCard**
 - **Input**
 - **InputOTP**
-- **KeyValueList**
 - **Label**
 - **NavigationMenu**
-- **PageHeader**
 - **Pagination**
 - **Popover**
 - **Progress**
@@ -2542,7 +2351,6 @@ Destructive action button copy: match the action label exactly
 - **Resizable**
 - **ScrollArea**
 - **SectionHeader**
-- **SectionMessage**
 - **Select**
 - **Separator**
 - **Sheet**
@@ -2550,14 +2358,12 @@ Destructive action button copy: match the action label exactly
 - **Slider**
 - **Sonner**
 - **StatCard**
-- **StepIndicator**
 - **Switch**
 - **Table**
 - **Tabs**
 - **Textarea**
 - **Toggle**
 - **ToggleGroup**
-- **Toolbar**
 - **Tooltip**
 
 ---
@@ -6668,42 +6474,6 @@ export { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessa
 
 ---
 
-### FormLayout
-
-#### meta.yaml
-```yaml
-id: FormLayout
-status: placeholder
-component_type: form
-level: composite
-structural_family: assessment-form
-confidence: 0.0
-version: 0.0.0
-
-summary: >
-  Placeholder — not yet ratified. Standard form layout shell for
-  structured data entry — field groups, section labels, submit/cancel
-  actions in the footer. Governs spacing, field width, label placement,
-  and button placement for all non-assessment forms.
-
-when:
-  - structured data entry form with multiple fields
-  - creating or editing an entity (Task, Note, Protocol)
-  - form needs consistent field spacing, grouping, and footer actions
-
-not_when:
-  - structured assessment instrument — use AssessmentTab or equivalent
-  - single inline field with no group structure — no layout wrapper needed
-  - read-only display of form data — use KeyValueList
-
-embedding_hint: >
-  form layout shell data entry fields groups labels submit cancel footer
-  create edit task note protocol structured input spacing field width
-  label placement standard form wrapper
-```
-
----
-
 ### HoverCard
 
 #### meta.yaml
@@ -7098,40 +6868,6 @@ export function InputOTPBlock({
 
 ---
 
-### KeyValueList
-
-#### meta.yaml
-```yaml
-id: KeyValueList
-status: placeholder
-component_type: list
-level: primitive
-structural_family: readonly-list-row
-confidence: 0.0
-version: 0.0.0
-
-summary: >
-  Placeholder — not yet ratified. A read-only list of labeled field/value
-  pairs used for displaying entity details. Covers patient demographics,
-  care team info, and similar structured data in detail panels.
-
-when:
-  - displaying a set of labeled fields for a single entity
-  - detail panel or summary section with no actions per row
-  - structured metadata that benefits from label/value alignment
-
-not_when:
-  - actionable list rows — use ActionableRow
-  - tabular data with multiple entities — use a table or list of rows
-  - single metric — use StatCard
-
-embedding_hint: >
-  key value list label field detail panel read only metadata entity
-  demographics care team structured data name value pairs summary
-```
-
----
-
 ### Label
 
 #### meta.yaml
@@ -7391,38 +7127,6 @@ export function NavigationMenuBlock({
     </ShadcnNavigationMenu>
   )
 }
-```
-
----
-
-### PageHeader
-
-#### meta.yaml
-```yaml
-id: PageHeader
-status: placeholder
-component_type: header
-level: composite
-structural_family: section-organiser
-confidence: 0.0
-version: 0.0.0
-
-summary: >
-  Placeholder — not yet ratified. Page-level header for non-entity-scoped
-  surfaces. Encodes the surface title, optional subtitle, and top-level
-  page actions. Distinct from EntityContextHeader (entity-scoped only).
-
-when:
-  - top-level heading of a non-entity-scoped page or artifact
-  - surface needs a title, optional description, and primary page actions
-
-not_when:
-  - entity-scoped surface — use EntityContextHeader
-  - section within a page — use SectionHeader
-
-embedding_hint: >
-  page header title surface artifact heading top level actions breadcrumb
-  navigation non-entity admin surface name
 ```
 
 ---
@@ -8300,41 +8004,6 @@ export function SectionHeader({
 
 ---
 
-### SectionMessage
-
-#### meta.yaml
-```yaml
-id: SectionMessage
-status: placeholder
-component_type: banner
-level: primitive
-structural_family: section-organiser
-confidence: 0.0
-version: 0.0.0
-
-summary: >
-  Placeholder — not yet ratified. Inline informational, warning, or success
-  message block within page content. Distinct from AlertBanner
-  (safety interrupts) — this is for non-urgent contextual messaging
-  embedded in a surface section.
-
-when:
-  - displaying non-urgent contextual information within a section
-  - surfacing a passive system notice that doesn't require immediate action
-  - empty-state guidance or inline onboarding hints
-
-not_when:
-  - alert requiring acknowledgment — use AlertBanner
-  - transient feedback after an action — use Toast
-  - inline field validation — use FormFieldError
-
-embedding_hint: >
-  section message info banner inline notice contextual hint empty state
-  guidance non-urgent passive system message onboarding surface content
-```
-
----
-
 ### Select
 
 #### meta.yaml
@@ -9095,41 +8764,6 @@ export function StatCard({
 
 ---
 
-### StepIndicator
-
-#### meta.yaml
-```yaml
-id: StepIndicator
-status: placeholder
-component_type: other
-level: primitive
-structural_family: section-organiser
-confidence: 0.0
-version: 0.0.0
-
-summary: >
-  Placeholder — not yet ratified. Horizontal or vertical progress indicator
-  for multi-step flows. Shows current step, completed steps, and remaining
-  steps. Used in intake forms, enrollment flows, and structured assessments
-  with more than 2 stages.
-
-when:
-  - multi-step form or workflow with 3+ discrete stages
-  - user needs orientation within a sequential process
-  - progress through a clinical assessment or intake flow
-
-not_when:
-  - single-step form — no step indicator needed
-  - non-sequential content (tabs are not steps)
-  - fewer than 3 steps — inline labeling is sufficient
-
-embedding_hint: >
-  step indicator progress stepper multi-step form flow intake enrollment
-  assessment stages current step completed remaining sequential wizard
-```
-
----
-
 ### Switch
 
 #### meta.yaml
@@ -9818,41 +9452,6 @@ export function ToggleGroup(props: ToggleGroupProps) {
     </ShadcnToggleGroup>
   )
 }
-```
-
----
-
-### Toolbar
-
-#### meta.yaml
-```yaml
-id: Toolbar
-status: placeholder
-component_type: other
-level: primitive
-structural_family: section-organiser
-confidence: 0.0
-version: 0.0.0
-
-summary: >
-  Placeholder — not yet ratified. Horizontal strip of filter controls,
-  search input, and/or bulk actions placed above a list or table. Distinct
-  from SectionHeader — Toolbar is interactive and scoped to controlling a
-  specific content area.
-
-when:
-  - above a list or table that needs filtering, searching, or sorting
-  - bulk actions apply to multiple selected items in a list
-  - surface needs a search input + filter chip row
-
-not_when:
-  - page-level navigation — use shell navigation components
-  - single section label with count — use SectionHeader
-  - no interactive controls needed — use SectionHeader instead
-
-embedding_hint: >
-  toolbar filter search sort bulk action chips controls list table
-  worklist input coordinator filter row above content interactive
 ```
 
 ---
