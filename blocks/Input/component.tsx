@@ -30,7 +30,7 @@ export function InputBlock({
         "placeholder:text-muted-foreground",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         "disabled:opacity-50 disabled:cursor-not-allowed",
-        error && "border-destructive focus-visible:ring-destructive",
+        error && "border-destructive focus-visible:ring-ring-destructive",
         className
       )}
       aria-invalid={error || undefined}

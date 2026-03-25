@@ -53,14 +53,6 @@
     }
   },
   "blocks": {
-    "StatusBadge": {
-      "file": "blocks/StatusBadge/meta.yaml",
-      "level": "primitive",
-      "confidence": 0.95,
-      "status": "active",
-      "renders_total": 0,
-      "override_rate": 0.0
-    },
     "SectionHeader": {
       "file": "blocks/SectionHeader/meta.yaml",
       "level": "primitive",

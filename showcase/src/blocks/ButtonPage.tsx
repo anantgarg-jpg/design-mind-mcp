@@ -26,12 +26,12 @@ const PRESSED_CLASSES: Record<string, string> = {
 }
 
 const FOCUSED_CLASSES: Record<string, string> = {
-  primary:     'ring-2 ring-primary/40 ring-offset-1 outline-none',
-  destructive: 'ring-2 ring-destructive/40 ring-offset-1 outline-none',
-  basic:       'ring-2 ring-primary/40 ring-offset-1 outline-none',
-  outline:     'ring-2 ring-primary/40 ring-offset-1 outline-none',
-  transparent: 'ring-2 ring-primary/40 ring-offset-1 outline-none',
-  link:        'ring-2 ring-primary/40 ring-offset-1 outline-none',
+  primary:     'ring-2 ring-ring ring-offset-1 outline-none',
+  destructive: 'ring-2 ring-ring-destructive ring-offset-1 outline-none',
+  basic:       'ring-2 ring-ring ring-offset-1 outline-none',
+  outline:     'ring-2 ring-ring ring-offset-1 outline-none',
+  transparent: 'ring-2 ring-ring ring-offset-1 outline-none',
+  link:        'ring-2 ring-ring ring-offset-1 outline-none',
 }
 
 type Variant = 'primary' | 'destructive' | 'basic' | 'outline' | 'transparent' | 'link'

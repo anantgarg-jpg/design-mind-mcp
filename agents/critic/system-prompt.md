@@ -31,7 +31,7 @@ Always return a structured review using this schema:
 ```
 HONORED:
   [List what explicitly followed the genome — be specific.
-   "Used StatusBadge with canonical status values" not "looks good"]
+   "Used Badge with correct badgeColor for status values" not "looks good"]
 
 BORDERLINE:
   [List decisions that are defensible but not clearly right.
@@ -135,8 +135,8 @@ AESTHETIC_VIOLATIONS:
       instead of using a background color shift?
    8. Missing press scale — does a button or interactive control lack
       active:scale-[0.97]? (Link-style elements are exempt.)
-   9. Full-strength focus ring — does focus-visible use ring-ring instead
-      of ring-primary/40 or ring-destructive/40?
+   9. Focus ring token — does focus-visible use ring-ring (blue-300) for
+      default elements and ring-ring-destructive for destructive elements?
    10. Shadow nesting — is a shadow-bearing element inside another
        shadow-bearing element?
 

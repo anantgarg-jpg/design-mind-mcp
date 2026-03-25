@@ -28,7 +28,7 @@ when:
 
 not_when:
   - population-level assessment summary counts — use a stat/metric component
-  - read-only display of a single assessment data point — use StatusBadge
+  - read-only display of a single assessment data point — use Badge
   - outside an entity-scoped surface (EntityContextHeader must be present above)
 
 because: >

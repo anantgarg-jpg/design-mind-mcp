@@ -8,8 +8,8 @@ import { Card } from "@blocks/Card/component"
 // Density:  genome/rules/data-density.rule.md — value scannable at a glance
 //
 // INVARIANTS:
-//   Label: text-sm (12px) font-semibold uppercase tracking-wide text-muted-foreground
-//   Value: text-2xl font-semibold tabular-nums leading-none
+//   Label: text-sm (12px) font-medium uppercase tracking-wide text-muted-foreground
+//   Value: text-[32px] font-medium tabular-nums leading-none (title/x-large)
 //   Max 4 StatCards per row.
 //
 // Container: Card block with elevation prop — no local card styling.
@@ -19,14 +19,15 @@ import { Card } from "@blocks/Card/component"
 //   warning → --warning     (Overdue / at-risk)
 //   success → --success     (Positive outcomes)
 //   default → --foreground  (General counts, neutral)
+// Subtitle is always text-muted-foreground — no reduced-opacity text.
 
 type StatVariant = "default" | "urgent" | "warning" | "success"
 
-const VARIANT_CONFIG: Record<StatVariant, { valueClass: string; subtitleClass: string }> = {
-  default: { valueClass: "text-foreground",          subtitleClass: "text-muted-foreground" },
-  urgent:  { valueClass: "text-destructive",         subtitleClass: "text-destructive/70" },
-  warning: { valueClass: "text-warning",             subtitleClass: "text-warning/70" },
-  success: { valueClass: "text-success",             subtitleClass: "text-success/70" },
+const VARIANT_CONFIG: Record<StatVariant, { valueClass: string }> = {
+  default: { valueClass: "text-foreground" },
+  urgent:  { valueClass: "text-destructive" },
+  warning: { valueClass: "text-warning" },
+  success: { valueClass: "text-success" },
 }
 
 interface StatCardProps {
@@ -59,14 +60,14 @@ export function StatCard({
       className={className}
     >
       <div className="flex flex-col gap-1">
-        <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+        <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
           {label}
         </p>
-        <p className={cn("text-2xl font-semibold tabular-nums leading-none", v.valueClass)}>
+        <p className={cn("text-[32px] font-medium tabular-nums leading-none", v.valueClass)}>
           {value}
         </p>
         {subtitle && (
-          <p className={cn("text-sm leading-tight", v.subtitleClass)}>
+          <p className="text-sm leading-4 text-muted-foreground">
             {subtitle}
           </p>
         )}

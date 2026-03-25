@@ -598,6 +598,10 @@ Interactive elements follow a consistent state feedback language:
   NEVER use translate-y for press feedback — use scale instead.
   NEVER use color darkening as the sole press signal — always include scale.
   NEVER use gradients, glows, or inner highlights for any state.
+  NEVER apply reduced opacity to text. Text is always 100% opacity unless the
+  element is in a disabled state (disabled:opacity-50). Use semantic color tokens
+  (e.g. text-muted-foreground) to create hierarchy — not opacity modifiers on
+  existing tokens (e.g. text-destructive/70 is forbidden).
 
 # ── USAGE RULES ──────────────────────────────────────────────────────────────
 

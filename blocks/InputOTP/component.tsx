@@ -62,7 +62,7 @@ export function InputOTPBlock({
                   className={cn(
                     "h-10 w-10 rounded-md border border-input text-center font-mono text-base",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    error && "border-destructive focus-visible:ring-destructive"
+                    error && "border-destructive focus-visible:ring-ring-destructive"
                   )}
                 />
               )
