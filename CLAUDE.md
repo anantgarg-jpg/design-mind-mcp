@@ -1,5 +1,9 @@
 # Project Instructions
 
+## Git Policy
+
+Never push to GitHub / the remote unless explicitly asked. Always work on a local branch.
+
 ## Color Token Responses
 
 When asked about a color token, always resolve it to its full chain:

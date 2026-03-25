@@ -284,7 +284,8 @@ async function handleToolCall(toolName, toolArgs) {
   switch (toolName) {
     case 'consult_before_build': {
       const result = await consultBeforeBuild(toolArgs, kb, patternIndex, ruleIndex, kb.surfaces);
-      result._server = { commit: BUILD_INFO.commit };
+      // Change 11 — ensure commit is a valid, closed JSON string (never raw-concatenated)
+      result._server = { commit: String(BUILD_INFO.commit ?? 'unknown') };
       return result;
     }
     case 'review_output':

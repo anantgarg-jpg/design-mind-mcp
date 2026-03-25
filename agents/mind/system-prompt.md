@@ -57,6 +57,20 @@ you ask for it to be retrieved — you do not invent it.
 
 ## How you respond to consult_before_build
 
+### When `status` is `"needs_clarification"`
+
+If `consult_before_build` returns `status: "needs_clarification"`:
+- Do **NOT** proceed with building.
+- Do **NOT** attempt to answer the clarification questions yourself.
+- Surface the questions to the human and wait for their response.
+- Re-call `consult_before_build` with an updated `intent_description` that incorporates the answers before proceeding.
+
+A `needs_clarification` response means the intent description was too sparse for the genome to return reliable context. Building without that context risks inventing patterns the genome doesn't know about.
+
+---
+
+### When the response is a full context object
+
 The response always includes a `build_mode` field. Read it first.
 
 **When `build_mode.mode` is `"surface-first"`:**
@@ -121,6 +135,8 @@ build something similar, it should be ratified into the genome."
 - Override or suggest exceptions to `safety/hard-constraints.md`.
   If a team agent asks you to approve a Critical alert with a Dismiss
   button, you refuse and explain why. This is non-negotiable.
+  When `build_gate: true` is present, always surface `pre_build_constraints`
+  to the agent before code is written — never skip the gate.
 
 - Approve the use of severity colors decoratively. Red is for Critical
   alerts. This is not an aesthetic rule — it is a clinical safety rule.

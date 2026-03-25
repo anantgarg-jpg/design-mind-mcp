@@ -186,6 +186,22 @@ function formatNotWhen(notWhenVal) {
   return String(notWhenVal);
 }
 
+// Change 2: Determine whether a constraint is "direct" (governs the component
+// being built right now) or "carry_forward" (applies to sub-components —
+// confirmation dialogs, modal copy, form error states, button behavior).
+// Based on reading each constraint's text:
+//   9  — destructive confirmation → sub-component (confirmation dialog)
+//   12 — unsaved-changes warning → sub-component behavior
+//   13 — form error token → sub-component error state
+//   16 — confirmation dialog copy → sub-component dialog
+//   17 — modal secondary "Close" label → sub-component button behavior
+// All others govern the component's own layout, display, or visual treatment.
+const CARRY_FORWARD_IDS = new Set([9, 12, 13, 16, 17]);
+
+function determineConstraintScope(id) {
+  return CARRY_FORWARD_IDS.has(id) ? 'carry_forward' : 'direct';
+}
+
 // Identify which safety constraints are in scope for an intent
 function getSafetyConstraintsInScope(intent, componentType, domain, kb) {
   const allConstraints = kb.safety.constraints || [];
@@ -193,9 +209,10 @@ function getSafetyConstraintsInScope(intent, componentType, domain, kb) {
 
   // Always return all safety constraints — per the spec: "always included, never filtered"
   return allConstraints.map(c => ({
-    constraint_id: c.id,
-    rule: c.text,
+    constraint_id:   c.id,
+    rule:            c.text,
     applies_because: inferAppliesBecause(c, intentLower, componentType),
+    scope:           determineConstraintScope(c.id),
   }));
 }
 
@@ -325,6 +342,51 @@ function getOntologyRefs(ontologyRefs, kb) {
   return result;
 }
 
+// ── Change 8: Pattern because generator ───────────────────────────────────────
+// Generates a specific "why this pattern was matched" string for each returned pattern.
+// Returns null (never "") if a meaningful because cannot be generated.
+function generatePatternBecause(patternResult, intentDesc, componentType, dom) {
+  const patternId = patternResult.id || '';
+  const summary   = (patternResult.metadata?.summary || '').trim().substring(0, 120);
+  const ct        = componentType || 'component';
+  const d         = dom || 'this domain';
+  const intent    = (intentDesc || '').trim();
+
+  if (!intent && !summary) return null;
+
+  // Use the pattern summary and intent to construct a specific match explanation.
+  // If summary exists, explain the connection to the intent.
+  if (summary) {
+    const intentHint = intent.length > 10
+      ? ` for "${intent.substring(0, 70)}${intent.length > 70 ? '...' : ''}"`
+      : '';
+    return `Matched because a ${d} ${ct}${intentHint} aligns with: ${summary}`;
+  }
+
+  if (intent.length > 10) {
+    return `Matched for "${intent.substring(0, 70)}${intent.length > 70 ? '...' : ''}" in ${d} — ${patternId} is the closest genome pattern for this ${ct} intent.`;
+  }
+
+  return null;
+}
+
+// ── Change 1: Intent quality gate ────────────────────────────────────────────
+// Scores the input against four signals before retrieval runs.
+// If score < 0.5, returns a needs_clarification response — no patterns, no rules.
+function scoreIntentQuality(intentDescription, userType, componentType) {
+  const signals = {
+    hasUserContext:      Array.isArray(userType) && userType.length > 0,
+    hasDataDescription:  /patient|record|list|gap|task|alert|protocol|score|count|metric|data|form|table|row|card/i.test(intentDescription),
+    hasActionContext:    /action|button|click|close|assign|submit|view|edit|create|confirm|acknowledge|filter|select|search|add|remove/i.test(intentDescription),
+    hasSpecificity:      intentDescription.trim().split(/\s+/).length > 8,
+  };
+  const score   = Object.values(signals).filter(Boolean).length / Object.keys(signals).length;
+  const missing = Object.entries(signals)
+    .filter(([, v]) => !v)
+    .map(([k]) => k.replace('has', '').replace(/([A-Z])/g, '_$1').toLowerCase().slice(1));
+  return { score, signals, missing };
+}
+
 // ── TOOL 1: consult_before_build ─────────────────────────────────────────────
 
 /**
@@ -339,6 +401,29 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
     user_type = [],
     product_area = '',
   } = params;
+
+  // ── Intent quality gate (pre-retrieval) ─────────────────────────────────────
+  const intentQuality = scoreIntentQuality(intent_description, user_type, component_type);
+  if (intentQuality.score < 0.5) {
+    return {
+      status:         'needs_clarification',
+      intent_quality: {
+        score:   intentQuality.score,
+        missing: intentQuality.missing,
+      },
+      questions: [
+        'What data is displayed or acted on in this component? (e.g. a list of care protocols, a patient summary card, a form for logging outreach)',
+        'What actions can the user take? (e.g. close a gap, assign a task, filter the list, submit a form)',
+      ],
+      patterns:           null,
+      rules:              null,
+      safety_constraints: null,
+      ontology_refs:      null,
+      similar_builds:     null,
+      confidence:         null,
+      gaps:               null,
+    };
+  }
 
   // Compose search text from all input fields
   const searchText = [
@@ -381,10 +466,22 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
   // styling-tokens and copy-voice apply to every component — always include both
   // regardless of query relevance so the model always has the token reference
   // and the copy/language rules before generating any output.
-  // Also enrich any result's metadata with the full kb.rules entry (which
-  // carries the raw field) since the TF-IDF / vector store payloads strip it.
+  // Change 6 — structural inclusions based on component_type:
+  //   accessibility:        always (page, form, modal additionally required)
+  //   destructive-actions:  modal, drawer, form
+  //   interface-guidelines: page, panel
+  // Deduplication ensures retrieval results are not double-listed.
   const enriched = new Map(kb.rules.map(r => [r.id, r]));
-  for (const alwaysId of ['styling-tokens', 'copy-voice', 'accessibility']) {
+
+  const structuralIncludes = new Set(['styling-tokens', 'copy-voice', 'accessibility']);
+  if (['modal', 'drawer', 'form'].includes(component_type)) {
+    structuralIncludes.add('destructive-actions');
+  }
+  if (['page', 'panel'].includes(component_type)) {
+    structuralIncludes.add('interface-guidelines');
+  }
+
+  for (const alwaysId of structuralIncludes) {
     if (!ruleResults.some(r => r.id === alwaysId)) {
       const rule = enriched.get(alwaysId);
       if (rule) ruleResults = [...ruleResults, { id: rule.id, score: 1.0, metadata: rule }];
@@ -397,20 +494,24 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
   }));
 
   // ── Pattern results ─────────────────────────────────────────────────────────
+  // Change 7 — usage_signal is always present (empty shape when no telemetry data)
+  // Change 8 — because is generated from intent context (null if not meaningful, never "")
+  const EMPTY_USAGE_SIGNAL = { renders_total: 0, products: [], override_rate: 0.0 };
+
   const patterns = boostedResults.map(r => {
     const usageSignal = r.metadata?.usage_signal;
     const hasUsageData = usageSignal && usageSignal.renders_total > 0;
     return {
       id: r.id,
-      relevance_score:  parseFloat(r.score.toFixed(4)),
+      relevance_score:   parseFloat(r.score.toFixed(4)),
       structural_family: r.metadata?.structural_family || null,
-      component_type:   r.metadata?.component_type || null,
-      summary:          r.metadata?.summary || '',
-      when:             formatWhen(r.metadata?.when),
-      not_when:         formatNotWhen(r.metadata?.not_when),
-      because:          r.metadata?.because || '',
-      confidence:       r.metadata?.confidence || 0.9,
-      ...(hasUsageData ? { usage_signal: usageSignal } : {}),
+      component_type:    r.metadata?.component_type || null,
+      summary:           r.metadata?.summary || '',
+      when:              formatWhen(r.metadata?.when),
+      not_when:          formatNotWhen(r.metadata?.not_when),
+      because:           generatePatternBecause(r, intent_description, component_type, domain),
+      confidence:        r.metadata?.confidence || 0.9,
+      usage_signal:      hasUsageData ? usageSignal : EMPTY_USAGE_SIGNAL,
     };
   });
 
@@ -442,6 +543,35 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
     };
   }
 
+  // Change 5 — intent-specific applies_because for rules
+  function ruleAppliesBecause(ruleId, intentDesc, compType, dom) {
+    const ct  = compType || 'component';
+    const d   = dom      || 'this domain';
+    const i   = intentDesc ? intentDesc.trim().substring(0, 120) : '';
+    switch (ruleId) {
+      case 'styling-tokens':
+        return `Applies because all color, spacing, and typography values on this ${ct} must resolve to design tokens — not hardcoded hex or px values.`;
+      case 'copy-voice':
+        return `Applies because all labels, empty states, error messages, and CTAs on this ${ct} must follow clinical copy standards — imperative labels, no first-person, specific empty states.`;
+      case 'accessibility':
+        if (['page', 'form', 'modal'].includes(ct)) {
+          return `Applies because ${ct}-level components must establish correct focus management, tab order, and ARIA landmark structure for all sub-components built within them.`;
+        }
+        return `Applies because every interactive element on this ${ct} must meet WCAG 2.1 AA requirements — color is never the sole differentiator, focus rings are never suppressed, and touch targets meet the 44×44px minimum.`;
+      case 'data-density':
+        return `Applies because a ${d} ${ct} likely displays lists or tables of records where table layout, progressive disclosure, and zero-results handling decisions are required.`;
+      case 'destructive-actions':
+        return `Applies because any destructive or bulk action within this ${ct} requires an explicit confirmation step with a consequence statement — not "Are you sure?".`;
+      case 'interface-guidelines':
+        return `Applies because ${ct}-level components must follow surface composition rules — header hierarchy, section spacing, and navigation placement.`;
+      default: {
+        // Generic: mention at least one aspect of the current intent
+        const intentHint = i.length > 10 ? ` for "${i.substring(0, 60)}..."` : '';
+        return `Applies to this ${ct} in ${d}${intentHint} — verify compliance before generating.`;
+      }
+    }
+  }
+
   // ── Rule results ────────────────────────────────────────────────────────────
   const rules = ruleResults.map(r => {
     let content;
@@ -464,7 +594,7 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
     return {
       rule_id: r.id,
       ...content,
-      applies_because: `Applies to: ${r.metadata.applies_to || 'this component type'}`,
+      applies_because: ruleAppliesBecause(r.id, intent_description, component_type, domain),
       confidence: r.metadata.confidence || 0.9,
     };
   });
@@ -478,8 +608,7 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
     intent_description, component_type, domain, kb
   );
 
-  // Design Mind improvement: Change 1 — safety blocking vs confidence gating
-  // safety_violations: constraints structurally likely to be violated → causes block: true
+  // safety_violations (now pre_build_constraints): constraints structurally in scope → causes build_gate: true
   // coverage_gap: confidence < 0.6 → warning only, never blocks
   const safetyViolations = detectSafetyViolations(
     intent_description, component_type, domain, kb
@@ -494,6 +623,21 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
     : parseFloat(Math.min(topPatternScore / 0.55, 1.0).toFixed(4));
 
   const coverageGap = confidence < 0.6;
+
+  // Change 9 — confidence_basis: decompose what the confidence score means in context
+  let confidenceBasis;
+  if (confidence >= 0.7 && intentQuality.score >= 0.5) {
+    confidenceBasis = 'reliable';
+  } else if (confidence >= 0.7 && intentQuality.score < 0.5) {
+    // Gated cases never reach here (early return above), so this is borderline 0.4–0.5
+    confidenceBasis = 'unreliable_match';
+  } else if (intentQuality.score >= 0.4 && intentQuality.score < 0.5) {
+    // Borderline intent quality that was not gated (score 0.4–0.5)
+    confidenceBasis = 'low_intent_quality';
+  } else {
+    // Intent was acceptable but genome returned low-relevance matches
+    confidenceBasis = 'low_coverage';
+  }
 
   // ── Gap detection ───────────────────────────────────────────────────────────
   // Vector store: low match < 0.45 cosine. TF-IDF: low match < 0.25 raw.
@@ -589,37 +733,69 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
     };
   }
 
-  // ── Assemble response — block if safety violations detected ─────────────────
+  // ── Assemble response ────────────────────────────────────────────────────────
   const response = {
     build_mode,
     ...(surface                        ? { surface }                               : {}),
     ...(structuralGuidance             ? { structural_guidance: structuralGuidance } : {}),
+    intent_quality: { score: intentQuality.score, missing: intentQuality.missing },
     patterns,
     ...(compositions.length > 0        ? { compositions }                          : {}),
     ...(gap_probe                      ? { gap_probe }                             : {}),
     rules,
-    ...(ontologyRefs.length > 0        ? { ontology_refs: ontologyRefs }           : {}),
+    ontology_refs:      ontologyRefs,
     safety_constraints: safetyConstraints,
-    ...(similarBuilds.length > 0       ? { similar_builds: similarBuilds }         : {}),
+    similar_builds:     similarBuilds,
     confidence,
-    safety_violations: safetyViolations,
+    confidence_basis:   confidenceBasis,
+    pre_build_constraints: safetyViolations,
     coverage_gap: coverageGap,
     ...(gaps.length > 0                ? { gaps }                                  : {}),
     ...(Object.keys(debugField).length ? { _debug: debugField }                    : {}),
   };
 
+  // Changes 3 & 4 — build_gate + build_gate_reason + build_gate_resolution
   if (safetyViolations.length > 0) {
-    response.block = true;
-    response.block_reason =
-      `${safetyViolations.length} hard constraint(s) are structurally relevant for ` +
-      `component_type="${component_type}" in domain="${domain}". ` +
-      `Review safety_constraints and ensure compliance before generating: ` +
-      safetyViolations.map(id => `[C${id}]`).join(' | ');
+    const directCount       = safetyViolations.filter(id => !CARRY_FORWARD_IDS.has(id)).length;
+    const carryForwardCount = safetyViolations.filter(id =>  CARRY_FORWARD_IDS.has(id)).length;
+    response.build_gate = true;
+    response.build_gate_reason =
+      `${directCount} direct constraint(s) and ${carryForwardCount} carry-forward constraint(s) ` +
+      `require pre-build verification for component_type="${component_type}" in domain="${domain}". ` +
+      `Review pre_build_constraints before writing code.`;
+    response.build_gate_resolution =
+      "Review each constraint in pre_build_constraints before writing any code. " +
+      "For scope='direct' constraints, verify your planned component architecture satisfies them. " +
+      "For scope='carry_forward' constraints, note them and apply when building sub-components. " +
+      "Self-certification is sufficient — no separate tool call required. " +
+      "Proceed once all constraints have been reviewed.";
   }
 
   if (coverageGap) {
     response.coverage_warning =
       'Genome has low coverage for this component type. Proceed carefully and call report_pattern if you invent new structure.';
+  }
+
+  // Change 10 — auto-log gap observations when intent was well-described but genome had no good matches
+  if (confidence < 0.4 && intentQuality.score >= 0.5) {
+    const gapLogPath = join(kb.basePath, 'memory', 'gap-observations.jsonl');
+    try {
+      if (!existsSync(join(kb.basePath, 'memory'))) {
+        mkdirSync(join(kb.basePath, 'memory'), { recursive: true });
+      }
+      const observation = {
+        timestamp:        new Date().toISOString(),
+        intent_description,
+        component_type,
+        domain,
+        confidence,
+        top_pattern_score: parseFloat((topPatternScore).toFixed(4)),
+        observation_type:  'auto_gap_log',
+      };
+      writeFileSync(gapLogPath, JSON.stringify(observation) + '\n', { flag: 'a', encoding: 'utf-8' });
+    } catch {
+      // Non-fatal: gap logging failure must never interrupt the tool response
+    }
   }
 
   return response;
