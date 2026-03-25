@@ -14,21 +14,6 @@ import { query } from './vectorIndex.js';
 import { embedOne } from './embedder.js';
 import { search, isSeeded } from './vectorstore.js';
 
-// ── Styling-tokens compact cache ─────────────────────────────────────────────
-// Read once at first use, cached for the process lifetime.
-let _stylingTokensCompact = null;
-function getStylingTokensCompact(basePath) {
-  if (_stylingTokensCompact) return _stylingTokensCompact;
-  try {
-    _stylingTokensCompact = readFileSync(
-      join(basePath, 'genome/rules/styling-tokens-compact.rule.md'), 'utf-8'
-    );
-  } catch {
-    _stylingTokensCompact = ''; // fallback: agent uses theme.css directly
-  }
-  return _stylingTokensCompact;
-}
-
 // ── Tokenizer (mirrors vectorIndex.js — no new dependency) ───────────────────
 // Used for not_when penalty and composition hint checks.
 function tokenize(text) {
@@ -460,10 +445,7 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
   // ── Rule results ────────────────────────────────────────────────────────────
   const rules = ruleResults.map(r => {
     let content;
-    if (r.id === 'styling-tokens') {
-      // Send compact lookup reference — token values are in theme.css in the consumer project
-      content = { compact_ref: getStylingTokensCompact(kb.basePath) };
-    } else if (r.id === 'copy-voice') {
+    if (r.id === 'copy-voice') {
       // Summary + pointer — no full content needed
       content = {
         summary:
