@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 //
 // INVARIANTS (meta.yaml):
 //   Root: h-5 w-9 rounded-full
-//   Track: bg-input checked:bg-primary
+//   Track: bg-subtle checked:bg-primary
 //   Thumb: h-4 w-4 rounded-full bg-card shadow-sm
 
 interface SwitchProps {

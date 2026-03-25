@@ -4,7 +4,7 @@ component_type: input
 level: primitive
 structural_family: form-input
 family_invariants:
-  - "Container: h-9 rounded-md border border-input bg-background px-3 text-base"
+  - "Container: h-9 rounded-md border border-subtle bg-card px-3 text-base"
   - "Focus: focus-visible:ring-2 ring-ring"
   - "Error state: border-destructive (rule 13)"
   - "Disabled: opacity-50 cursor-not-allowed"

@@ -16,7 +16,7 @@ import {
 // Safety:   safety/hard-constraints.md rules 20, 21
 //
 // INVARIANTS (meta.yaml):
-//   Trigger: h-9 rounded-md border border-input px-3
+//   Trigger: h-9 rounded-md border border-subtle px-3
 //   Calendar popover: rounded-md shadow-md
 //   Calendar icon: left-aligned inside trigger
 
@@ -50,7 +50,7 @@ export function DatePicker({
           variant="outline"
           disabled={disabled}
           className={cn(
-            "h-9 w-full justify-start border border-input px-3 text-sm font-normal",
+            "h-9 w-full justify-start border border-subtle px-3 text-sm font-normal",
             !value && "text-muted-foreground",
             hasError && "border-destructive",
             className

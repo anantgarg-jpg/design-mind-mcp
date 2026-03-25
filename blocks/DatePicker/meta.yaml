@@ -4,7 +4,7 @@ component_type: action
 level: composite
 structural_family: date-selector
 family_invariants:
-  - "Trigger: h-9 rounded-md border border-input px-3 text-sm"
+  - "Trigger: h-9 rounded-md border border-subtle px-3 text-sm"
   - "Calendar popover: rounded-md shadow-md bg-card border border-border"
   - "Calendar icon: left-aligned inside trigger"
 confidence: 0.80

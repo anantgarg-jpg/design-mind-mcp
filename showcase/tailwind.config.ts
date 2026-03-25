@@ -21,7 +21,7 @@ const config: Config = {
   				foreground: 'rgb(var(--muted-foreground) / <alpha-value>)'
   			},
   			border: 'rgb(var(--border) / <alpha-value>)',
-  			input: 'rgb(var(--input) / <alpha-value>)',
+  			subtle: 'rgb(var(--input) / <alpha-value>)',
   			ring: 'rgb(var(--ring) / <alpha-value>)',
 			'ring-destructive': 'rgb(var(--ring-destructive) / <alpha-value>)',
   			primary: {

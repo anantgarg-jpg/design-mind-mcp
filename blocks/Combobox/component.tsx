@@ -22,7 +22,7 @@ import {
 // Safety:   safety/hard-constraints.md rules 13, 20, 21
 //
 // INVARIANTS (meta.yaml):
-//   Trigger: h-9 rounded-md border border-input px-3
+//   Trigger: h-9 rounded-md border border-subtle px-3
 //   Popover: rounded-md shadow-md z-20
 //   Items: py-1.5 px-2 rounded-sm
 
@@ -66,7 +66,7 @@ export function Combobox({
           aria-expanded={open}
           disabled={disabled}
           className={cn(
-            "h-9 w-full justify-between border border-input px-3 text-sm font-normal",
+            "h-9 w-full justify-between border border-subtle px-3 text-sm font-normal",
             !value && "text-muted-foreground",
             hasError && "border-destructive",
             className

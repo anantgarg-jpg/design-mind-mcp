@@ -14,7 +14,7 @@ import {
 // Safety:   safety/hard-constraints.md rules 20, 21
 //
 // INVARIANTS (meta.yaml):
-//   rounded-lg border border-border/40 bg-card
+//   rounded-lg border border-subtle bg-card
 //   shadow-sm when on muted/tinted background, no shadow on white background
 //   p-4 content padding
 //
@@ -28,7 +28,7 @@ import {
 //   active:   bg-foreground/[0.08]
 //   focused:  ring-2 ring-ring ring-offset-1
 //   selected: border-2 border-primary
-//   disabled: opacity-50, pointer-events-none, no shadow, border border-border/40
+//   disabled: opacity-50, pointer-events-none, no shadow, border border-subtle
 //
 // No nested cards permitted.
 
@@ -80,9 +80,9 @@ export function Card({
       className={cn(
         "rounded-lg bg-card",
         disabled
-          ? "border border-border/40 opacity-50 pointer-events-none"
+          ? "border border-subtle opacity-50 pointer-events-none"
           : elevation === "flat"
-            ? "border border-border/40"
+            ? "border border-subtle"
             : elevationClass[elevation],
         selected && !disabled && "border-2 border-primary",
         isInteractive && [

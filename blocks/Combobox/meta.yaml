@@ -4,7 +4,7 @@ component_type: action
 level: composite
 structural_family: searchable-select
 family_invariants:
-  - "Trigger: h-9 rounded-md border border-input px-3 text-sm"
+  - "Trigger: h-9 rounded-md border border-subtle px-3 text-sm"
   - "Popover: rounded-md shadow-md z-20 bg-card border border-border"
   - "Items: py-1.5 px-2 rounded-sm cursor-pointer"
 confidence: 0.80

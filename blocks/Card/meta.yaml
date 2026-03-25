@@ -4,7 +4,7 @@ component_type: layout
 level: primitive
 structural_family: content-container
 family_invariants:
-  - "rounded-lg border border-border/40 bg-card"
+  - "rounded-lg border border-subtle bg-card"
   - "shadow-sm when on muted/tinted background, no shadow on white background"
   - "p-4 content padding"
 confidence: 0.85

@@ -28,7 +28,7 @@ export function DialogPage() {
           >
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium">Full name</label>
-              <input className="rounded-md border border-input px-3 py-2 text-sm" defaultValue="John Doe" />
+              <input className="rounded-md border border-subtle px-3 py-2 text-sm" defaultValue="John Doe" />
             </div>
           </DialogBlock>
         </Fixture>

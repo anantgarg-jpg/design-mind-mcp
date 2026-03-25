@@ -5,7 +5,7 @@ level: primitive
 structural_family: form-input
 family_invariants:
   - "Slots: gap-2 between slots"
-  - "Each slot: h-10 w-10 rounded-md border border-input text-center font-mono"
+  - "Each slot: h-10 w-10 rounded-md border border-subtle text-center font-mono"
   - "Min slot size: 44px (rule 21)"
   - "Focus: focus-visible:ring-2 ring-ring"
 confidence: 0.85

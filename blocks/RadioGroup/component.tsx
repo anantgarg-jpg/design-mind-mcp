@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 //
 // INVARIANTS (meta.yaml):
 //   Layout: flex flex-col gap-3
-//   Each radio: h-4 w-4 rounded-full border border-input
+//   Each radio: h-4 w-4 rounded-full border border-subtle
 //   Checked: border-primary fill-primary
 //   44px min touch target on label+radio combined (rule 21)
 
@@ -59,7 +59,7 @@ export function RadioGroupBlock({
             id={option.value}
             disabled={option.disabled}
             className={cn(
-              "h-4 w-4 rounded-full border border-input mt-0.5",
+              "h-4 w-4 rounded-full border border-subtle mt-0.5",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               error && "border-destructive"
             )}

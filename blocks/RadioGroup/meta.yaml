@@ -5,7 +5,7 @@ level: primitive
 structural_family: form-input
 family_invariants:
   - "Layout: flex flex-col gap-3"
-  - "Each radio: h-4 w-4 rounded-full border border-input"
+  - "Each radio: h-4 w-4 rounded-full border border-subtle"
   - "Checked: border-primary fill-primary"
   - "Touch target: 44px min on label+radio combined (rule 21)"
 confidence: 0.85

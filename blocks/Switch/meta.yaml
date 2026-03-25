@@ -5,8 +5,8 @@ level: primitive
 structural_family: form-input
 family_invariants:
   - "Root: h-5 w-9 rounded-full"
-  - "Track: bg-input checked:bg-primary"
-  - "Thumb: h-4 w-4 rounded-full bg-card shadow-sm"
+  - "Track: bg-subtle checked:bg-primary"
+  - "Thumb: h-4 w-4 rounded-full bg-card"
 confidence: 0.85
 version: 1.0.0
 

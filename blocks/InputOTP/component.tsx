@@ -13,7 +13,7 @@ import {
 //
 // INVARIANTS (meta.yaml):
 //   Slots: gap-2 between slots
-//   Each slot: h-10 w-10 rounded-md border border-input text-center font-mono
+//   Each slot: h-10 w-10 rounded-md border border-subtle text-center font-mono
 //   Min 44px touch target per slot (rule 21)
 //   Auto-focus next slot; paste support
 
@@ -60,7 +60,7 @@ export function InputOTPBlock({
                   key={idx}
                   index={idx}
                   className={cn(
-                    "h-10 w-10 rounded-md border border-input text-center font-mono text-base",
+                    "h-10 w-10 rounded-md border border-subtle text-center font-mono text-base",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     error && "border-destructive focus-visible:ring-ring-destructive"
                   )}

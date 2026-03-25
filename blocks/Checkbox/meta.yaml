@@ -4,7 +4,7 @@ component_type: input
 level: primitive
 structural_family: form-input
 family_invariants:
-  - "h-4 w-4 rounded-sm border border-input"
+  - "h-4 w-4 rounded-sm border border-subtle"
   - "checked bg-primary"
   - "focus-visible:ring-2"
 confidence: 0.85
@@ -26,7 +26,7 @@ not_when:
   - complex multi-state selection
 
 variants:
-  default: unchecked state with border-input
+  default: unchecked state with border-subtle
   checked: filled bg-primary with check icon
   indeterminate: dash icon for partial group selection
 

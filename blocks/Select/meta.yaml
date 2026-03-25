@@ -4,7 +4,7 @@ component_type: input
 level: primitive
 structural_family: form-input
 family_invariants:
-  - "Trigger: h-9 rounded-md border border-input px-3 bg-background"
+  - "Trigger: h-9 rounded-md border border-subtle px-3 bg-card"
   - "Content: rounded-md shadow-md z-20 bg-card border"
   - "Item: py-1.5 px-2 cursor-pointer hover:bg-muted/50"
 confidence: 0.85

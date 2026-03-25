@@ -4,7 +4,7 @@ component_type: input
 level: primitive
 structural_family: form-input
 family_invariants:
-  - "Root: rounded-md border border-input bg-background px-3 py-2 text-base"
+  - "Root: rounded-md border border-subtle bg-card px-3 py-2 text-base"
   - "Focus: focus-visible:ring-2 ring-ring"
   - "Min height: min-h-[80px]"
 confidence: 0.85

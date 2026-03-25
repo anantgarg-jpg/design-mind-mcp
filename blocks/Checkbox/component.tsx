@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 // Safety:   safety/hard-constraints.md rules 13, 20, 21
 //
 // INVARIANTS (meta.yaml):
-//   h-4 w-4 rounded-sm border border-input
+//   h-4 w-4 rounded-sm border border-subtle
 //   checked bg-primary
 //   focus-visible:ring-2
 //
@@ -46,7 +46,7 @@ export function Checkbox({
         onCheckedChange={onCheckedChange}
         disabled={disabled}
         className={cn(
-          "h-4 w-4 rounded-sm border border-input",
+          "h-4 w-4 rounded-sm border border-subtle",
           "data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           error && "border-destructive",
