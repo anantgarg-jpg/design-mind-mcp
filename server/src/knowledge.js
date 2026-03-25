@@ -139,7 +139,7 @@ export function loadKnowledge(basePath) {
     principles: '',
   };
 
-  process.stderr.write('[knowledge] Loading genome...\n');
+  process.stdout.write('[knowledge] Loading genome...\n');
 
   // Taste and principles (full text — used for review_output context)
   const tastePath = join(basePath, 'genome', 'taste.md');
@@ -149,7 +149,7 @@ export function loadKnowledge(basePath) {
   if (existsSync(principlesPath)) kb.principles = readFileSync(principlesPath, 'utf-8');
 
   // ── Rules ──────────────────────────────────────────────────────────────────
-  process.stderr.write('[knowledge] Loading rules...\n');
+  process.stdout.write('[knowledge] Loading rules...\n');
   const rulesDir = join(basePath, 'genome', 'rules');
   if (existsSync(rulesDir)) {
     for (const file of readdirSync(rulesDir)) {
@@ -158,15 +158,15 @@ export function loadKnowledge(basePath) {
         const content = readFileSync(join(rulesDir, file), 'utf-8');
         const parsed = parseRuleMd(content, file);
         kb.rules.push(parsed);
-        process.stderr.write(`[knowledge]   rule: ${parsed.id}\n`);
+        process.stdout.write(`[knowledge]   rule: ${parsed.id}\n`);
       } catch (e) {
-        process.stderr.write(`[knowledge]   WARN: could not parse ${file}: ${e.message}\n`);
+        process.stdout.write(`[knowledge]   WARN: could not parse ${file}: ${e.message}\n`);
       }
     }
   }
 
   // ── Blocks ─────────────────────────────────────────────────────────────────
-  process.stderr.write('[knowledge] Loading blocks...\n');
+  process.stdout.write('[knowledge] Loading blocks...\n');
   const patternsDir = join(basePath, 'blocks');
   if (existsSync(patternsDir)) {
     for (const patternName of readdirSync(patternsDir)) {
@@ -182,7 +182,7 @@ export function loadKnowledge(basePath) {
 
         // Skip deprecated patterns — they are replaced by their deprecated_by successor
         if (meta.status === 'deprecated') {
-          process.stderr.write(`[knowledge]   skip (deprecated): ${meta.id || patternName}\n`);
+          process.stdout.write(`[knowledge]   skip (deprecated): ${meta.id || patternName}\n`);
           continue;
         }
 
@@ -214,15 +214,15 @@ export function loadKnowledge(basePath) {
         ].join(' ');
 
         kb.patterns.push(meta);
-        process.stderr.write(`[knowledge]   pattern: ${meta.id || patternName}\n`);
+        process.stdout.write(`[knowledge]   pattern: ${meta.id || patternName}\n`);
       } catch (e) {
-        process.stderr.write(`[knowledge]   WARN: could not parse ${patternName}/meta.yaml: ${e.message}\n`);
+        process.stdout.write(`[knowledge]   WARN: could not parse ${patternName}/meta.yaml: ${e.message}\n`);
       }
     }
   }
 
   // ── Ontology ───────────────────────────────────────────────────────────────
-  process.stderr.write('[knowledge] Loading ontology...\n');
+  process.stdout.write('[knowledge] Loading ontology...\n');
   const ontologyDir = join(basePath, 'ontology');
   if (existsSync(ontologyDir)) {
     for (const file of readdirSync(ontologyDir)) {
@@ -235,13 +235,13 @@ export function loadKnowledge(basePath) {
           kb.ontology[key] = readFileSync(filePath, 'utf-8');
         }
       } catch (e) {
-        process.stderr.write(`[knowledge]   WARN: could not parse ontology/${file}: ${e.message}\n`);
+        process.stdout.write(`[knowledge]   WARN: could not parse ontology/${file}: ${e.message}\n`);
       }
     }
   }
 
   // ── Safety ─────────────────────────────────────────────────────────────────
-  process.stderr.write('[knowledge] Loading safety...\n');
+  process.stdout.write('[knowledge] Loading safety...\n');
   const hardConstraintsPath = join(basePath, 'safety', 'hard-constraints.md');
   if (existsSync(hardConstraintsPath)) {
     kb.safety.hardConstraintsRaw = readFileSync(hardConstraintsPath, 'utf-8');
@@ -253,12 +253,12 @@ export function loadKnowledge(basePath) {
     try {
       kb.safety.severitySchema = parseYaml(readFileSync(severitySchemaPath, 'utf-8'));
     } catch (e) {
-      process.stderr.write(`[knowledge]   WARN: could not parse severity-schema.yaml: ${e.message}\n`);
+      process.stdout.write(`[knowledge]   WARN: could not parse severity-schema.yaml: ${e.message}\n`);
     }
   }
 
   // ── Surfaces ────────────────────────────────────────────────────────────────
-  process.stderr.write('[knowledge] Loading surfaces...\n');
+  process.stdout.write('[knowledge] Loading surfaces...\n');
   const surfacesDir = join(basePath, 'surfaces');
   if (existsSync(surfacesDir)) {
     for (const file of readdirSync(surfacesDir)) {
@@ -279,14 +279,14 @@ export function loadKnowledge(basePath) {
           Array.isArray(parsed.user_type) ? parsed.user_type.join(' ') : '',
         ].join(' ');
         kb.surfaces.push(parsed);
-        process.stderr.write(`[knowledge]   surface: ${parsed.id}\n`);
+        process.stdout.write(`[knowledge]   surface: ${parsed.id}\n`);
       } catch (e) {
-        process.stderr.write(`[knowledge]   WARN: could not parse ${file}: ${e.message}\n`);
+        process.stdout.write(`[knowledge]   WARN: could not parse ${file}: ${e.message}\n`);
       }
     }
   }
 
-  process.stderr.write(
+  process.stdout.write(
     `[knowledge] Loaded: ${kb.patterns.length} patterns, ${kb.surfaces.length} surfaces, ` +
     `${kb.rules.length} rules, ${kb.safety.constraints.length} safety constraints\n`
   );

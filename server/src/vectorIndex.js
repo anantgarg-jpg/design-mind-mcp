@@ -184,7 +184,7 @@ export function loadIndex(filePath) {
  * Returns { patternIndex, ruleIndex }.
  */
 export function buildKnowledgeIndexes(kb) {
-  process.stderr.write('[vectorIndex] Building pattern index...\n');
+  process.stdout.write('[vectorIndex] Building pattern index...\n');
   const patternDocs = kb.patterns.map(p => ({
     id: p.id || p._patternName,
     text: p.embedding_input || '',
@@ -206,7 +206,7 @@ export function buildKnowledgeIndexes(kb) {
   }));
   const patternIndex = buildIndex(patternDocs);
 
-  process.stderr.write('[vectorIndex] Building rule index...\n');
+  process.stdout.write('[vectorIndex] Building rule index...\n');
   const ruleDocs = kb.rules.map(r => ({
     id: r.id,
     text: r.embedding_input || '',
@@ -222,6 +222,6 @@ export function buildKnowledgeIndexes(kb) {
   }));
   const ruleIndex = buildIndex(ruleDocs);
 
-  process.stderr.write(`[vectorIndex] Indexes built: ${patternDocs.length} patterns, ${ruleDocs.length} rules\n`);
+  process.stdout.write(`[vectorIndex] Indexes built: ${patternDocs.length} patterns, ${ruleDocs.length} rules\n`);
   return { patternIndex, ruleIndex };
 }

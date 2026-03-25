@@ -57,6 +57,12 @@ const __dirname  = dirname(__filename);
 const BASE_PATH  = join(__dirname, '..', '..');
 const INDEX_DIR  = join(__dirname, '..', '.index');
 
+// In SSE/HTTP mode stdout is free for logs; in stdio mode stdout carries the MCP protocol
+// so we must use stderr there to avoid corrupting the JSON-RPC stream.
+const TRANSPORT_ENV = (process.env.TRANSPORT || 'stdio').toLowerCase();
+const log    = msg => (TRANSPORT_ENV === 'stdio' ? process.stderr : process.stdout).write(msg);
+const logErr = msg => process.stderr.write(msg);
+
 // ── Build info ────────────────────────────────────────────────────────────────
 // Read the git SHA from .git/HEAD at startup so every response can carry it.
 // No execSync — pure file reads, works in any environment.
@@ -237,8 +243,8 @@ let patternIndex = null;
 let ruleIndex    = null;
 
 async function initialize() {
-  process.stderr.write('[design-mind] Starting Design Mind MCP Server...\n');
-  process.stderr.write(`[design-mind] Knowledge base: ${BASE_PATH}\n`);
+  log('[design-mind] Starting Design Mind MCP Server...\n');
+  log(`[design-mind] Knowledge base: ${BASE_PATH}\n`);
 
   kb = loadKnowledge(BASE_PATH);
 
@@ -249,29 +255,29 @@ async function initialize() {
   const cachedRules    = loadIndex(ruleIndexPath);
 
   if (cachedPatterns && cachedRules) {
-    process.stderr.write('[design-mind] Using cached indexes\n');
+    log('[design-mind] Using cached indexes\n');
     patternIndex = cachedPatterns;
     ruleIndex    = cachedRules;
   } else {
-    process.stderr.write('[design-mind] Building indexes (first run)...\n');
+    log('[design-mind] Building indexes (first run)...\n');
     const indexes = buildKnowledgeIndexes(kb);
     patternIndex  = indexes.patternIndex;
     ruleIndex     = indexes.ruleIndex;
     try {
       saveIndex(patternIndex, patternIndexPath);
       saveIndex(ruleIndex,    ruleIndexPath);
-      process.stderr.write('[design-mind] Indexes saved to .index/\n');
+      log('[design-mind] Indexes saved to .index/\n');
     } catch (e) {
-      process.stderr.write(`[design-mind] WARN: could not save indexes: ${e.message}\n`);
+      logErr(`[design-mind] WARN: could not save indexes: ${e.message}\n`);
     }
   }
 
   const vectorsReady = isSeeded('dm_patterns') && isSeeded('dm_rules');
   if (vectorsReady) {
     setUseVectorStore(true);
-    process.stderr.write('[design-mind] Vector search: local semantic (flat-file cosine)\n');
+    log('[design-mind] Vector search: local semantic (flat-file cosine)\n');
   } else {
-    process.stderr.write('[design-mind] Vector search: TF-IDF fallback\n');
+    log('[design-mind] Vector search: TF-IDF fallback\n');
   }
 }
 
@@ -334,7 +340,7 @@ function handleMessage(message, reply) {
       }
 
       case 'notifications/initialized':
-        process.stderr.write('[design-mind] Client initialized\n');
+        log('[design-mind] Client initialized\n');
         break;
 
       case 'tools/list':
@@ -344,7 +350,7 @@ function handleMessage(message, reply) {
       case 'tools/call': {
         const toolName = params?.name;
         const toolArgs = params?.arguments || {};
-        process.stderr.write(`[design-mind] Tool call: ${toolName}\n`);
+        log(`[design-mind] Tool call: ${toolName}\n`);
 
         handleToolCall(toolName, toolArgs)
           .then(result => {
@@ -353,7 +359,7 @@ function handleMessage(message, reply) {
             });
           })
           .catch(toolErr => {
-            process.stderr.write(`[design-mind] Tool error: ${toolErr.message}\n`);
+            logErr(`[design-mind] Tool error: ${toolErr.message}\n`);
             sendResult(id, {
               content: [{ type: 'text', text: `Error: ${toolErr.message}` }],
               isError: true,
@@ -378,7 +384,7 @@ function handleMessage(message, reply) {
         break;
     }
   } catch (err) {
-    process.stderr.write(`[design-mind] Unexpected error handling ${method}: ${err.message}\n`);
+    logErr(`[design-mind] Unexpected error handling ${method}: ${err.message}\n`);
     if (!isNotification && id !== undefined) {
       sendError(id, -32603, 'Internal error', err.message);
     }
@@ -388,7 +394,7 @@ function handleMessage(message, reply) {
 // ── Stdio transport ───────────────────────────────────────────────────────────
 
 function startStdio() {
-  process.stderr.write('[design-mind] Transport: stdio — listening on stdin\n');
+  log('[design-mind] Transport: stdio — listening on stdin\n');
 
   const reply = (obj) => process.stdout.write(JSON.stringify(obj) + '\n');
 
@@ -399,14 +405,14 @@ function startStdio() {
     if (!trimmed) return;
     let message;
     try { message = JSON.parse(trimmed); } catch {
-      process.stderr.write(`[design-mind] WARN: could not parse message: ${trimmed.substring(0, 100)}\n`);
+      logErr(`[design-mind] WARN: could not parse message: ${trimmed.substring(0, 100)}\n`);
       return;
     }
     handleMessage(message, reply);
   });
 
   rl.on('close', () => {
-    process.stderr.write('[design-mind] stdin closed — server shutting down\n');
+    log('[design-mind] stdin closed — server shutting down\n');
     process.exit(0);
   });
 }
@@ -482,7 +488,7 @@ async function notifySlack(webhookUrl, candidate) {
       req.end();
     });
   } catch (err) {
-    process.stderr.write(`[design-mind] Slack notification failed: ${err.message}\n`);
+    logErr(`[design-mind] Slack notification failed: ${err.message}\n`);
   }
 }
 
@@ -551,9 +557,9 @@ function startHttp(port) {
       req.on('close', () => {
         clearInterval(heartbeat);
         sessions.delete(sessionId);
-        process.stderr.write(`[design-mind] SSE session closed: ${sessionId}\n`);
+        log(`[design-mind] SSE session closed: ${sessionId}\n`);
       });
-      process.stderr.write(`[design-mind] SSE session opened: ${sessionId}\n`);
+      log(`[design-mind] SSE session opened: ${sessionId}\n`);
       return;
     }
 
@@ -627,7 +633,7 @@ function startHttp(port) {
         };
 
         store.append(record);
-        process.stderr.write(`[design-mind] Candidate received: ${record.candidate_id} (${status}, ${frequency_count}x)\n`);
+        log(`[design-mind] Candidate received: ${record.candidate_id} (${status}, ${frequency_count}x)\n`);
         notifySlack(SLACK_WEBHOOK, record).catch(() => {});
 
         return sendJson(res, 201, { candidate_id: record.candidate_id, status, frequency_count });
@@ -643,20 +649,20 @@ function startHttp(port) {
     // ── Seed / re-index ─────────────────────────────────────────────────────
     if (req.method === 'POST' && url.pathname === '/seed') {
       try {
-        process.stderr.write('[design-mind] /seed triggered via showcase UI\n');
+        log('[design-mind] /seed triggered via showcase UI\n');
         mkdirSync(INDEX_DIR, { recursive: true });
         const kb = loadKnowledge(BASE_PATH);
         const { patternIndex, ruleIndex } = buildKnowledgeIndexes(kb);
         saveIndex(patternIndex, join(INDEX_DIR, 'patterns.json'));
         saveIndex(ruleIndex,    join(INDEX_DIR, 'rules.json'));
-        process.stderr.write(`[design-mind] Re-indexed: ${patternIndex.documents.length} patterns, ${ruleIndex.documents.length} rules\n`);
+        log(`[design-mind] Re-indexed: ${patternIndex.documents.length} patterns, ${ruleIndex.documents.length} rules\n`);
         return sendJson(res, 200, {
           status:   'ok',
           patterns: patternIndex.documents.length,
           rules:    ruleIndex.documents.length,
         });
       } catch (err) {
-        process.stderr.write(`[design-mind] /seed error: ${err.message}\n`);
+        logErr(`[design-mind] /seed error: ${err.message}\n`);
         return sendJson(res, 500, { error: err.message });
       }
     }
@@ -667,9 +673,9 @@ function startHttp(port) {
   // Explicit 0.0.0.0 — required in Docker/Railway so Railway's proxy can reach the server.
   // Without this, Node may bind to ::1 (IPv6 loopback) only in some container environments.
   server.listen(port, '0.0.0.0', () => {
-    process.stderr.write(`[design-mind] Transport: HTTP/SSE — listening on port ${port}\n`);
-    process.stderr.write(`[design-mind] MCP endpoint: http://localhost:${port}/sse\n`);
-    process.stderr.write(`[design-mind] Health check: http://localhost:${port}/health\n`);
+    log(`[design-mind] Transport: HTTP/SSE — listening on port ${port}\n`);
+    log(`[design-mind] MCP endpoint: http://localhost:${port}/sse\n`);
+    log(`[design-mind] Health check: http://localhost:${port}/health\n`);
   });
 }
 
@@ -688,12 +694,12 @@ async function main() {
   }
 
   process.on('SIGTERM', () => {
-    process.stderr.write('[design-mind] SIGTERM received — shutting down\n');
+    log('[design-mind] SIGTERM received — shutting down\n');
     process.exit(0);
   });
 }
 
 main().catch(err => {
-  process.stderr.write(`[design-mind] Fatal error: ${err.message}\n${err.stack}\n`);
+  logErr(`[design-mind] Fatal error: ${err.message}\n${err.stack}\n`);
   process.exit(1);
 });
