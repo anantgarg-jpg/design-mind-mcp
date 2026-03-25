@@ -41,11 +41,12 @@ WHEN — loading states:
 
 USE:
   - skeleton screens matching the shape of the expected content
-  - loading spinner only for action feedback (e.g. button submits, not page loads)
+  - loading spinner only for action feedback (like buttons) and cases where the block or surface can have completely empty data. 
 
 NOT:
   - full-page loading spinners for partial data loads
   - "Loading..." text alone
+  - Progress bar loaders
 
 ---
 
@@ -57,11 +58,11 @@ USE:
     visible without interaction
   - progressive disclosure for contextual or supplementary data that supports but
     does not gate the primary action
-  - judgment: if a user must open a detail view to decide what to do, the surface
+  - judgment: if a user must open a detail view to decide what to do at all times, the surface
     is under-displaying
 
 NOT:
-  - hiding all secondary context behind expand or drill — this forces unnecessary
+  - hiding all secondary context behind expand or drilldown — this forces unnecessary
     navigation and is a density failure in the other direction
   - surfacing every available field indiscriminately — overload is also a
     density failure
