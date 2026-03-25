@@ -3,6 +3,7 @@ status: active
 component_type: navigation
 level: composite
 structural_family: page-navigation
+structural_role: "page-navigation"
 family_invariants:
   - "Container: flex items-center gap-1"
   - "Item: h-9 w-9 rounded-md text-sm"

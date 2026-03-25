@@ -3,6 +3,7 @@ status: active
 component_type: row
 level: composite
 structural_family: actionable-list-row
+structural_role: "list-row"
 confidence: 0.95
 version: 1.0.0
 introduced: refactor-v1
@@ -22,6 +23,7 @@ summary: >
 when:
   - displaying any entity in a list where the user can take a primary action
   - worklist rows: tasks, protocols, assessments, items
+  - any severity-grouped list where each item has a primary action (Acknowledge, Dismiss, Accept, or similar) — use ActionableRow regardless of the entity domain
   - variant="row" when rows live inside a shared container (bg-card rounded-lg border)
   - variant="card" when each row is a standalone card (its own border + shadow)
 
@@ -109,3 +111,6 @@ embedding_hint: >
   complete assign exclude add note overdue status
   accent stripe variant row card entity action unit scan act workflow
   context label meta icon primary action secondary dropdown
+  alert queue priority queue severity grouped item row clinical alert
+  acknowledge dismiss escalate work item patient item escalated
+  care manager today view priority list action surface

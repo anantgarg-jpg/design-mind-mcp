@@ -3,6 +3,7 @@ status: active
 component_type: other
 level: primitive
 structural_family: section-divider
+structural_role: "section-divider"
 family_invariants:
   - "Typography: text-xs font-semibold uppercase tracking-wider text-muted-foreground"
   - "Never bold or large — should recede visually, not dominate"
@@ -32,3 +33,6 @@ key_rules:
 embedding_hint: >
   section header label group divider needs attention coming up
   items count wayfinding artifact content organizer
+  severity group critical high medium low grouped by severity
+  priority section alert group section label queue section
+  coordinator today clinical section divider urgency group

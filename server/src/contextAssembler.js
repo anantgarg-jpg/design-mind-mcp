@@ -197,9 +197,16 @@ function formatNotWhen(notWhenVal) {
 //   17 — modal secondary "Close" label → sub-component button behavior
 // All others govern the component's own layout, display, or visual treatment.
 const CARRY_FORWARD_IDS = new Set([9, 12, 13, 16, 17]);
+// C22: no className override of family_invariants
+// C23: downstream review when composed block changes
+// C24: meta.yaml sync when .tsx changes
+// These are commit/review-time constraints, not design-time.
+const GOVERNANCE_IDS = new Set([22, 23, 24]);
 
 function determineConstraintScope(id) {
-  return CARRY_FORWARD_IDS.has(id) ? 'carry_forward' : 'direct';
+  if (GOVERNANCE_IDS.has(id)) return 'governance';
+  if (CARRY_FORWARD_IDS.has(id)) return 'carry_forward';
+  return 'direct';
 }
 
 // Identify which safety constraints are in scope for an intent
@@ -276,8 +283,232 @@ function inferAppliesBecause(constraint, intentLower, componentType) {
   return 'Clinical terminology, copy/language, CTA display, and accessibility rules always apply';
 }
 
-// Get relevant ontology concepts for a set of ontology_refs
-function getOntologyRefs(ontologyRefs, kb) {
+// ── Fix 3: Ontology resolver — text-based, with domain defaults ───────────────
+// Resolves ontology refs by matching against intent_description text (canonical names +
+// synonyms). Merges with domain-based defaults. Returns shaped objects with build-relevant
+// notes. Replaces the old pattern-ref lookup (getOntologyRefs) which only matched
+// whatever the top pattern declared and returned [] for unrecognised concepts.
+const DOMAIN_ONTOLOGY_DEFAULTS = {
+  'clinical-alerts': ['Alert', 'AlertSeverity'],
+  'patient-data':    ['Patient'],
+  'care-gaps':       ['CareGap', 'Patient'],
+  'tasks':           ['Task'],
+};
+
+function resolveOntologyFromIntent(intentDescription, domain, kb) {
+  const intentLower = (intentDescription || '').toLowerCase();
+  const result = [];
+  const seen = new Set();
+
+  const allEntities = kb.ontology.entities || {};
+  const allStates   = kb.ontology.states   || {};
+  const allActions  = kb.ontology.actions  || {};
+
+  function addEntityEntry(key, entity) {
+    const canonical = entity.canonical_name || key;
+    if (seen.has(canonical)) return;
+    seen.add(canonical);
+    result.push({
+      concept:        canonical,
+      canonical_name: canonical,
+      ui_label:       canonical,
+      source:         'ontology/entities.yaml',
+      notes: entity.definition
+        ? entity.definition.replace(/\s+/g, ' ').trim().substring(0, 200)
+        : '',
+    });
+  }
+
+  function addStateGroupEntry(groupKey, group) {
+    if (seen.has(groupKey)) return;
+    seen.add(groupKey);
+    const valueLabels = group.values
+      ? Object.values(group.values).map(v => v.canonical_name).filter(Boolean).join(', ')
+      : '';
+    result.push({
+      concept:        groupKey,
+      canonical_name: groupKey,
+      ui_label:       groupKey,
+      source:         'ontology/states.yaml',
+      notes:          valueLabels ? `Values: ${valueLabels}` : '',
+    });
+  }
+
+  function addActionEntry(key, action) {
+    const canonical = action.canonical_name || key;
+    if (seen.has(canonical)) return;
+    seen.add(canonical);
+    const noteParts = [];
+    if (action.meaning) {
+      noteParts.push(action.meaning.replace(/\s+/g, ' ').trim().substring(0, 100));
+    }
+    if (action.confirmation_required !== undefined) {
+      noteParts.push(`confirmation_required: ${action.confirmation_required}`);
+    }
+    if (action.audit_logged !== undefined) {
+      noteParts.push(`audit_logged: ${action.audit_logged}`);
+    }
+    if (action.applies_to && action.applies_to.length > 0) {
+      noteParts.push(`applies_to: [${action.applies_to.join(', ')}]`);
+    }
+    if (action.constraint) {
+      noteParts.push(action.constraint);
+    }
+    result.push({
+      concept:        canonical,
+      canonical_name: canonical,
+      ui_label:       action.ui_label || canonical,
+      source:         'ontology/actions.yaml',
+      notes:          noteParts.join('. '),
+    });
+  }
+
+  // ── Text matching: entities ───────────────────────────────────────────────
+  for (const [key, entity] of Object.entries(allEntities)) {
+    const names = [entity.canonical_name, ...(entity.synonyms || [])].filter(Boolean);
+    if (names.some(n => intentLower.includes(n.toLowerCase()))) {
+      addEntityEntry(key, entity);
+    }
+  }
+
+  // ── Text matching: state groups ───────────────────────────────────────────
+  for (const [groupKey, group] of Object.entries(allStates)) {
+    if (!group.values) continue;
+    const groupLower = groupKey.toLowerCase();
+    let matched = intentLower.includes(groupLower);
+    if (!matched) {
+      for (const [, valObj] of Object.entries(group.values)) {
+        const terms = [valObj.canonical_name, ...(valObj.synonyms || [])].filter(Boolean);
+        if (terms.some(t => intentLower.includes(t.toLowerCase()))) {
+          matched = true;
+          break;
+        }
+      }
+    }
+    if (matched) addStateGroupEntry(groupKey, group);
+  }
+
+  // ── Text matching: actions ────────────────────────────────────────────────
+  for (const [key, action] of Object.entries(allActions)) {
+    const names = [action.canonical_name, ...(action.synonyms || [])].filter(Boolean);
+    if (names.some(n => intentLower.includes(n.toLowerCase()))) {
+      addActionEntry(key, action);
+    }
+  }
+
+  // ── Domain defaults (merged, deduplicated) ────────────────────────────────
+  const defaults = DOMAIN_ONTOLOGY_DEFAULTS[domain] || [];
+  for (const conceptName of defaults) {
+    if (seen.has(conceptName)) continue;
+    // Check entities
+    const entity = allEntities[conceptName];
+    if (entity) { addEntityEntry(conceptName, entity); continue; }
+    // Check state groups
+    const stateGroup = allStates[conceptName];
+    if (stateGroup) { addStateGroupEntry(conceptName, stateGroup); continue; }
+    // Check actions
+    const action = allActions[conceptName];
+    if (action) { addActionEntry(conceptName, action); }
+  }
+
+  return result;
+}
+
+// ── Fix 4: Ontology gap detector ───────────────────────────────────────────────
+// After the resolver runs, extract candidate action/entity names from
+// intent_description and check each against the ontology. Returns gap strings
+// for any candidate that has no canonical definition.
+// Order: unmatched (no synonym) before near-matched (synonym exists) — the
+// unmatched case is more urgent because there's no canonical to redirect to.
+function detectOntologyGaps(intentDescription, kb) {
+  const gaps = [];
+  const intent = intentDescription || '';
+  const allActions = kb.ontology.actions || {};
+
+  // Build canonical lookup and synonym lookup for actions
+  const canonicalActions = new Map(); // lowercase canonical → action entry
+  const synonymActions   = new Map(); // lowercase synonym → { canonical, entry }
+
+  for (const [, action] of Object.entries(allActions)) {
+    const c = (action.canonical_name || '').toLowerCase();
+    if (c) canonicalActions.set(c, action);
+    for (const syn of (action.synonyms || [])) {
+      const s = syn.toLowerCase();
+      if (!synonymActions.has(s)) {
+        synonymActions.set(s, { canonical: action.canonical_name, entry: action });
+      }
+    }
+  }
+
+  // Extract candidate action words from intent using two strategies:
+  //   1. Words after "= " in "Severity = Action1, Action2, Action3" patterns
+  //   2. Words in "actions per item:", "actions:", "user can" phrases
+  const candidates = new Set();
+
+  // Strategy 1: "= Word1, Word2, …" — stops at . ; ( or end
+  const eqPattern = /=\s*([A-Za-z][A-Za-z,\s/]*?)(?:[.;(]|$)/g;
+  let m;
+  while ((m = eqPattern.exec(intent)) !== null) {
+    for (const w of m[1].split(/[,\s/]+/)) {
+      const clean = w.replace(/[^a-zA-Z]/g, '');
+      if (clean.length >= 3 && /^[A-Z]/.test(clean)) candidates.add(clean);
+    }
+  }
+
+  // Strategy 2: after "actions per item:", "actions:", "user can" up to the period
+  const phrasePat = /(?:actions?(?:\s+per\s+\w+)?|user\s+can)\s*[:\s]\s*([^.]+)/gi;
+  while ((m = phrasePat.exec(intent)) !== null) {
+    for (const w of m[1].split(/[,;\s/]+/)) {
+      const clean = w.replace(/[^a-zA-Z]/g, '');
+      if (clean.length >= 3 && /^[A-Z]/.test(clean)) candidates.add(clean);
+    }
+  }
+
+  // Skip words that are clearly severity levels, entities, or common modifiers
+  const skipWords = new Set([
+    'Critical', 'High', 'Medium', 'Low', 'The', 'And', 'For', 'With',
+    'This', 'That', 'Each', 'All', 'Item', 'Items', 'View', 'Page',
+    'Full', 'Today', 'Care', 'When', 'Only', 'After', 'From', 'Into',
+    'Once', 'Last', 'First', 'Includes', 'Shows', 'Agent', 'Source',
+    'Badge', 'Name', 'Reason', 'State', 'Empty', 'Patient', 'Manager',
+    'Work', 'Queue', 'Priority', 'MRN', 'Timestamp',
+  ]);
+
+  const noMatch   = [];  // not canonical, not a synonym of anything
+  const nearMatch = [];  // not canonical, but is a synonym → near-match
+
+  for (const candidate of candidates) {
+    if (skipWords.has(candidate)) continue;
+    const lower = candidate.toLowerCase();
+    if (canonicalActions.has(lower)) continue; // exact canonical → no gap
+    const syn = synonymActions.get(lower);
+    if (syn) {
+      nearMatch.push({ candidate, canonical: syn.canonical, synonyms: syn.entry.synonyms || [] });
+    } else {
+      noMatch.push({ candidate });
+    }
+  }
+
+  // Unmatched (most urgent) first, then near-matched
+  for (const { candidate } of noMatch) {
+    gaps.push(
+      `Action '${candidate}' is referenced in the intent but has no canonical definition in ontology/actions.yaml. ` +
+      `No close synonym match found. If this is a new action, it should be added to ontology/actions.yaml before this component is built.`
+    );
+  }
+  for (const { candidate, canonical, synonyms } of nearMatch) {
+    gaps.push(
+      `Action '${candidate}' is referenced in the intent but has no canonical definition in ontology/actions.yaml. ` +
+      `Verify with the ontology owner before building — using non-canonical labels creates product-wide inconsistency. ` +
+      `Closest canonical action may be '${canonical}' (synonyms include: ${synonyms.join(', ')}).`
+    );
+  }
+
+  return gaps;
+}
+
+// ── (legacy — kept for direct pattern-ref resolution if needed internally) ────
+function _getOntologyRefsByPattern(ontologyRefs, kb) {
   const result = [];
   if (!ontologyRefs || typeof ontologyRefs !== 'object') return result;
 
@@ -304,7 +535,6 @@ function getOntologyRefs(ontologyRefs, kb) {
   }
 
   for (const stateName of toArray(states)) {
-    // States are nested under TaskStatus, CareGapStatus, etc.
     let found = false;
     for (const [groupKey, group] of Object.entries(allStates)) {
       if (groupKey === stateName && group.values) {
@@ -342,32 +572,292 @@ function getOntologyRefs(ontologyRefs, kb) {
   return result;
 }
 
-// ── Change 8: Pattern because generator ───────────────────────────────────────
-// Generates a specific "why this pattern was matched" string for each returned pattern.
-// Returns null (never "") if a meaningful because cannot be generated.
-function generatePatternBecause(patternResult, intentDesc, componentType, dom) {
-  const patternId = patternResult.id || '';
-  const summary   = (patternResult.metadata?.summary || '').trim().substring(0, 120);
-  const ct        = componentType || 'component';
-  const d         = dom || 'this domain';
-  const intent    = (intentDesc || '').trim();
+// ── Fix 5: Signal-based because generator ─────────────────────────────────────
+// Replaces the old template-string approach. Extracts specific signals from the
+// intent and pattern metadata, then builds a targeted explanation from them.
+// Returns null (never "") if no meaningful because can be generated.
+//
+// Signal priority:
+//   1. Action names from intent found in pattern fields (when/summary/embedding_hint)
+//   2. Ontology refs resolved for this intent that are relevant to the pattern
+//   3. critical_rules or safety_refs that directly relate to intent constraints
+//   4. Structural fallback if no specific signals fire
+// Low-confidence matches get an honest "low confidence" note with a reconsider hint.
+function generateBecause(patternResult, intentDesc, matchedOntologyRefs, domain, componentType) {
+  const patternId    = patternResult.id || '';
+  const meta         = patternResult.metadata || {};
+  const summary      = (meta.summary || '').trim();
+  const whenArr      = Array.isArray(meta.when)     ? meta.when     : (meta.when     ? [String(meta.when)]     : []);
+  const notWhenArr   = Array.isArray(meta.not_when)  ? meta.not_when : (meta.not_when  ? [String(meta.not_when)]  : []);
+  const critRules    = Array.isArray(meta.critical_rules) ? meta.critical_rules : [];
+  const safetyRefs   = Array.isArray(meta.safety_refs)    ? meta.safety_refs    : [];
+  const embHint      = (meta.embedding_hint || '').toLowerCase();
+  const intentLower  = (intentDesc || '').toLowerCase();
+  const score        = typeof patternResult.score === 'number'
+    ? patternResult.score
+    : (patternResult.relevance_score || 0);
 
-  if (!intent && !summary) return null;
+  if (!intentDesc && !summary) return null;
 
-  // Use the pattern summary and intent to construct a specific match explanation.
-  // If summary exists, explain the connection to the intent.
-  if (summary) {
-    const intentHint = intent.length > 10
-      ? ` for "${intent.substring(0, 70)}${intent.length > 70 ? '...' : ''}"`
+  // Full searchable text of the pattern
+  const patternText = [summary, ...whenArr, embHint, ...critRules, ...safetyRefs]
+    .join(' ').toLowerCase();
+
+  // ── Signal 1: action words from intent that appear in pattern fields ─────
+  const ACTION_WORDS = [
+    'acknowledge', 'dismiss', 'escalate', 'archive', 'delete',
+    'assign', 'accept', 'snooze', 'close gap', 'close',
+  ];
+  const matchedActions = ACTION_WORDS.filter(a =>
+    intentLower.includes(a) && patternText.includes(a)
+  );
+
+  // ── Signal 2: ontology refs relevant to this pattern ────────────────────
+  const relevantOntologyRefs = (matchedOntologyRefs || []).filter(ref =>
+    patternText.includes((ref.canonical_name || '').toLowerCase())
+  ).map(ref => ref.canonical_name);
+
+  // ── Signal 3: critical_rules / safety_refs that map to intent ───────────
+  const hasSeverityInIntent    = /critical|severity|high|medium|low/.test(intentLower);
+  const hasConfirmationInIntent = /confirmation|confirm/.test(intentLower);
+
+  const severitySafetyMatch = (hasSeverityInIntent || hasConfirmationInIntent) &&
+    safetyRefs.length > 0 &&
+    safetyRefs.some(sr => /critical|dismiss|severity|acknowledge/.test(sr.toLowerCase()));
+
+  const severityCritRulesMatch = hasSeverityInIntent && critRules.length > 0 &&
+    critRules.some(r => /critical|dismiss|acknowledge|severity/.test(r.toLowerCase()));
+
+  const confirmationCritRulesMatch = hasConfirmationInIntent && critRules.length > 0 &&
+    critRules.some(r => /confirm|destructive/.test(r.toLowerCase()));
+
+  // ── Extract severity action rules from intent (e.g. "Critical = Acknowledge only") ──
+  const criticalRuleMatch = intentDesc.match(/Critical\s*=\s*([^;.]+)/i);
+  const otherSeverityMatch = intentDesc.match(/(?:High|Medium|Low)[/\w,\s]*=\s*([^;.(]+)/i);
+
+  // ── Low confidence path ──────────────────────────────────────────────────
+  if (score < 0.55) {
+    // Find the most structurally relevant not_when hint
+    const relevantNotWhen = notWhenArr.find(nw => {
+      const nwl = nw.toLowerCase();
+      return nwl.includes('paged') || nwl.includes('single') || nwl.includes('scroll') ||
+             nwl.includes('queue') || nwl.includes('priority') || nwl.includes('list');
+    });
+    const summaryHint = summary ? ` — ${summary.substring(0, 100)}` : '';
+    const notWhenHint = relevantNotWhen
+      ? ` Review: not_when says "${relevantNotWhen}".`
       : '';
-    return `Matched because a ${d} ${ct}${intentHint} aligns with: ${summary}`;
+    return (
+      `Matched at low confidence${summaryHint}.${notWhenHint} ` +
+      `Only use if the intent genuinely requires this pattern's structure.`
+    );
   }
 
-  if (intent.length > 10) {
-    return `Matched for "${intent.substring(0, 70)}${intent.length > 70 ? '...' : ''}" in ${d} — ${patternId} is the closest genome pattern for this ${ct} intent.`;
+  // ── Assemble the because string from fired signals ───────────────────────
+  const parts = [];
+
+  // Opening clause: what specific thing in the intent drove the match
+  if (hasSeverityInIntent && (severityCritRulesMatch || patternText.includes('severity'))) {
+    // Severity-aware pattern + severity-based intent
+    const critClause  = criticalRuleMatch  ? `Critical=${criticalRuleMatch[1].trim()}`  : '';
+    const otherClause = otherSeverityMatch ? otherSeverityMatch[1].trim().substring(0, 60) : '';
+    const actionDetail = [critClause, otherClause].filter(Boolean).join(', ');
+    parts.push(
+      `the intent describes severity-grouped alerts with per-severity action rules` +
+      (actionDetail ? ` (${actionDetail})` : '')
+    );
+  } else if (hasConfirmationInIntent && confirmationCritRulesMatch) {
+    parts.push(`the intent specifies a confirmation dialog for destructive actions`);
+  } else if (matchedActions.length > 0) {
+    parts.push(
+      `the intent's actions (${matchedActions.join(', ')}) appear in ${patternId}'s ` +
+      `when/summary/embedding_hint fields`
+    );
+  } else if (relevantOntologyRefs.length > 0) {
+    parts.push(
+      `ontology concepts from the intent (${relevantOntologyRefs.join(', ')}) ` +
+      `align with ${patternId}'s declared use case`
+    );
+  } else {
+    // Structural fallback
+    parts.push(
+      summary
+        ? `the ${domain} ${componentType} intent structurally aligns with: ${summary.substring(0, 100)}`
+        : `${patternId} is the closest genome pattern for this ${componentType} intent`
+    );
   }
 
-  return null;
+  // Second clause: what makes this pattern specifically authoritative
+  if (severitySafetyMatch) {
+    parts.push(
+      `${patternId}'s safety_refs (${safetyRefs.slice(0, 2).join(', ')}) ` +
+      `enforce exactly the constraints the intent describes`
+    );
+  } else if (confirmationCritRulesMatch) {
+    parts.push(`${patternId} is the designated block for destructive confirmation`);
+  } else if (matchedActions.length > 0 && critRules.length > 0) {
+    const relevantRule = critRules.find(r =>
+      matchedActions.some(a => r.toLowerCase().includes(a))
+    );
+    if (relevantRule) {
+      parts.push(`critical_rule: "${relevantRule.substring(0, 100)}"`);
+    }
+  }
+
+  return parts.length > 0
+    ? `Matched because ${parts.join('. ')}.`
+    : (summary
+        ? `Matched because the ${domain} ${componentType} intent aligns with: ${summary}.`
+        : null);
+}
+
+// ── Fix 1: Secondary structural retrieval pass ─────────────────────────────────
+// For page and panel component types only, a second pass finds blocks from four
+// structural families that are invisible to the primary vector search because their
+// embedding vocabulary doesn't overlap with display-heavy intent language.
+//
+// The pass scans kb.patterns directly (bypassing the index) so it always finds the
+// canonical structural block even if it scored near-zero in retrieval. Blocks with
+// a structural_role field are preferred over those without one.
+//
+// Structural inclusions are APPENDED after the primary top-N — they are additive,
+// not substitutions. structural_inclusion: true marks them so the agent can treat
+// them differently from retrieval-ranked results.
+
+const STRUCTURAL_PASS_FAMILIES = [
+  'actionable-list-row',
+  'section-divider',
+  'page-navigation',
+  'section-organiser',
+];
+
+// Intent-specific because string for each structural family.
+// References signals from the intent where possible.
+function generateStructuralBecause(blockId, meta, intentDesc) {
+  const family = meta?.structural_family || '';
+  const intentLower = (intentDesc || '').toLowerCase();
+
+  const hasList   = /queue|list|items|work item|worklist/i.test(intentDesc);
+  const hasAction = /action|acknowledge|dismiss|accept|snooze|escalate/i.test(intentDesc);
+  const hasSeverityGrouping = /grouped by severity|severity.*group|critical\s*[→>]/i.test(intentDesc) ||
+    (/critical/i.test(intentDesc) && /high/i.test(intentDesc) && /medium/i.test(intentDesc) && /low/i.test(intentDesc));
+
+  // Extract severity sequence from intent for SectionHeader because
+  const severitySeqMatch = intentDesc.match(/Critical\s*[→>]\s*High\s*[→>]\s*Medium\s*[→>]\s*Low/i);
+  const severitySeq = severitySeqMatch ? severitySeqMatch[0] : 'Critical → High → Medium → Low';
+
+  switch (family) {
+    case 'actionable-list-row': {
+      if (hasList && hasAction) {
+        const severityNote = hasSeverityGrouping
+          ? ` The intent's severity-grouped structure (${severitySeq}) maps directly to ${blockId}'s scan-and-act model — one row per item, primary action right-aligned, accent stripe driven by severity.`
+          : '';
+        return (
+          `Included as a structural block — page-level intents that describe a list, queue, or collection of items ` +
+          `require a row container pattern. ${blockId} is the canonical list row for any scan-and-act workflow.` +
+          severityNote +
+          ` Consider this the default row block unless the intent specifically calls for a read-only or non-actionable list.`
+        );
+      }
+      return (
+        `Included as a structural block — ${blockId} defines how individual items are rendered ` +
+        `in the collection this page describes.`
+      );
+    }
+
+    case 'section-divider':
+      if (hasSeverityGrouping) {
+        return (
+          `Included as a structural block — the intent describes severity-grouped sections (${severitySeq}). ` +
+          `${blockId} is the canonical block for naming and counting groups within a list. ` +
+          `Use one ${blockId} per severity group with countVariant matching the group's urgency level.`
+        );
+      }
+      return (
+        `Included as a structural block — ${blockId} provides section labels to organize the grouped ` +
+        `content this page describes.`
+      );
+
+    case 'page-navigation':
+      return (
+        `Included as a structural block — ${blockId} is available if the item count can grow beyond a single ` +
+        `viewport. Review the data-density rule before enabling pagination — if all critical items must be ` +
+        `visible at once, prefer scroll over pagination.`
+      );
+
+    case 'section-organiser':
+      return (
+        `Included as a structural block — ${blockId} provides filter, search, and sort controls above ` +
+        `the list. Use if the user needs to filter items by severity, date, or patient attributes.`
+      );
+
+    default:
+      return (
+        `Included as a structural block — ${blockId} supports the ${family} structure this page requires.`
+      );
+  }
+}
+
+// Build the structural inclusions list for a page/panel intent.
+// allRetrieved = _rawBoosted (all 8 pre-slice results, used only to look up
+//                retrieval scores for display — not for candidate selection)
+// primaryTopN  = boostedResults (the top-5 already in the patterns output)
+//
+// Candidate selection uses kb.patterns (the full library) rather than the
+// retrieval pool, because the whole point of this pass is to surface blocks
+// that the primary retrieval missed. Confidence is the tie-breaker within
+// each family pool — the most-ratified block wins, not the highest TF-IDF scorer.
+function buildStructuralInclusions(primaryTopN, allRetrieved, kb, componentType, intentDesc, domain) {
+  if (!['page', 'panel'].includes(componentType)) return [];
+
+  const primaryIds      = new Set(primaryTopN.map(r => r.id));
+  // Build a score lookup from the retrieval pool for display purposes only
+  const retrievedScores = new Map(allRetrieved.map(r => [r.id, parseFloat(r.score.toFixed(4))]));
+
+  const EMPTY_USAGE_SIGNAL = { renders_total: 0, products: [], override_rate: 0.0 };
+  const inclusions = [];
+
+  for (const targetFamily of STRUCTURAL_PASS_FAMILIES) {
+    // ── Step 1: find best candidate from the full block library ──────────────
+    // Scan kb.patterns (not retrieval results) so we always find the canonical
+    // block regardless of whether it scored in the primary retrieval pass.
+    const allCandidates = (kb.patterns || []).filter(p =>
+      p.structural_family === targetFamily &&
+      p.status === 'active'    // skip placeholder / deprecated
+    );
+    if (allCandidates.length === 0) continue;
+
+    // Prefer blocks with structural_role (Fix 4) over those without.
+    // Within the preferred pool, sort by confidence — most-ratified wins.
+    const withRole = allCandidates.filter(p => p.structural_role);
+    const pool     = withRole.length > 0 ? withRole : allCandidates;
+    const best     = pool.slice().sort((a, b) => (b.confidence || 0) - (a.confidence || 0))[0];
+    if (!best) continue;
+
+    // ── Step 2: skip if already surfaced in the primary top-5 ────────────────
+    if (primaryIds.has(best.id)) continue;
+
+    // ── Step 3: build the inclusion entry ─────────────────────────────────────
+    // Use retrieval score if the block happened to appear in the retrieval pool,
+    // otherwise 0 (explicitly excluded by score cutoff, not a retrieval failure).
+    const candScore = retrievedScores.get(best.id) || 0;
+
+    inclusions.push({
+      id:               best.id,
+      relevance_score:  candScore,
+      structural_family: best.structural_family || null,
+      component_type:   best.component_type || null,
+      summary:          (best.summary || '').trim(),
+      when:             formatWhen(best.when),
+      not_when:         formatNotWhen(best.not_when),
+      because:          generateStructuralBecause(best.id, best, intentDesc),
+      confidence:       best.confidence || 0.0,
+      structural_inclusion: true,
+      usage_signal:     EMPTY_USAGE_SIGNAL,
+    });
+  }
+
+  return inclusions;
 }
 
 // ── Change 1: Intent quality gate ────────────────────────────────────────────
@@ -493,9 +983,14 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
     metadata: { ...enriched.get(r.id), ...r.metadata },
   }));
 
+  // ── Ontology refs — text-based resolver (Fixes 3 & 4) ──────────────────────
+  // Computed here (before pattern assembly) so generateBecause can use it.
+  const ontologyRefs = resolveOntologyFromIntent(intent_description, domain, kb);
+  const ontologyGaps = detectOntologyGaps(intent_description, kb);
+
   // ── Pattern results ─────────────────────────────────────────────────────────
   // Change 7 — usage_signal is always present (empty shape when no telemetry data)
-  // Change 8 — because is generated from intent context (null if not meaningful, never "")
+  // Fix 5 — because is signal-based (null if not meaningful, never "")
   const EMPTY_USAGE_SIGNAL = { renders_total: 0, products: [], override_rate: 0.0 };
 
   const patterns = boostedResults.map(r => {
@@ -509,11 +1004,21 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
       summary:           r.metadata?.summary || '',
       when:              formatWhen(r.metadata?.when),
       not_when:          formatNotWhen(r.metadata?.not_when),
-      because:           generatePatternBecause(r, intent_description, component_type, domain),
+      because:           generateBecause(r, intent_description, ontologyRefs, domain, component_type),
       confidence:        r.metadata?.confidence || 0.9,
       usage_signal:      hasUsageData ? usageSignal : EMPTY_USAGE_SIGNAL,
     };
   });
+
+  // ── Fix 1: Structural inclusions (page/panel only) ───────────────────────────
+  // Secondary pass: finds actionable-list-row, section-divider, page-navigation,
+  // section-organiser blocks that scored too low to appear in primary top-5.
+  // Appended after primary results. structural_inclusion: true marks them.
+  const structuralInclusions = buildStructuralInclusions(
+    boostedResults, _rawBoosted, kb, component_type, intent_description, domain
+  );
+  // Combined pattern list used in the response
+  const allPatterns = [...patterns, ...structuralInclusions];
 
   // ── Structural guidance — dominant family + invariants ──────────────────────
   // When multiple top patterns share a structural family, surface the invariants
@@ -599,10 +1104,6 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
     };
   });
 
-  // ── Ontology refs (from top matched pattern) ────────────────────────────────
-  const topPatternRefs = boostedResults[0]?.metadata?.ontology_refs || {};
-  const ontologyRefs = getOntologyRefs(topPatternRefs, kb);
-
   // ── Safety constraints (always all of them) ─────────────────────────────────
   const safetyConstraints = getSafetyConstraintsInScope(
     intent_description, component_type, domain, kb
@@ -639,10 +1140,11 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
     confidenceBasis = 'low_coverage';
   }
 
-  // ── Gap detection ───────────────────────────────────────────────────────────
+  // ── Gap detection — pattern coverage + ontology gaps ───────────────────────
+  // ontologyGaps (Fix 4) are prepended: unmatched actions before near-matches.
   // Vector store: low match < 0.45 cosine. TF-IDF: low match < 0.25 raw.
   const lowThreshold = _useVectorStore ? 0.45 : 0.25;
-  const gaps = [];
+  const gaps = [...ontologyGaps];
   if (boostedResults.length === 0) {
     gaps.push('No pattern matches found. This is likely a novel UI element — flag with DESIGN MIND comment.');
   } else if (topPatternScore < lowThreshold) {
@@ -739,7 +1241,7 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
     ...(surface                        ? { surface }                               : {}),
     ...(structuralGuidance             ? { structural_guidance: structuralGuidance } : {}),
     intent_quality: { score: intentQuality.score, missing: intentQuality.missing },
-    patterns,
+    patterns: allPatterns,
     ...(compositions.length > 0        ? { compositions }                          : {}),
     ...(gap_probe                      ? { gap_probe }                             : {}),
     rules,
@@ -748,27 +1250,40 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
     similar_builds:     similarBuilds,
     confidence,
     confidence_basis:   confidenceBasis,
-    pre_build_constraints: safetyViolations,
     coverage_gap: coverageGap,
     ...(gaps.length > 0                ? { gaps }                                  : {}),
     ...(Object.keys(debugField).length ? { _debug: debugField }                    : {}),
   };
 
-  // Changes 3 & 4 — build_gate + build_gate_reason + build_gate_resolution
+  // build_gate fires on direct + carry_forward constraints in scope.
+  // Governance constraints (C22–C24) are always present in safety_constraints
+  // with scope='governance' but never contribute to the gate count —
+  // they apply at commit time, not design time.
   if (safetyViolations.length > 0) {
-    const directCount       = safetyViolations.filter(id => !CARRY_FORWARD_IDS.has(id)).length;
-    const carryForwardCount = safetyViolations.filter(id =>  CARRY_FORWARD_IDS.has(id)).length;
+    const directCount       = safetyConstraints.filter(c =>
+      safetyViolations.includes(c.constraint_id) && c.scope === 'direct'
+    ).length;
+    const carryForwardCount = safetyConstraints.filter(c =>
+      safetyViolations.includes(c.constraint_id) && c.scope === 'carry_forward'
+    ).length;
+    const governanceCount   = safetyConstraints.filter(c => c.scope === 'governance').length;
+
     response.build_gate = true;
     response.build_gate_reason =
-      `${directCount} direct constraint(s) and ${carryForwardCount} carry-forward constraint(s) ` +
-      `require pre-build verification for component_type="${component_type}" in domain="${domain}". ` +
-      `Review pre_build_constraints before writing code.`;
+      `${directCount} direct and ${carryForwardCount} carry-forward constraints require pre-build verification ` +
+      `for component_type='${component_type}' in domain='${domain}'.` +
+      (governanceCount > 0
+        ? ` Additionally ${governanceCount} governance constraints apply at commit time — ` +
+          `see safety_constraints where scope='governance'.`
+        : '') +
+      ` Review direct and carry-forward constraints before writing code.`;
     response.build_gate_resolution =
-      "Review each constraint in pre_build_constraints before writing any code. " +
+      "Review each constraint in safety_constraints (scope='direct' and scope='carry_forward') before writing any code. " +
       "For scope='direct' constraints, verify your planned component architecture satisfies them. " +
       "For scope='carry_forward' constraints, note them and apply when building sub-components. " +
+      "scope='governance' constraints apply at commit time — review before committing. " +
       "Self-certification is sufficient — no separate tool call required. " +
-      "Proceed once all constraints have been reviewed.";
+      "Proceed once all direct and carry-forward constraints have been reviewed.";
   }
 
   if (coverageGap) {

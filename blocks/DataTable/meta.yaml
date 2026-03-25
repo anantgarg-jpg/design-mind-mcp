@@ -3,6 +3,7 @@ status: active
 component_type: data-display
 level: composite
 structural_family: data-table
+structural_role: "list-container"
 family_invariants:
   - "Container: w-full rounded-lg border border-border overflow-hidden"
   - "Header: sticky top-0 bg-muted/50 text-sm font-medium text-muted-foreground"
