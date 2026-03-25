@@ -1,6 +1,6 @@
 # Design Mind MCP — Project Context
 
-> Auto-generated from repo on 2026-03-24. Do not edit manually — run `node scripts/generate-context.js` to refresh.
+> Auto-generated from repo on 2026-03-25. Do not edit manually — run `node scripts/generate-context.js` to refresh.
 
 **Repo:** https://github.com/anantgarg-jpg/design-mind-mcp
 **Hosted MCP:** https://design-mind-mcp-production.up.railway.app/sse
@@ -1485,6 +1485,10 @@ Interactive elements follow a consistent state feedback language:
   NEVER use translate-y for press feedback — use scale instead.
   NEVER use color darkening as the sole press signal — always include scale.
   NEVER use gradients, glows, or inner highlights for any state.
+  NEVER apply reduced opacity to text. Text is always 100% opacity unless the
+  element is in a disabled state (disabled:opacity-50). Use semantic color tokens
+  (e.g. text-muted-foreground) to create hierarchy — not opacity modifiers on
+  existing tokens (e.g. text-destructive/70 is forbidden).
 
 # ── USAGE RULES ──────────────────────────────────────────────────────────────
 
@@ -3435,7 +3439,7 @@ when:
 
 not_when:
   - population-level assessment summary counts — use a stat/metric component
-  - read-only display of a single assessment data point — use StatusBadge
+  - read-only display of a single assessment data point — use Badge
   - outside an entity-scoped surface (EntityContextHeader must be present above)
 
 because: >
@@ -6950,7 +6954,7 @@ export function InputBlock({
         "placeholder:text-muted-foreground",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         "disabled:opacity-50 disabled:cursor-not-allowed",
-        error && "border-destructive focus-visible:ring-destructive",
+        error && "border-destructive focus-visible:ring-ring-destructive",
         className
       )}
       aria-invalid={error || undefined}
@@ -7077,7 +7081,7 @@ export function InputOTPBlock({
                   className={cn(
                     "h-10 w-10 rounded-md border border-input text-center font-mono text-base",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    error && "border-destructive focus-visible:ring-destructive"
+                    error && "border-destructive focus-visible:ring-ring-destructive"
                   )}
                 />
               )
@@ -8954,8 +8958,8 @@ component_type: card
 level: primitive
 structural_family: stat-metric-card
 family_invariants:
-  - "Label: text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-  - "Value: text-2xl font-bold tabular-nums"
+  - "Label: text-sm font-medium uppercase tracking-wide text-muted-foreground"
+  - "Value: text-[32px] font-medium tabular-nums leading-none"
   - "Maximum 4 StatCards per row"
   - "Variant tokens: default=foreground, urgent=destructive, warning=warning, success=success"
 confidence: 0.88
@@ -8991,7 +8995,7 @@ key_rules:
   - max 4 StatCards in a single row for readability
 
 frozen:
-  - "zones: label (text-xs uppercase tracking-wide) and value (text-2xl tabular-nums) — both always present"
+  - "zones: label (text-sm font-medium uppercase tracking-wide) and value (text-[32px] font-medium tabular-nums leading-none) — both always present"
   - "max density: no more than 4 StatCards in a single row"
   - "value: always tabular-nums — numeric alignment across a row of cards is non-negotiable"
 
@@ -9018,8 +9022,8 @@ import { Card } from "@blocks/Card/component"
 // Density:  genome/rules/data-density.rule.md — value scannable at a glance
 //
 // INVARIANTS:
-//   Label: text-sm (12px) font-semibold uppercase tracking-wide text-muted-foreground
-//   Value: text-2xl font-semibold tabular-nums leading-none
+//   Label: text-sm (12px) font-medium uppercase tracking-wide text-muted-foreground
+//   Value: text-[32px] font-medium tabular-nums leading-none (title/x-large)
 //   Max 4 StatCards per row.
 //
 // Container: Card block with elevation prop — no local card styling.
@@ -9029,14 +9033,15 @@ import { Card } from "@blocks/Card/component"
 //   warning → --warning     (Overdue / at-risk)
 //   success → --success     (Positive outcomes)
 //   default → --foreground  (General counts, neutral)
+// Subtitle is always text-muted-foreground — no reduced-opacity text.
 
 type StatVariant = "default" | "urgent" | "warning" | "success"
 
-const VARIANT_CONFIG: Record<StatVariant, { valueClass: string; subtitleClass: string }> = {
-  default: { valueClass: "text-foreground",          subtitleClass: "text-muted-foreground" },
-  urgent:  { valueClass: "text-destructive",         subtitleClass: "text-destructive/70" },
-  warning: { valueClass: "text-warning",             subtitleClass: "text-warning/70" },
-  success: { valueClass: "text-success",             subtitleClass: "text-success/70" },
+const VARIANT_CONFIG: Record<StatVariant, { valueClass: string }> = {
+  default: { valueClass: "text-foreground" },
+  urgent:  { valueClass: "text-destructive" },
+  warning: { valueClass: "text-warning" },
+  success: { valueClass: "text-success" },
 }
 
 interface StatCardProps {
@@ -9069,14 +9074,14 @@ export function StatCard({
       className={className}
     >
       <div className="flex flex-col gap-1">
-        <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+        <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
           {label}
         </p>
-        <p className={cn("text-2xl font-semibold tabular-nums leading-none", v.valueClass)}>
+        <p className={cn("text-[32px] font-medium tabular-nums leading-none", v.valueClass)}>
           {value}
         </p>
         {subtitle && (
-          <p className={cn("text-sm leading-tight", v.subtitleClass)}>
+          <p className="text-sm leading-4 text-muted-foreground">
             {subtitle}
           </p>
         )}
@@ -10422,7 +10427,7 @@ Always return a structured review using this schema:
 ```
 HONORED:
   [List what explicitly followed the genome — be specific.
-   "Used StatusBadge with canonical status values" not "looks good"]
+   "Used Badge with correct badgeColor for status values" not "looks good"]
 
 BORDERLINE:
   [List decisions that are defensible but not clearly right.
@@ -10526,8 +10531,8 @@ AESTHETIC_VIOLATIONS:
       instead of using a background color shift?
    8. Missing press scale — does a button or interactive control lack
       active:scale-[0.97]? (Link-style elements are exempt.)
-   9. Full-strength focus ring — does focus-visible use ring-ring instead
-      of ring-primary/40 or ring-destructive/40?
+   9. Focus ring token — does focus-visible use ring-ring (blue-300) for
+      default elements and ring-ring-destructive for destructive elements?
    10. Shadow nesting — is a shadow-bearing element inside another
        shadow-bearing element?
 
