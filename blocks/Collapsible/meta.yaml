@@ -18,7 +18,7 @@ summary: >
 when:
   - a single section needs expand/collapse behavior
   - progressive disclosure of optional detail within a card or row
-  - "Show more" / "Show less" patterns
+  - '"Show more" / "Show less" patterns'
 
 not_when:
   - multiple collapsible sections in a group (use Accordion)
