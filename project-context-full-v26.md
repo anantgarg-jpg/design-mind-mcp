@@ -1988,6 +1988,8 @@ Two questions. Both must pass.
 
 23. When a primitive or composite Block's component or meta.yaml is modified, all consuming Blocks and surfaces that import or compose that Block must be reviewed and updated to reflect the change. No upstream change may be committed without verifying downstream consumers remain compliant.
 
+24. Whenever updating the code (.tsx) for any block or surface, the meta.yaml must be checked and updated to align with the changes.
+
 ---
 
 ## Safety — severity schema
@@ -4135,7 +4137,7 @@ component_type: layout
 level: primitive
 structural_family: content-container
 family_invariants:
-  - "rounded-lg border border-border/40 bg-card"
+  - "rounded-lg border border-subtle bg-card"
   - "shadow-sm when on muted/tinted background, no shadow on white background"
   - "p-4 content padding"
 confidence: 0.85
@@ -4193,7 +4195,7 @@ import {
 // Safety:   safety/hard-constraints.md rules 20, 21
 //
 // INVARIANTS (meta.yaml):
-//   rounded-lg border border-border/40 bg-card
+//   rounded-lg border border-subtle bg-card
 //   shadow-sm when on muted/tinted background, no shadow on white background
 //   p-4 content padding
 //
@@ -4207,7 +4209,7 @@ import {
 //   active:   bg-foreground/[0.08]
 //   focused:  ring-2 ring-ring ring-offset-1
 //   selected: border-2 border-primary
-//   disabled: opacity-50, pointer-events-none, no shadow, border border-border/40
+//   disabled: opacity-50, pointer-events-none, no shadow, border border-subtle
 //
 // No nested cards permitted.
 
@@ -4259,9 +4261,9 @@ export function Card({
       className={cn(
         "rounded-lg bg-card",
         disabled
-          ? "border border-border/40 opacity-50 pointer-events-none"
+          ? "border border-subtle opacity-50 pointer-events-none"
           : elevation === "flat"
-            ? "border border-border/40"
+            ? "border border-subtle"
             : elevationClass[elevation],
         selected && !disabled && "border-2 border-primary",
         isInteractive && [
@@ -4632,7 +4634,7 @@ component_type: input
 level: primitive
 structural_family: form-input
 family_invariants:
-  - "h-4 w-4 rounded-sm border border-input"
+  - "h-4 w-4 rounded-sm border border-subtle"
   - "checked bg-primary"
   - "focus-visible:ring-2"
 confidence: 0.85
@@ -4654,7 +4656,7 @@ not_when:
   - complex multi-state selection
 
 variants:
-  default: unchecked state with border-input
+  default: unchecked state with border-subtle
   checked: filled bg-primary with check icon
   indeterminate: dash icon for partial group selection
 
@@ -4681,7 +4683,7 @@ import { Label } from "@/components/ui/label"
 // Safety:   safety/hard-constraints.md rules 13, 20, 21
 //
 // INVARIANTS (meta.yaml):
-//   h-4 w-4 rounded-sm border border-input
+//   h-4 w-4 rounded-sm border border-subtle
 //   checked bg-primary
 //   focus-visible:ring-2
 //
@@ -4719,7 +4721,7 @@ export function Checkbox({
         onCheckedChange={onCheckedChange}
         disabled={disabled}
         className={cn(
-          "h-4 w-4 rounded-sm border border-input",
+          "h-4 w-4 rounded-sm border border-subtle",
           "data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           error && "border-destructive",
@@ -4855,7 +4857,7 @@ component_type: action
 level: composite
 structural_family: searchable-select
 family_invariants:
-  - "Trigger: h-9 rounded-md border border-input px-3 text-sm"
+  - "Trigger: h-9 rounded-md border border-subtle px-3 text-sm"
   - "Popover: rounded-md shadow-md z-20 bg-card border border-border"
   - "Items: py-1.5 px-2 rounded-sm cursor-pointer"
 confidence: 0.80
@@ -4913,7 +4915,7 @@ import {
 // Safety:   safety/hard-constraints.md rules 13, 20, 21
 //
 // INVARIANTS (meta.yaml):
-//   Trigger: h-9 rounded-md border border-input px-3
+//   Trigger: h-9 rounded-md border border-subtle px-3
 //   Popover: rounded-md shadow-md z-20
 //   Items: py-1.5 px-2 rounded-sm
 
@@ -4957,7 +4959,7 @@ export function Combobox({
           aria-expanded={open}
           disabled={disabled}
           className={cn(
-            "h-9 w-full justify-between border border-input px-3 text-sm font-normal",
+            "h-9 w-full justify-between border border-subtle px-3 text-sm font-normal",
             !value && "text-muted-foreground",
             hasError && "border-destructive",
             className
@@ -5563,7 +5565,7 @@ component_type: action
 level: composite
 structural_family: date-selector
 family_invariants:
-  - "Trigger: h-9 rounded-md border border-input px-3 text-sm"
+  - "Trigger: h-9 rounded-md border border-subtle px-3 text-sm"
   - "Calendar popover: rounded-md shadow-md bg-card border border-border"
   - "Calendar icon: left-aligned inside trigger"
 confidence: 0.80
@@ -5615,7 +5617,7 @@ import {
 // Safety:   safety/hard-constraints.md rules 20, 21
 //
 // INVARIANTS (meta.yaml):
-//   Trigger: h-9 rounded-md border border-input px-3
+//   Trigger: h-9 rounded-md border border-subtle px-3
 //   Calendar popover: rounded-md shadow-md
 //   Calendar icon: left-aligned inside trigger
 
@@ -5649,7 +5651,7 @@ export function DatePicker({
           variant="outline"
           disabled={disabled}
           className={cn(
-            "h-9 w-full justify-start border border-input px-3 text-sm font-normal",
+            "h-9 w-full justify-start border border-subtle px-3 text-sm font-normal",
             !value && "text-muted-foreground",
             hasError && "border-destructive",
             className
@@ -6881,7 +6883,7 @@ component_type: input
 level: primitive
 structural_family: form-input
 family_invariants:
-  - "Container: h-9 rounded-md border border-input bg-background px-3 text-base"
+  - "Container: h-9 rounded-md border border-subtle bg-card px-3 text-base"
   - "Focus: focus-visible:ring-2 ring-ring"
   - "Error state: border-destructive (rule 13)"
   - "Disabled: opacity-50 cursor-not-allowed"
@@ -6931,7 +6933,7 @@ import { Input as ShadcnInput } from "@/components/ui/input"
 // Safety:   safety/hard-constraints.md rules 13, 20
 //
 // INVARIANTS (meta.yaml):
-//   h-9 rounded-md border border-input bg-background px-3 text-base
+//   h-9 rounded-md border border-subtle bg-card px-3 text-base
 //   Focus: focus-visible:ring-2 ring-ring (never suppressed)
 //   Error state: border-destructive (rule 13, NOT severity-critical)
 
@@ -6950,7 +6952,7 @@ export function InputBlock({
   return (
     <ShadcnInput
       className={cn(
-        "h-9 rounded-md border border-input bg-background px-3 text-base",
+        "h-9 rounded-md border border-subtle bg-card px-3 text-base",
         "placeholder:text-muted-foreground",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         "disabled:opacity-50 disabled:cursor-not-allowed",
@@ -6977,7 +6979,7 @@ level: primitive
 structural_family: form-input
 family_invariants:
   - "Slots: gap-2 between slots"
-  - "Each slot: h-10 w-10 rounded-md border border-input text-center font-mono"
+  - "Each slot: h-10 w-10 rounded-md border border-subtle text-center font-mono"
   - "Min slot size: 44px (rule 21)"
   - "Focus: focus-visible:ring-2 ring-ring"
 confidence: 0.85
@@ -7032,7 +7034,7 @@ import {
 //
 // INVARIANTS (meta.yaml):
 //   Slots: gap-2 between slots
-//   Each slot: h-10 w-10 rounded-md border border-input text-center font-mono
+//   Each slot: h-10 w-10 rounded-md border border-subtle text-center font-mono
 //   Min 44px touch target per slot (rule 21)
 //   Auto-focus next slot; paste support
 
@@ -7079,7 +7081,7 @@ export function InputOTPBlock({
                   key={idx}
                   index={idx}
                   className={cn(
-                    "h-10 w-10 rounded-md border border-input text-center font-mono text-base",
+                    "h-10 w-10 rounded-md border border-subtle text-center font-mono text-base",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     error && "border-destructive focus-visible:ring-ring-destructive"
                   )}
@@ -7829,7 +7831,7 @@ level: primitive
 structural_family: form-input
 family_invariants:
   - "Layout: flex flex-col gap-3"
-  - "Each radio: h-4 w-4 rounded-full border border-input"
+  - "Each radio: h-4 w-4 rounded-full border border-subtle"
   - "Checked: border-primary fill-primary"
   - "Touch target: 44px min on label+radio combined (rule 21)"
 confidence: 0.85
@@ -7881,7 +7883,7 @@ import { Label } from "@/components/ui/label"
 //
 // INVARIANTS (meta.yaml):
 //   Layout: flex flex-col gap-3
-//   Each radio: h-4 w-4 rounded-full border border-input
+//   Each radio: h-4 w-4 rounded-full border border-subtle
 //   Checked: border-primary fill-primary
 //   44px min touch target on label+radio combined (rule 21)
 
@@ -7931,7 +7933,7 @@ export function RadioGroupBlock({
             id={option.value}
             disabled={option.disabled}
             className={cn(
-              "h-4 w-4 rounded-full border border-input mt-0.5",
+              "h-4 w-4 rounded-full border border-subtle mt-0.5",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               error && "border-destructive"
             )}
@@ -8343,7 +8345,7 @@ component_type: input
 level: primitive
 structural_family: form-input
 family_invariants:
-  - "Trigger: h-9 rounded-md border border-input px-3 bg-background"
+  - "Trigger: h-9 rounded-md border border-subtle px-3 bg-card"
   - "Content: rounded-md shadow-md z-20 bg-card border"
   - "Item: py-1.5 px-2 cursor-pointer hover:bg-muted/50"
 confidence: 0.85
@@ -8397,7 +8399,7 @@ import {
 // Safety:   safety/hard-constraints.md rules 13, 20, 21
 //
 // INVARIANTS (meta.yaml):
-//   Trigger: h-9 rounded-md border border-input px-3 bg-background
+//   Trigger: h-9 rounded-md border border-subtle px-3 bg-card
 //   Content: rounded-md shadow-md z-20 bg-card border
 //   Item: py-1.5 px-2 cursor-pointer hover:bg-muted/50
 
@@ -8431,7 +8433,7 @@ export function Select({
     <ShadcnSelect value={value} onValueChange={onValueChange} disabled={disabled}>
       <SelectTrigger
         className={cn(
-          "h-11 min-h-[44px] rounded-md border border-input bg-background px-3 text-base",
+          "h-11 min-h-[44px] rounded-md border border-subtle bg-card px-3 text-base",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           error && "border-destructive",
           className,
@@ -9139,8 +9141,8 @@ level: primitive
 structural_family: form-input
 family_invariants:
   - "Root: h-5 w-9 rounded-full"
-  - "Track: bg-input checked:bg-primary"
-  - "Thumb: h-4 w-4 rounded-full bg-card shadow-sm"
+  - "Track: bg-subtle checked:bg-primary"
+  - "Thumb: h-4 w-4 rounded-full bg-card"
 confidence: 0.85
 version: 1.0.0
 
@@ -9187,7 +9189,7 @@ import { Label } from "@/components/ui/label"
 //
 // INVARIANTS (meta.yaml):
 //   Root: h-5 w-9 rounded-full
-//   Track: bg-input checked:bg-primary
+//   Track: bg-subtle checked:bg-primary
 //   Thumb: h-4 w-4 rounded-full bg-card shadow-sm
 
 interface SwitchProps {
@@ -9503,7 +9505,7 @@ component_type: input
 level: primitive
 structural_family: form-input
 family_invariants:
-  - "Root: rounded-md border border-input bg-background px-3 py-2 text-base"
+  - "Root: rounded-md border border-subtle bg-card px-3 py-2 text-base"
   - "Focus: focus-visible:ring-2 ring-ring"
   - "Min height: min-h-[80px]"
 confidence: 0.85
@@ -9551,7 +9553,7 @@ import { Textarea as ShadcnTextarea } from "@/components/ui/textarea"
 // Safety:   safety/hard-constraints.md rules 13, 20
 //
 // INVARIANTS (meta.yaml):
-//   Root: rounded-md border border-input bg-background px-3 py-2 text-base
+//   Root: rounded-md border border-subtle bg-card px-3 py-2 text-base
 //   Focus: focus-visible:ring-2 ring-ring
 //   Min height: min-h-[80px]
 
@@ -9583,7 +9585,7 @@ export function Textarea({
       disabled={disabled}
       rows={rows}
       className={cn(
-        "rounded-md border border-input bg-background px-3 py-2 text-base",
+        "rounded-md border border-subtle bg-card px-3 py-2 text-base",
         "min-h-[80px] resize-y",
         "placeholder:text-muted-foreground",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
