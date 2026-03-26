@@ -642,8 +642,10 @@ function startHttp(port) {
       });
       // Must be an absolute URL — Claude Code connects from a remote machine and
       // cannot resolve a relative path back to the Railway domain.
-      // PUBLIC_URL env var takes priority; falls back to Host header (Railway sets this correctly).
-      const publicBase = (process.env.PUBLIC_URL || `https://${req.headers.host}`).replace(/\/$/, '');
+      // PUBLIC_URL env var takes priority (set this on Railway).
+      // Locally, detect http vs https from x-forwarded-proto header (defaults to http).
+      const proto = req.headers['x-forwarded-proto'] || 'http';
+      const publicBase = (process.env.PUBLIC_URL || `${proto}://${req.headers.host}`).replace(/\/$/, '');
       res.write(`event: endpoint\ndata: ${publicBase}/messages?sessionId=${sessionId}\n\n`);
       sessions.set(sessionId, res);
 
