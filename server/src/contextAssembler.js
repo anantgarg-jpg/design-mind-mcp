@@ -1077,7 +1077,7 @@ async function consultBeforeBuildLegacy(params, kb, patternIndex, ruleIndex, sur
     product_area,
   ].join(' ');
 
-  // ── Vector search (Qdrant semantic or TF-IDF fallback) ──────────────────────
+  // ── Keyword retrieval (TF-IDF Jaccard, pre-LLM candidate selection) ──────────
   const patternResults = await queryPatterns(searchText, 8, patternIndex);
 
   // Ranking: component_type structural boost (stage1 via TYPE_FAMILIES).
@@ -1307,8 +1307,7 @@ async function consultBeforeBuildLegacy(params, kb, patternIndex, ruleIndex, sur
   );
 
   // ── Confidence score ────────────────────────────────────────────────────────
-  // Vector store: cosine similarity 0.0–1.0, good match ~0.70+
-  // TF-IDF: naturally tops out ~0.5–0.6, scaled by /0.55 so ~0.5 maps to ~0.9
+  // TF-IDF Jaccard naturally tops out ~0.5–0.6; boosted scores may reach ~0.9
   const topPatternScore = boostedResults[0]?.score || 0;
   // Keyword scores naturally top out ~0.5–0.6; scale by /0.55 so ~0.5 maps to ~0.9
   const confidence = parseFloat(Math.min(topPatternScore / 0.55, 1.0).toFixed(4));

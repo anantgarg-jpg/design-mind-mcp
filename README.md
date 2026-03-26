@@ -75,13 +75,13 @@ cd server && npm install
 }
 ```
 
-**3. (Optional) Enable semantic search**
+**3. Set the Anthropic API key**
 
 ```bash
-npm run seed:vectors
+export ANTHROPIC_API_KEY=your-key-here
 ```
 
-Without this step the server falls back to TF-IDF search — still useful, just less precise.
+The server uses the Anthropic API (claude-sonnet-4-5) to reason over the genome at query time. Without the key, `consult_before_build` returns a fallback response with no surface match or block selection.
 
 ---
 
@@ -154,6 +154,7 @@ cd api && node src/index.js
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `ANTHROPIC_API_KEY` | — | **Required.** Anthropic API key for LLM reasoning (claude-sonnet-4-5) |
 | `TRANSPORT` | `stdio` | Set to `sse` to enable HTTP/SSE transport |
 | `PORT` | `8080` | HTTP port (Railway sets this automatically) |
 | `API_KEY` | `dm-local-dev-key` | Key for `/candidates` endpoint — **change in production** |
@@ -176,8 +177,7 @@ Any consumer project
   → POST /candidates to hosted API
   → Maintainer gets Slack notification
   → Maintainer reviews, promotes to blocks/ or surfaces/
-  → npm run seed:vectors to re-index
-  → All consumers pick it up automatically
+  → Hot-reload picks it up automatically (dev) or redeploy on Railway (prod)
 ```
 
 ---
@@ -218,3 +218,41 @@ This keeps the genome lean. Four domain-named patterns (CareGapCard, CareGapRow,
 | `InlineEntityCard` | domain | Compact entity card inline in chat or detail views |
 | `ActivityLogRow` | domain | Single activity entry in a chronological log |
 | `AssessmentTab` | domain | Structured assessment/questionnaire tab |
+
+---
+
+## Architecture (v2)
+
+The v2 architecture replaced the flat-file cosine vector store and TF-IDF retrieval pipeline with full LLM reasoning over the entire genome.
+
+### Genome loader
+
+At startup, `genomeLoader.js` reads all blocks (`blocks/*/meta.yaml` + `component.tsx`), surfaces (`surfaces/*.surface.yaml`), rules (`genome/rules/*.rule.md`), safety constraints (`safety/hard-constraints.md`), ontology files, taste, and principles into a module-level in-memory cache. The cache is used for all tool calls; hot-reload (dev only) polls for file changes and swaps the cache atomically.
+
+The legacy `knowledge.js` loader remains active alongside `genomeLoader.js` — it powers the keyword-scoring path in `contextAssembler.js` (surface matching, not-when penalty, composition hints) and the hot-reload in `index.js`.
+
+### LLM composition
+
+`llmClient.js` calls the Anthropic API (`claude-sonnet-4-5`) for both tools:
+
+- `callDesignMind` — used by `consult_before_build`. Sends the full serialised genome as context, then the intent/scope/domain/user_type. The model selects matching blocks, identifies the surface (if any), applies rules and safety constraints, and returns a structured JSON response.
+- `callCritic` — used by `review_output`. Sends the genome plus the generated code and auto-check results. Returns `honored`, `borderline`, `fix`, `novel`, and `copy_violations` arrays.
+
+Both calls include a JSON-parse retry loop: if the model returns invalid JSON, one follow-up message is sent requesting clean JSON before giving up.
+
+### Prompt caching
+
+The genome context string is sent as a `cache_control: { type: "ephemeral" }` block in the first user message. This caches the genome prefix at the Anthropic API level so repeated calls within the cache TTL (5 minutes) avoid re-tokenising the ~25–30K token genome on every request.
+
+### Tools
+
+| Tool | Schema fields | Notes |
+|------|--------------|-------|
+| `consult_before_build` | `intent_description`, `scope`, `domain`, `user_type` | Replaced v1's `component_type`/`product_area` fields |
+| `review_output` | `generated_output`, `original_intent`, `context_used` | Hybrid: auto-checks run first, then LLM critique |
+| `report_pattern` | `pattern_name`, `description`, `intent_it_serves`, `why_existing_patterns_didnt_fit`, `closest_match_block_id` | Unchanged from v1 |
+| `ping` | — | Returns build info and kb stats |
+
+### Environment variable required
+
+`ANTHROPIC_API_KEY` must be set. Without it, `callDesignMind` and `callCritic` return a fallback object with `build_mode: { mode: "block-composition" }`, empty `blocks`, and a gap entry explaining the LLM is not configured. The server starts and serves all four tools regardless — the API key is only needed for LLM-powered responses.

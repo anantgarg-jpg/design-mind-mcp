@@ -20,3 +20,4 @@
 #   "novel_patterns": ["string"],
 #   "review_confidence": 0.0     // only on review_output calls
 # }
+{"timestamp":"2026-03-26T07:13:01.483Z","intent":"Coordinator-facing worklist showing prioritised patients with open care gaps","scope":"surface","domain":"care-gaps","build_mode":"block-composition","selected_blocks":[],"confidence":0}

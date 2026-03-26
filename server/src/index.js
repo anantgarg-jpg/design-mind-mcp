@@ -269,8 +269,8 @@ async function initialize() {
 // ── Hot-reload (local dev only — disabled in production) ──────────────────────
 //
 // Polls mtime of genome directories and key files every HOT_RELOAD_INTERVAL ms
-// (default 2000). When a change is detected, re-runs loadKnowledge +
-// buildKnowledgeIndexes and swaps the module-level refs atomically.
+// (default 2000). When a change is detected, re-runs loadKnowledge and
+// swaps the module-level refs atomically.
 //
 // Not enabled when NODE_ENV=production (Railway) — files don't change in a
 // running container and the poll overhead is unnecessary.

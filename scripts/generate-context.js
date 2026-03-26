@@ -140,12 +140,12 @@ lines.push(`Design Mind MCP is a Claude Code tool (MCP server) that enforces con
 
 Any team can point their \`.mcp.json\` at the hosted server and get the full Design Mind genome at build time.
 
-Tech stack: Node.js 18+, ES modules, dual stdio/HTTP+SSE transport, Railway deployment, flat-file cosine vector store (semantic) with TF-IDF fallback. No framework — pure Node \`http\`.`);
+Tech stack: Node.js 18+, ES modules, dual stdio/HTTP+SSE transport, Railway deployment, Anthropic API (claude-sonnet-4-5) with prompt caching for LLM-based genome reasoning. No framework — pure Node \`http\`.`);
 
 // ── MCP tools ─────────────────────────────────────────────────────────────────
 lines.push(section('MCP Tools'));
 lines.push(`Three tools exposed by the server:\n`);
-lines.push(`**\`consult_before_build\`** — Call BEFORE generating any UI. Required: \`intent_description\`, \`component_type\`, \`domain\`, \`user_type\`. Returns: surface spec, structural guidance (dominant block family + invariants), top 5 blocks ranked by relevance, applicable genome rules (styling-tokens always included), ontology refs, all safety constraints with \`applies_because\`, episodic similar builds, confidence score (0.0–1.0), and gap flags.\n`);
+lines.push(`**\`consult_before_build\`** — Call BEFORE generating any UI. Required: \`intent_description\`, \`scope\`. Optional: \`domain\`, \`user_type\`. Returns: \`build_mode\` (surface-first or block-composition), matched surface spec, selected blocks with code templates and family_invariants, applicable genome rules, safety constraints, ontology refs, confidence score, and gap flags.\n`);
 lines.push(`**\`review_output\`** — Call AFTER generating UI. Takes \`generated_output\` (code) + \`original_intent\`. Returns: \`honored\` (what followed the genome), \`borderline\` (defensible but not clearly right), \`novel\` (invented blocks with taste assessment), \`fix\` (violations with correction guidance), \`copy_violations\` (copy-voice.md breaches), \`confidence\` score. Auto-checks: hardcoded hex colors, Tailwind default color classes, Critical alert dismiss buttons, patient first-name-only, forbidden clinical terms, copy voice violations (see COPY_VOICE_CHECKS in contextAssembler.js).\n`);
 lines.push(`**\`report_pattern\`** — Call ONLY when UI STRUCTURE changes (new layout, new interaction model, new slot arrangement). NOT when slot content changes (label, domain, icon, entity type). Submits to hosted API → Slack → human ratification. Falls back to \`blocks/_candidates/\` YAML. 3+ reports across projects = \`ready_for_ratification\`.
 
