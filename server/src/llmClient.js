@@ -1,8 +1,9 @@
-// TEMPORARY: Gemini fallback added for testing without an Anthropic key.
-// Priority: ANTHROPIC_API_KEY → GEMINI_API_KEY → keyword fallback
-// Remove Gemini support once Anthropic key is available.
+// TEMPORARY: Gemini and OpenRouter fallbacks added for testing without an Anthropic key.
+// Priority: ANTHROPIC_API_KEY → OPENROUTER_API_KEY → GEMINI_API_KEY → keyword fallback
+// Remove non-Anthropic support once Anthropic key is available.
 
 import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
@@ -34,11 +35,28 @@ function makeFallback(gap) {
   };
 }
 
+// Extracts a JSON object from a model response that may contain prose or markdown
+function extractJson(text) {
+  // Strip markdown code fences
+  const stripped = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
+  // Try direct parse first
+  try { return JSON.parse(stripped); } catch (_) {}
+  // Find first { ... last } and parse that
+  const start = stripped.indexOf('{');
+  const end   = stripped.lastIndexOf('}');
+  if (start !== -1 && end > start) {
+    return JSON.parse(stripped.slice(start, end + 1));
+  }
+  throw new SyntaxError(`No JSON object found in response: ${stripped.slice(0, 120)}`);
+}
+
 // ── Provider detection ────────────────────────────────────────────────────────
 
 function getProvider() {
-  if (process.env.ANTHROPIC_API_KEY) return 'anthropic';
-  if (process.env.GEMINI_API_KEY)    return 'gemini';
+  if (process.env.ANTHROPIC_API_KEY)                           return 'anthropic';
+  if (process.env.OPENAI_API_KEY && process.env.OPENAI_BASE_URL) return 'openai';
+  if (process.env.OPENROUTER_API_KEY)                          return 'openrouter';
+  if (process.env.GEMINI_API_KEY)                              return 'gemini';
   return null;
 }
 
@@ -82,6 +100,69 @@ async function anthropicParseWithRetry(client, model, systemPrompt, messages, la
     }
     return JSON.parse(retryResponse.content?.[0]?.text ?? '');
   }
+}
+
+// ── OpenAI-compatible helpers (covers TrueFoundry, Azure, etc.) ───────────────
+
+async function openaiCall(systemPrompt, userContent, label) {
+  const client = new OpenAI({
+    baseURL: process.env.OPENAI_BASE_URL,
+    apiKey:  process.env.OPENAI_API_KEY,
+  });
+  const model = process.env.OPENAI_MODEL || 'gpt-4o';
+
+  process.stdout.write(`[llmClient] ${label} using OpenAI-compatible endpoint (model: ${model})\n`);
+
+  let response;
+  try {
+    response = await client.chat.completions.create({
+      model,
+      max_tokens: 4096,
+      temperature: 0,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user',   content: userContent },
+      ],
+      response_format: { type: 'json_object' },
+    });
+  } catch (err) {
+    process.stderr.write(`[llmClient] ${label} OpenAI-compatible error: ${err.message}\n`);
+    throw err;
+  }
+
+  const rawText = response.choices?.[0]?.message?.content ?? '';
+  return extractJson(rawText);
+}
+
+// ── OpenRouter helpers (TEMPORARY) ────────────────────────────────────────────
+
+async function openRouterCall(systemPrompt, userContent, label) {
+  const client = new OpenAI({
+    baseURL: 'https://openrouter.ai/api/v1',
+    apiKey: process.env.OPENROUTER_API_KEY,
+  });
+
+  process.stdout.write(`[llmClient] ${label} using OpenRouter (temporary — no Anthropic key)\n`);
+
+  let response;
+  try {
+    response = await client.chat.completions.create({
+      model: 'anthropic/claude-sonnet-4-5',
+      max_tokens: 2500,
+      temperature: 0,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user',   content: userContent },
+      ],
+      response_format: { type: 'json_object' },
+    });
+  } catch (err) {
+    process.stderr.write(`[llmClient] ${label} OpenRouter error: ${err.message}\n`);
+    throw err;
+  }
+
+  const rawText = response.choices?.[0]?.message?.content ?? '';
+  return JSON.parse(rawText);
 }
 
 // ── Gemini helpers (TEMPORARY) ────────────────────────────────────────────────
@@ -143,6 +224,14 @@ export async function callDesignMind({ genomeContext, intent, scope, domain, use
       return await anthropicParseWithRetry(client, 'claude-sonnet-4-5', DESIGN_MIND_SYSTEM_PROMPT, messages, 'callDesignMind');
     }
 
+    if (provider === 'openai') {
+      return await openaiCall(DESIGN_MIND_SYSTEM_PROMPT, userContent, 'callDesignMind');
+    }
+
+    if (provider === 'openrouter') {
+      return await openRouterCall(DESIGN_MIND_SYSTEM_PROMPT, userContent, 'callDesignMind');
+    }
+
     if (provider === 'gemini') {
       return await geminiCall(DESIGN_MIND_SYSTEM_PROMPT, userContent, 'callDesignMind');
     }
@@ -179,6 +268,14 @@ export async function callCritic({ generatedCode, originalIntent, genomeContext,
         ],
       }];
       return await anthropicParseWithRetry(client, 'claude-sonnet-4-5', CRITIC_SYSTEM_PROMPT, messages, 'callCritic');
+    }
+
+    if (provider === 'openai') {
+      return await openaiCall(CRITIC_SYSTEM_PROMPT, userContent, 'callCritic');
+    }
+
+    if (provider === 'openrouter') {
+      return await openRouterCall(CRITIC_SYSTEM_PROMPT, userContent, 'callCritic');
     }
 
     if (provider === 'gemini') {
