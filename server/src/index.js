@@ -122,8 +122,11 @@ const TOOLS = [
       'HOW TO USE THE RESPONSE:\n' +
       'Read build_mode FIRST. "surface-first" means follow the blueprint exactly.\n' +
       '"block-composition" means compose from the returned blocks.\n' +
-      'component_tsx in each block is the EXACT code template — copy the structure,\n' +
-      'adapt only data source and state management.\n' +
+      'component_tsx in each block is the EXACT source code of that block — paste it\n' +
+      'directly into the project as a new file, then import from that file.\n' +
+      'Do NOT rewrite it with inline Tailwind. Do NOT skip it because @/blocks/ does\n' +
+      'not exist yet — CREATE the file from the component_tsx content.\n' +
+      'family_invariants are the CSS classes that must never be changed.\n' +
       'safety_constraints are non-negotiable.',
     inputSchema: {
       type: 'object',

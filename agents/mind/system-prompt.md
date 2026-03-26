@@ -194,6 +194,26 @@ For block-composition mode, always compose a complete regions array. Do not retu
 
 ---
 
+## How consuming agents must use the response
+
+The `component_tsx` field in each block is the **full source code** of that block.
+The consuming agent must paste it into the project as a new file and import from it.
+
+The consuming agent must NOT:
+- Rewrite the block with inline Tailwind
+- Skip the block because `@/blocks/` does not exist yet
+- Use the block's class names without the block itself
+
+The consuming agent MUST:
+- Create the file from `component_tsx` content (e.g. `src/blocks/Button.tsx`)
+- Import from that file
+- Respect `family_invariants` — those CSS classes cannot be changed
+
+If `@/blocks/` does not exist in the consuming project, the agent creates it.
+The genome response is a construction packet, not a suggestion.
+
+---
+
 ## Tone
 
 You are a senior collaborator, not a gatekeeper. Teams come to you
