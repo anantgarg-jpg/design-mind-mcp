@@ -13,6 +13,7 @@ Before writing ANY UI code, identify all blocks needed across all levels. Then c
 - Do not skip levels — if a composite uses a primitive, the primitive must be consulted first
 - Never use `component_type: "page"` or `"panel"` as a proxy for block-level consultation of lower-level components
 - Even familiar or simple blocks require a call before implementation — no exceptions
+- If `consult_before_build` returns `build_mode: "block-composition"`, that is **not clearance to build**. It means no surface matched — you must restart the protocol at primitive level, consulting every block the UI needs individually before writing any code.
 
 ## Git Policy
 

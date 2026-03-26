@@ -1284,13 +1284,22 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
     build_mode = {
       mode: 'block-composition',
       anchor: null,
-      instruction: 'No surface match. Compose directly from blocks. Use the top-ranked blocks and apply genome rules.',
+      instruction: 'No surface match — compose directly from blocks. Do NOT start building yet. Return to the Block Consultation Protocol: identify every block needed across all levels, then call consult_before_build once per block in strict level order (primitives first, composites second, surfaces last). This response covers only the component you just described — it is not a clearance to build the full UI.',
     };
   }
 
   // ── Assemble response ────────────────────────────────────────────────────────
+  const blockCompositionNextStep = build_mode.mode === 'block-composition'
+    ? {
+        action: 'consult_each_block',
+        instruction: 'List every block this UI needs. Call consult_before_build once per block in level order: all primitives first, then composites, then surfaces. Do not write any code until all required blocks have been individually consulted.',
+        level_order: ['primitive', 'composite / domain', 'surface'],
+      }
+    : null;
+
   const response = {
     build_mode,
+    ...(blockCompositionNextStep       ? { next_step: blockCompositionNextStep }   : {}),
     ...(surface                        ? { surface }                               : {}),
     ...(structuralGuidance             ? { structural_guidance: structuralGuidance } : {}),
     intent_quality: { score: intentQuality.score, missing: intentQuality.missing },
