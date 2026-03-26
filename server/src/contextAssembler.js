@@ -1426,28 +1426,65 @@ function classHasInvariantConflict(className) {
 }
 
 /**
- * Scans the generated code for two categories of primitive violations:
+ * Scans the generated code for three categories of primitive violations:
  *   1. className overrides that conflict with family_invariants (rule 22)
- *   2. Primitive blocks defined locally instead of imported (rule 25)
+ *   2. Primitive blocks defined locally instead of imported (rule 25, TSX)
+ *   3. Primitive re-implemented as a CSS class in a <style> block (rule 25, HTML)
  *
- * @param {string}   code            - The generated TSX/JSX code
+ * Check 3 runs unconditionally — it does not require JSX presence, so it fires
+ * for HTML prototypes where <Button> never appears but .btn-primary does.
+ *
+ * @param {string}   code            - The generated code (TSX, JSX, or HTML)
  * @param {object[]} primitiveBlocks - Active primitive blocks from kb.patterns
  * @returns {object[]} Array of fix-shaped violation objects with safety_block: true
  */
 function checkPrimitiveViolations(code, primitiveBlocks) {
   const violations = [];
 
+  // Pre-extract all <style>...</style> content once — used in Check 3 for every block.
+  const styleBlockContent = [...code.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)]
+    .map(m => m[1]).join('\n');
+  // Collect all CSS class selectors defined in style blocks: `.foo {`, `.foo,`
+  const styleClassNames = styleBlockContent
+    ? [...styleBlockContent.matchAll(/\.([a-zA-Z][\w-]*)\s*[{,]/g)].map(m => m[1])
+    : [];
+
   for (const block of primitiveBlocks) {
     const id = block.id;
     if (!block.family_invariants || block.family_invariants.length === 0) continue;
 
-    // Is this primitive referenced at all in the code?
+    // ── Check 3: primitive re-implemented via <style> block CSS class (rule 25) ──
+    // Runs before the JSX-presence guard so it fires for HTML prototypes.
+    // Matches: full lowercase id ("button", "badge") and 3-char abbreviation ("btn", "bdg").
+    if (styleClassNames.length > 0) {
+      const idLower  = id.toLowerCase();
+      const idAbbrev = idLower.slice(0, 3);
+      const prefixes = [...new Set([idLower, idAbbrev])];
+      const shadowClass = styleClassNames.find(cls =>
+        prefixes.some(pfx => cls === pfx || cls.startsWith(pfx + '-'))
+      );
+      if (shadowClass) {
+        violations.push({
+          problem: `Primitive '${id}' re-implemented as CSS class '.${shadowClass}' in a <style> block instead of applying family_invariants inline`,
+          rule_violated: 'safety/hard-constraints.md rule 25',
+          correction:
+            `Remove '.${shadowClass}' from the <style> block. ` +
+            `Apply ${id}'s family_invariants as inline Tailwind classes directly on the element: ` +
+            `${(block.family_invariants || []).join(' | ')}. ` +
+            `A custom CSS class is a re-implementation — it bypasses the block contract and breaks the invariant audit trail.`,
+          safety_block: true,
+        });
+        continue; // style re-implementation supersedes JSX checks for this block
+      }
+    }
+
+    // ── JSX-only checks — skip if primitive not referenced as a JSX element ──
     if (!new RegExp(`<${id}[\\s/>]`).test(code)) continue;
 
-    // ── Check 1: conflicting className override ─────────────────────────────
+    // ── Check 1: conflicting className override (rule 22) ───────────────────
     // Match both literal className="..." and expression className={cn("...")}
-    const literalRe  = new RegExp(`<${id}[^>]{0,400}className\\s*=\\s*["'\`]([^"'\`]*)["'\`]`, 's');
-    const exprRe     = new RegExp(`<${id}[^>]{0,400}className\\s*=\\s*\\{[^}]*["'\`]([^"'\`]*)["'\`]`, 's');
+    const literalRe = new RegExp(`<${id}[^>]{0,400}className\\s*=\\s*["'\`]([^"'\`]*)["'\`]`, 's');
+    const exprRe    = new RegExp(`<${id}[^>]{0,400}className\\s*=\\s*\\{[^}]*["'\`]([^"'\`]*)["'\`]`, 's');
 
     for (const re of [literalRe, exprRe]) {
       const m = code.match(re);
@@ -1467,7 +1504,7 @@ function checkPrimitiveViolations(code, primitiveBlocks) {
       }
     }
 
-    // ── Check 2: primitive reimplemented inline (rule 25) ───────────────────
+    // ── Check 2: primitive reimplemented inline (rule 25, TSX) ─────────────
     // Detect: `const Button = ...` or `function Button(` without a corresponding
     // import from the blocks directory, which signals the block was rebuilt locally.
     const redefineRe = new RegExp(`(?:^|\\n)(?:const|function|let|var)\\s+${id}\\s*[=(]`, 'i');
@@ -1489,26 +1526,68 @@ function checkPrimitiveViolations(code, primitiveBlocks) {
 }
 
 /**
+ * Resolves block IDs actually present in the generated code by scanning
+ * multiple import path conventions used across real TSX codebases and the
+ * design-mind canonical format.
+ *
+ * Recognised patterns:
+ *   1. Design-mind canonical  — @/blocks/<Id>/<Id>
+ *   2. shadcn/ui              — @/components/ui/<name>  (named exports, PascalCase)
+ *   3. Generic component dir  — @/components/<Name>     (named exports, PascalCase)
+ *
+ * @param {string} code - The generated code
+ * @returns {Set<string>} Set of PascalCase block IDs found via imports
+ */
+function resolveImportedBlockIds(code) {
+  const ids = new Set();
+
+  // 1. Design-mind: @/blocks/Button/Button → id = "Button"
+  for (const m of code.matchAll(
+    /import\s+(?:\{[^}]*\}|\w+)\s+from\s+['"]@\/blocks\/(\w+)\/\w+['"]/g
+  )) ids.add(m[1]);
+
+  // 2. shadcn: import { Button, ButtonProps } from '@/components/ui/button'
+  //    Extract each named export; keep only PascalCase identifiers (component names).
+  for (const m of code.matchAll(
+    /import\s+\{([^}]+)\}\s+from\s+['"]@\/components\/ui\/[\w-]+['"]/g
+  )) {
+    for (const raw of m[1].split(',')) {
+      const name = raw.trim().split(/\s+as\s+/)[0].trim();
+      if (/^[A-Z]/.test(name)) ids.add(name);
+    }
+  }
+
+  // 3. Generic: import { Button } from '@/components/Button'
+  for (const m of code.matchAll(
+    /import\s+\{([^}]+)\}\s+from\s+['"]@\/components\/[\w/-]+['"]/g
+  )) {
+    for (const raw of m[1].split(',')) {
+      const name = raw.trim().split(/\s+as\s+/)[0].trim();
+      if (/^[A-Z]/.test(name)) ids.add(name);
+    }
+  }
+
+  return ids;
+}
+
+/**
  * Compares the blocks actually imported in the generated code against the
  * blocks recommended by consult_before_build (from context_used.patterns).
- * Flags high-confidence recommended blocks that are absent from the output.
+ * Flags high-confidence recommended blocks that are absent, and validates
+ * that variant props used on imported blocks match documented variants.
  *
- * @param {string} code         - The generated code
- * @param {object} contextUsed  - The full context returned by consult_before_build
+ * @param {string}   code            - The generated code (TSX, JSX, or HTML)
+ * @param {object}   contextUsed     - The full context returned by consult_before_build
+ * @param {object[]} primitiveBlocks - Active primitive blocks (for variant validation)
  * @returns {object[]} Array of borderline-shaped observations
  */
-function checkBlockIdentity(code, contextUsed) {
+function checkBlockIdentity(code, contextUsed, primitiveBlocks = []) {
   const issues = [];
   if (!contextUsed?.patterns) return issues;
 
-  // Extract block IDs that were imported from the @/blocks directory
-  const importMatches = [...code.matchAll(
-    /import\s+(?:\{[^}]*\}|\w+)\s+from\s+['"]@\/blocks\/(\w+)\/\w+['"]/g
-  )];
-  const usedBlockIds = new Set(importMatches.map(m => m[1]));
+  const usedBlockIds = resolveImportedBlockIds(code);
 
-  // Flag primary (non-structural) recommended blocks with high relevance scores
-  // that were not used — these are the most likely to cause design drift.
+  // ── High-confidence block usage check ──────────────────────────────────────
   const highConfRecommended = (contextUsed.patterns || []).filter(
     p => p.relevance_score >= 0.65 && !p.structural_inclusion
   );
@@ -1525,7 +1604,183 @@ function checkBlockIdentity(code, contextUsed) {
     }
   }
 
+  // ── Variant prop validation (TSX only) ─────────────────────────────────────
+  // Check that variant="..." values on imported primitive JSX elements match
+  // the block's documented variants. Catches invented variants like "ghost"
+  // that have no canonical definition.
+  for (const blockId of usedBlockIds) {
+    const block = primitiveBlocks.find(b => b.id === blockId);
+    if (!block?.variants) continue;
+    const validVariants = Object.keys(block.variants);
+    const variantRe = new RegExp(
+      `<${blockId}[^>]{0,400}variant\\s*=\\s*["'\`]([^"'\`]+)["'\`]`, 'g'
+    );
+    for (const m of code.matchAll(variantRe)) {
+      const used = m[1].trim();
+      if (used && !validVariants.includes(used)) {
+        issues.push({
+          observation: `'${blockId}' used with variant="${used}" which is not a documented variant`,
+          tension: `Undocumented variants are not covered by the block contract and may produce unexpected styles or break across design-system updates. Valid variants: ${validVariants.join(', ')}.`,
+          recommendation: `Replace variant="${used}" with one of: ${validVariants.join(', ')}.`,
+        });
+      }
+    }
+  }
+
   return issues;
+}
+
+/**
+ * Produces a structured invariant audit for every primitive that is in scope
+ * for the generated output. "In scope" means the primitive was:
+ *   - imported or used as JSX,
+ *   - re-implemented via a <style> block CSS class,
+ *   - used as a raw HTML element with inline classes, OR
+ *   - recommended with relevance_score ≥ 0.45 by consult_before_build.
+ *
+ * Each entry reports how the primitive was detected, which family_invariants
+ * are satisfied, which are missing, and a machine-readable verdict:
+ *   correct            — imported/used correctly, all invariants present
+ *   partial            — imported but some invariants missing or className conflict
+ *   variant_violation  — imported but an undocumented variant prop was used
+ *   reimplemented      — found as a CSS class in a <style> block (rule 25)
+ *   partial_inline     — found as a raw HTML element with some invariants inline
+ *   absent             — in scope (recommended) but not found in the output
+ *
+ * @param {string}   code            - The generated code
+ * @param {object[]} primitiveBlocks - Active primitive blocks from kb.patterns
+ * @param {object}   contextUsed     - Context returned by consult_before_build (optional)
+ * @returns {object[]} invariant_check array
+ */
+function buildInvariantCheck(code, primitiveBlocks, contextUsed) {
+  const results = [];
+
+  // Primitives recommended with moderate confidence are "in scope" even if absent.
+  const highConfIds = new Set(
+    (contextUsed?.patterns || [])
+      .filter(p => p.level === 'primitive' && p.relevance_score >= 0.45)
+      .map(p => p.id)
+  );
+
+  // Pre-compute import set and style block classes once.
+  const importedIds = resolveImportedBlockIds(code);
+
+  const styleBlockContent = [...code.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)]
+    .map(m => m[1]).join('\n');
+  const styleClassNames = styleBlockContent
+    ? [...styleBlockContent.matchAll(/\.([a-zA-Z][\w-]*)\s*[{,]/g)].map(m => m[1])
+    : [];
+
+  /**
+   * Given a family_invariant string (e.g. "focus-visible:ring-2 focus-visible:ring-offset-1 (rule 20)")
+   * extract the Tailwind-like tokens within it so we can check their presence in code.
+   */
+  function tokensFromInvariant(inv) {
+    // Match tokens that contain at least one dash or colon — Tailwind class shape.
+    return (inv.match(/[\w:![\].-]+(?:[-:][\w:![\].-]+)+/g) || []).filter(t => t.length > 3);
+  }
+
+  function classifyInvariants(invariants, searchTarget) {
+    const present = [];
+    const missing = [];
+    for (const inv of invariants) {
+      const tokens = tokensFromInvariant(inv);
+      // An invariant is "present" if at least one of its key tokens appears in the target.
+      const satisfied = tokens.length === 0 || tokens.some(t => searchTarget.includes(t));
+      (satisfied ? present : missing).push(inv);
+    }
+    return { present, missing };
+  }
+
+  for (const block of primitiveBlocks) {
+    const id = block.id;
+    const invariants = block.family_invariants || [];
+    if (invariants.length === 0) continue;
+
+    const inImport  = importedIds.has(id);
+    const inJsx     = new RegExp(`<${id}[\\s/>]`).test(code);
+    const inHighConf = highConfIds.has(id);
+
+    // Style block shadow?
+    const idLower  = id.toLowerCase();
+    const idAbbrev = idLower.slice(0, 3);
+    const prefixes = [...new Set([idLower, idAbbrev])];
+    const shadowClass = styleClassNames.find(cls =>
+      prefixes.some(pfx => cls === pfx || cls.startsWith(pfx + '-'))
+    );
+
+    // Raw HTML element usage (for HTML prototypes — <button>, <input>, etc.)
+    const htmlTag = idLower; // Button→button, Badge→badge, Input→input
+    const htmlClassRe = new RegExp(
+      `<${htmlTag}[^>]{0,600}class(?:Name)?\\s*=\\s*["']([^"']*)["']`, 'gi'
+    );
+    const htmlClasses = [...code.matchAll(htmlClassRe)].flatMap(m => m[1].split(/\s+/));
+
+    // Skip entirely if not in scope.
+    if (!inImport && !inJsx && !inHighConf && !shadowClass && htmlClasses.length === 0) continue;
+
+    let detection_method, verdict;
+    let invariants_present = [];
+    let invariants_missing = [];
+
+    if (inImport || inJsx) {
+      // ── TSX / imported component path ──────────────────────────────────
+      detection_method = inImport ? 'import' : 'jsx_usage';
+
+      // Check for variant prop violations.
+      let hasVariantViolation = false;
+      if (block.variants) {
+        const validVariants = Object.keys(block.variants);
+        const variantRe = new RegExp(
+          `<${id}[^>]{0,400}variant\\s*=\\s*["'\`]([^"'\`]+)["'\`]`, 'g'
+        );
+        for (const m of code.matchAll(variantRe)) {
+          if (!validVariants.includes(m[1].trim())) { hasVariantViolation = true; break; }
+        }
+      }
+
+      // Check className for invariant-prefix conflicts.
+      const literalRe = new RegExp(`<${id}[^>]{0,400}className\\s*=\\s*["'\`]([^"'\`]*)["'\`]`, 's');
+      const exprRe    = new RegExp(`<${id}[^>]{0,400}className\\s*=\\s*\\{[^}]*["'\`]([^"'\`]*)["'\`]`, 's');
+      const classMatch = code.match(literalRe) || code.match(exprRe);
+      const hasConflict = classMatch ? classHasInvariantConflict(classMatch[1]) : false;
+
+      const { present, missing } = classifyInvariants(invariants, code);
+      invariants_present = present;
+      invariants_missing = missing;
+
+      if (hasVariantViolation)      verdict = 'variant_violation';
+      else if (hasConflict)         verdict = 'partial';
+      else if (missing.length === 0) verdict = 'correct';
+      else                           verdict = 'partial';
+
+    } else if (shadowClass) {
+      // ── CSS class re-implementation in <style> block ────────────────────
+      detection_method = 'style_reimplementation';
+      invariants_missing = [...invariants]; // all invariants hidden behind CSS class
+      verdict = 'reimplemented';
+
+    } else if (htmlClasses.length > 0) {
+      // ── Raw HTML element with inline classes (HTML prototype) ───────────
+      detection_method = 'inline_tailwind';
+      const { present, missing } = classifyInvariants(invariants, htmlClasses.join(' '));
+      invariants_present = present;
+      invariants_missing = missing;
+      verdict = missing.length === 0 ? 'correct'
+              : present.length > 0   ? 'partial_inline'
+              :                        'absent';
+
+    } else {
+      // ── Recommended but not found ───────────────────────────────────────
+      detection_method = 'not_found';
+      invariants_missing = [...invariants];
+      verdict = 'absent';
+    }
+
+    results.push({ block: id, detection_method, invariants_present, invariants_missing, verdict });
+  }
+
+  return results;
 }
 
 // ── TOOL 2: review_output ─────────────────────────────────────────────────────
@@ -1868,7 +2123,7 @@ export async function reviewOutput(params, kb, patternIndex) {
   // Compares blocks imported in the generated code against consult_before_build's
   // high-confidence recommendations. Absent high-confidence blocks go to borderline.
   if (context_used) {
-    const identityIssues = checkBlockIdentity(code, context_used);
+    const identityIssues = checkBlockIdentity(code, context_used, activePrimitivesForReview);
     borderline.push(...identityIssues);
   }
 
@@ -1932,6 +2187,12 @@ export async function reviewOutput(params, kb, patternIndex) {
   compliance -= copyViolations.length * 0.05;   // each copy violation deducts 5%
   compliance = Math.max(0, Math.min(1, compliance));
 
+  // ── Invariant audit — structured per-primitive check ─────────────────────
+  // Covers all output types: TSX imports, shadcn imports, <style> re-implementations,
+  // and raw HTML inline Tailwind. Replaces name-based heuristics with invariant-level
+  // verification so misnamed CSS classes cannot be mistaken for block usage.
+  const invariantCheck = buildInvariantCheck(code, activePrimitivesForReview, context_used);
+
   return {
     honored,
     borderline,
@@ -1947,6 +2208,9 @@ export async function reviewOutput(params, kb, patternIndex) {
     // rules 22 and 25 — surfaced separately so consumers can gate on them alone.
     primitive_violations: primitiveViolations,
     copy_violations: copyViolations,
+    // invariant_check gives per-primitive detection method + invariant presence/absence.
+    // verdict: correct | partial | variant_violation | reimplemented | partial_inline | absent
+    invariant_check: invariantCheck,
     candidate_patterns: candidatePatterns,
     confidence: parseFloat(compliance.toFixed(4)),
   };
