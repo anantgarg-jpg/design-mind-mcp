@@ -1,135 +1,129 @@
 tool: consult_before_build
-version: 1.0.0
+version: 2.0.0
 description: >
-  Call before generating any UI surface or component. Returns the
-  relevant patterns, rules, ontology refs, and institutional memory
-  for the stated intent. Closes the context gap before generation.
+  REQUIRED before generating ANY UI — component, page, surface, or style change.
+  Returns the design genome: component code templates, layout blueprints, safety
+  constraints, and copy rules for this platform. The response is a construction
+  packet — use it as a blueprint, not as suggestions.
+
+  HOW TO CALL:
+  1. Describe WHAT you are building. Be specific — include who uses it, what data
+     it shows, what actions are available, and whether this is a new build or modification.
+  2. Send a SCOPE HINT: "surface" (full page/panel), "block" (single component),
+     "token" (styling/spacing question).
+  3. Include domain and user_type if you can infer them from the codebase.
+
+  The server matches your description against its knowledge base. If it finds a known
+  page blueprint, it returns a full construction plan with layout regions, component
+  assignments, ordering rules, and hard constraints. If not, it returns the best
+  matching components with code templates for you to compose.
+
+  WRITING A GOOD DESCRIPTION:
+    Good: "Coordinator-facing page showing prioritised patients with open care gaps.
+          Each row: patient name, risk tier, gap status, due date. Actions: Close Gap."
+    Bad: "a worklist"
+
+  HOW TO USE THE RESPONSE:
+  Read build_mode FIRST. "surface-first" means follow the blueprint exactly.
+  "block-composition" means compose from the returned blocks.
+  component_tsx in each block is the EXACT code template — copy the structure,
+  adapt only data source and state management.
+  safety_constraints are non-negotiable.
 
 input:
   intent_description:
     type: string
     required: true
-    description: >
-      Plain language description of what you are about to build.
-      Be specific about the user type, the data being shown,
-      and the actions available.
-    example: "A worklist row showing a care gap with status,
-              due date, and a Close Gap action for coordinators"
+    description: "Rich description of what to build — who uses it, what data it shows, what actions are available"
 
-  component_type:
+  scope:
     type: string
+    enum: ["surface", "block", "token"]
     required: true
-    enum: [card, row, banner, header, modal, drawer, form,
-           table, list, badge, button, page, panel, other]
+    description: "Routing hint: surface=full page, block=single component, token=styling question"
 
   domain:
     type: string
-    required: true
-    enum: [clinical-alerts, patient-data, care-gaps, tasks,
-           navigation, data-display, forms, admin, other]
+    enum: ["clinical-alerts", "patient-data", "care-gaps", "tasks", "navigation", "data-display", "forms", "admin", "other"]
+    required: false
 
   user_type:
     type: array
     items:
-      enum: [clinician, coordinator, patient, admin]
-    required: true
-
-  product_area:
-    type: string
+      type: string
+      enum: ["clinician", "coordinator", "patient", "admin", "data-engineer"]
     required: false
-    description: Which product this is being built for
 
 output:
-  patterns:
+  build_mode:
+    type: object
+    description: >
+      How to proceed. mode="surface-first" means a known page blueprint was matched —
+      follow it exactly. mode="block-composition" means compose from returned blocks.
+
+  surface:
+    type: object
+    description: Surface blueprint data when build_mode is surface-first.
+
+  blocks:
     type: array
-    description: Ranked relevant patterns from the library
+    description: Matched blocks with code templates and constraints.
     items:
       id: string
-      level: string           # 'primitive' | 'composite' | null — use this to enforce rules 22 & 25
-      family_invariants:      # CSS properties frozen by this block — never override these on primitives
+      level: string
+      meta_yaml: string
+      component_tsx: string
+      family_invariants:
         type: array
         items: string
-      relevance_score: number
+      import_path: string
       when: string
       not_when: string
-      because: string
-      confidence: number
-      usage_signal: object
-
-  canonical_block_set:
-    type: array
-    description: >
-      Alphabetically sorted list of block IDs at or above the relevance
-      threshold (plus structural inclusions). Identical for the same intent
-      across threads — use this as the authoritative set of blocks to compose
-      from. Do not invent blocks that are not in this set without first calling
-      report_pattern.
-    items:
-      type: string
 
   primitive_guard:
     type: object
     description: >
-      Lists ALL active primitive blocks in the knowledge base regardless of
-      query relevance. Always present when primitives exist. These blocks have
-      immutable family_invariants — they must be imported from their declared
-      import_path and used as-is (hard-constraint #25). Only additive className
-      classes (positioning, sizing, spacing, layout) may be passed to them
-      (hard-constraint #22).
+      ALL active primitive blocks — always present. family_invariants are immutable.
     properties:
-      rule_refs: array          # references to hard-constraints.md rules 22 & 25
-      instruction: string       # machine-readable directive for code generation
+      instruction: string
       primitives:
         type: array
         items:
           id: string
-          import_path: string   # canonical import e.g. '@/blocks/Button/Button'
-          family_invariants:    # must not be overridden via className
+          import_path: string
+          family_invariants:
             type: array
             items: string
 
   rules:
     type: array
-    description: Applicable cross-component rules
+    description: Applicable cross-component rules with full content.
     items:
       rule_id: string
       summary: string
       applies_because: string
-
-  ontology_refs:
-    type: array
-    description: Relevant concept definitions
-    items:
-      concept: string
-      canonical_name: string
-      ui_label: string
-      notes: string
+      full_content: string
 
   safety_constraints:
     type: array
-    description: Hard constraints in scope for this intent
+    description: Hard constraints in scope for this intent.
     items:
-      constraint_id: number
+      constraint_id: string
       rule: string
       applies_because: string
 
-  similar_builds:
+  ontology_refs:
     type: array
-    description: Past builds from episodic memory with similar intent
+    description: Relevant ontology concept references.
     items:
-      build_id: string
-      intent: string
-      what_worked: string
-      what_to_watch: string
+      type: string
 
   confidence:
     type: number
-    description: >
-      How well the genome covers this intent (0.0–1.0).
-      Below 0.7 means the agent is likely to invent — flag output.
+    description: How well the genome covers this intent (0.0–1.0).
 
   gaps:
     type: array
-    description: What the system doesn't have a pattern for yet
+    description: What the system does not have coverage for.
     items:
       type: string

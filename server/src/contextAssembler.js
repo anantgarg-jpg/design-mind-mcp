@@ -8,8 +8,23 @@
  *   reportPattern       — novel pattern candidate logging
  */
 
-import { writeFileSync, readFileSync, readdirSync, existsSync, mkdirSync } from 'node:fs';
+import { writeFileSync, readFileSync, readdirSync, existsSync, mkdirSync, appendFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { loadGenome, getGenomeForLLM, resolveTsx } from './genomeLoader.js';
+import { callDesignMind, callCritic } from './llmClient.js';
+
+// ── Episodic memory writer ────────────────────────────────────────────────────
+function logEpisodic(entry) {
+  try {
+    const BASE_PATH = join(new URL(import.meta.url).pathname, '..', '..', '..');
+    const memDir  = join(BASE_PATH, 'memory');
+    const logPath = join(memDir, 'episodic-log.jsonl');
+    if (!existsSync(memDir)) mkdirSync(memDir, { recursive: true });
+    appendFileSync(logPath, JSON.stringify(entry) + '\n', 'utf-8');
+  } catch {
+    // Non-fatal: episodic logging must never interrupt the tool response
+  }
+}
 // ── Tokenizer ─────────────────────────────────────────────────────────────────
 // Used for not_when penalty, composition hint checks, and keyword scoring.
 function tokenize(text) {
@@ -910,10 +925,118 @@ function scoreIntentQuality(intentDescription, userType, componentType) {
 // ── TOOL 1: consult_before_build ─────────────────────────────────────────────
 
 /**
- * Returns the most relevant patterns, rules, ontology refs, and safety
- * constraints for the agent's stated intent.
+ * Returns the design genome construction packet for the agent's stated intent.
+ * Uses the LLM-based Design Mind agent via llmClient and the genome loader.
  */
-export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, surfaces) {
+export async function consultBeforeBuild(params, _kb, _patternIndex, _ruleIndex, _surfaces) {
+  const {
+    intent_description,
+    scope = 'block',
+    domain,
+    user_type,
+  } = params;
+
+  // 1. Load genome (cached after first call)
+  const genome = loadGenome();
+  const genomeContext = getGenomeForLLM();
+
+  // 2. Call LLM
+  const llmResult = await callDesignMind({
+    genomeContext,
+    intent: intent_description,
+    scope,
+    domain,
+    userType: user_type,
+  });
+
+  // 3. Resolve .tsx files for selected blocks
+  const selectedIds = llmResult.selected_blocks || [];
+  const tsxMap = resolveTsx(selectedIds);
+
+  // 4. Build blocks array
+  const blocks = selectedIds.map(id => {
+    const entry = genome.blocks.get(id);
+    if (!entry) return null;
+    return {
+      id,
+      level: entry.meta.level || 'composite',
+      meta_yaml: entry.meta._metaRaw || JSON.stringify(entry.meta),
+      component_tsx: tsxMap.get(id) || '',
+      family_invariants: entry.meta.family_invariants || [],
+      import_path: `@/blocks/${id}/${id}`,
+      when: Array.isArray(entry.meta.when) ? entry.meta.when.join('; ') : (entry.meta.when || ''),
+      not_when: Array.isArray(entry.meta.not_when) ? entry.meta.not_when.join('; ') : (entry.meta.not_when || ''),
+    };
+  }).filter(Boolean);
+
+  // 5. Build primitive_guard — ALL primitive-level blocks always
+  const allPrimitives = [];
+  for (const [id, entry] of genome.blocks) {
+    if (entry.meta.level === 'primitive') {
+      allPrimitives.push({
+        id,
+        import_path: `@/blocks/${id}/${id}`,
+        family_invariants: entry.meta.family_invariants || [],
+      });
+    }
+  }
+
+  // 6. Build rules array
+  const rules = (llmResult.rules_applied || []).map(r => {
+    const ruleEntry = genome.rules.get(r.rule_id);
+    return {
+      rule_id: r.rule_id,
+      summary: r.applies_because || '',
+      applies_because: r.applies_because || '',
+      full_content: ruleEntry ? ruleEntry.fullContent : '',
+    };
+  });
+
+  // 7. Build safety constraints
+  const safety_constraints = (llmResult.safety_applied || []).map(s => ({
+    constraint_id: s.constraint_id,
+    rule: '',
+    applies_because: s.applies_because || '',
+  }));
+
+  // 8. Surface data if surface-first
+  const surfaceId = llmResult.build_mode?.anchor?.surface_id;
+  const surfaceData = surfaceId ? genome.surfaces.get(surfaceId) || null : null;
+
+  // 9. Log to episodic memory
+  logEpisodic({
+    timestamp: new Date().toISOString(),
+    intent: intent_description,
+    scope,
+    domain,
+    build_mode: llmResult.build_mode?.mode,
+    selected_blocks: selectedIds,
+    confidence: llmResult.confidence,
+  });
+
+  return {
+    build_mode: llmResult.build_mode || { mode: 'block-composition', anchor: null },
+    surface: surfaceData,
+    blocks,
+    primitive_guard: {
+      instruction: 'Import these from their declared paths. Do not override family_invariants.',
+      primitives: allPrimitives,
+    },
+    rules,
+    safety_constraints,
+    ontology_refs: llmResult.ontology_refs || [],
+    confidence: llmResult.confidence || 0,
+    gaps: llmResult.gaps || [],
+  };
+}
+
+// ── TOOL 1 (legacy path — keyword-only fallback, kept for reviewOutput internals) ──
+
+/**
+ * @internal
+ * Legacy keyword-based retrieval. Called by reviewOutput which still needs kb/patternIndex.
+ */
+async function consultBeforeBuildLegacy(params, kb, patternIndex, ruleIndex, surfaces) {
   const {
     intent_description,
     component_type = 'other',
@@ -2093,138 +2216,127 @@ function checkHonored(code, patternResults, kb) {
   return honored;
 }
 
+// ── isInComment helper for auto-checks ───────────────────────────────────────
+function isInComment(code, needle) {
+  // Returns true if the needle only appears inside // or /* */ comments
+  const lines = code.split('\n');
+  for (const line of lines) {
+    const singleCommentIdx = line.indexOf('//');
+    const lineWithoutComment = singleCommentIdx >= 0
+      ? line.substring(0, singleCommentIdx)
+      : line;
+    if (lineWithoutComment.includes(needle)) return false;
+  }
+  // Also check block comments — if ALL occurrences are inside /* */ then treat as comment
+  const withoutBlockComments = code.replace(/\/\*[\s\S]*?\*\//g, '');
+  const withoutAllComments   = withoutBlockComments.replace(/\/\/[^\n]*/g, '');
+  return !withoutAllComments.includes(needle);
+}
+
 /**
  * Reviews generated UI code/description against the Design Mind genome.
+ * Hybrid approach: step 1 runs fast regex auto-checks, step 2 sends everything
+ * to the LLM Critic, step 3 merges and deduplicates the results.
  */
 export async function reviewOutput(params, kb, patternIndex) {
   const { generated_output, original_intent, context_used } = params;
   const code = generated_output || '';
 
-  // Find matching patterns
-  const patternResults = await queryPatterns(
-    (original_intent || '') + ' ' + code.substring(0, 500), 3, patternIndex
-  );
+  // ── STEP 1 — CODE AUTO-CHECKS ────────────────────────────────────────────────
+  const violations = [];
 
-  const fix = [];
-  const borderline = [];
-  const candidatePatterns = [];
+  // 1. Hardcoded hex colors
+  const hexMatches = code.match(/#[0-9a-fA-F]{3,6}\b/g) || [];
+  hexMatches.filter(h => !isInComment(code, h)).forEach(found => {
+    violations.push({ violation_type: 'hardcoded-hex', found_text: found, rule_ref: 'styling-tokens', severity: 'blocker' });
+  });
 
-  // ── Hard constraint violation checks ────────────────────────────────────────
-  // Design Mind improvement: Change 1 — safety_block: true on hard-constraint fixes
-  // These items must be addressed before output is considered shippable.
-  for (const check of HARD_CONSTRAINT_CHECKS) {
-    if (check.check(code)) {
-      fix.push({
-        problem: check.problem,
-        rule_violated: check.rule_violated,
-        correction: check.correction,
-        safety_block: true,
-      });
+  // 2. Tailwind default color classes
+  const twColorMatches = code.match(/\b(red|blue|green|yellow|purple|pink|indigo|orange|teal|cyan|rose|violet|fuchsia|lime|emerald|sky|amber|gray|slate|zinc|neutral|stone)-(50|100|200|300|400|500|600|700|800|900|950)\b/g) || [];
+  twColorMatches.forEach(found => {
+    violations.push({ violation_type: 'tailwind-default-color', found_text: found, rule_ref: 'styling-tokens', severity: 'blocker' });
+  });
+
+  // 3. Critical alert dismiss
+  if (/dismiss|close/i.test(code) && /critical|severity-critical/i.test(code)) {
+    violations.push({ violation_type: 'critical-alert-dismiss', found_text: 'dismiss/close near critical', rule_ref: 'hard-constraints rule 1', severity: 'blocker' });
+  }
+
+  // 4. Patient first-name-only
+  if (/patient\.firstName|patient\.first_name|\bfirstName\b/.test(code) && !/patient\.lastName|patient\.last_name|\blastName\b/.test(code)) {
+    violations.push({ violation_type: 'patient-first-name-only', found_text: 'firstName without lastName', rule_ref: 'hard-constraints rule 3', severity: 'blocker' });
+  }
+
+  // 5. Copy voice violations
+  const copyVoiceChecks = [
+    { pattern: /something went wrong/i, label: 'Something went wrong' },
+    { pattern: /are you sure\?/i, label: 'Are you sure?' },
+    { pattern: /\b(we|our|I)\b/i, label: 'first-person pronoun' },
+    { pattern: /<Button[^>]*>Cancel</i, label: 'Cancel button (use Close)' },
+    { pattern: /\bdenied\b|\bfailed\b|\bfailure\b/i, label: 'denied/failed/failure' },
+  ];
+  copyVoiceChecks.forEach(({ pattern, label }) => {
+    if (pattern.test(code)) {
+      violations.push({ violation_type: 'copy-voice', found_text: label, rule_ref: 'copy-voice', severity: 'warning' });
     }
+  });
+
+  // 6. Primitive reimplementation via <style> blocks
+  if (/<style[^>]*>/.test(code)) {
+    violations.push({ violation_type: 'primitive-reimplementation', found_text: '<style> block', rule_ref: 'hard-constraints', severity: 'warning' });
   }
 
-  // ── Primitive block violations (rules 22 & 25) ───────────────────────────────
-  // Rule 22: no className override of family_invariants on primitive blocks.
-  // Rule 25: primitives must be imported and used as-is, never reimplemented.
-  const activePrimitivesForReview = (kb.patterns || []).filter(
-    p => p.level === 'primitive' && p.status === 'active'
-  );
-  const primitiveViolations = checkPrimitiveViolations(code, activePrimitivesForReview);
-  fix.push(...primitiveViolations);
-
-  // ── Block identity check — were the recommended blocks actually used? ────────
-  // Compares blocks imported in the generated code against consult_before_build's
-  // high-confidence recommendations. Absent high-confidence blocks go to borderline.
-  if (context_used) {
-    const identityIssues = checkBlockIdentity(code, context_used, activePrimitivesForReview);
-    borderline.push(...identityIssues);
+  // 7. Import path check (rounded-full without @/blocks/ import)
+  if (/className=["'][^"']*rounded-full[^"']*["']/.test(code) && !/@\/blocks\//.test(code)) {
+    violations.push({ violation_type: 'import-path', found_text: 'rounded-full without @/blocks/ import', rule_ref: 'hard-constraints', severity: 'warning' });
   }
 
-  // ── Non-canonical terminology ────────────────────────────────────────────────
-  const termViolations = checkNonCanonicalTerms(code, kb);
-  fix.push(...termViolations);
-
-  // ── Borderline checks ────────────────────────────────────────────────────────
-  // Check for missing audit trail on alert acknowledgment
-  if (/acknowledge/i.test(code) && !/audit|log|track/i.test(code)) {
-    borderline.push({
-      observation: 'Acknowledge action present but no audit trail call visible',
-      tension: 'Hard constraint rule 7: acknowledgment must always create an audit log entry',
-      recommendation: 'Ensure onAcknowledge fires an audit event. This may be handled by the API layer — confirm.',
+  // ── STEP 2 — LLM CRITIC ──────────────────────────────────────────────────────
+  let criticResult = {};
+  try {
+    criticResult = await callCritic({
+      generatedCode: code,
+      originalIntent: original_intent || '',
+      genomeContext: getGenomeForLLM(),
+      autoCheckResults: violations,
     });
-  }
-  // Check for navigation chrome inside artifact
-  if (/breadcrumb|back.button|backButton|<nav/i.test(code)) {
-    borderline.push({
-      observation: 'Navigation element (breadcrumb/back button) detected inside artifact content',
-      tension: 'interface-guidelines rule: artifacts should not have their own navigation chrome',
-      recommendation: 'Remove navigation elements from the artifact — Panel 1/tab close (×) handles navigation.',
-    });
-  }
-  // Check for font-family override
-  if (/font-family|fontFamily/i.test(code)) {
-    borderline.push({
-      observation: 'font-family is being set explicitly in a component',
-      tension: 'styling-tokens rule: never set font-family in components — all text inherits DM Sans from root',
-      recommendation: 'Remove the font-family declaration. Components inherit from globals.css.',
-    });
+  } catch (err) {
+    process.stderr.write(`[reviewOutput] callCritic error: ${err.message}\n`);
+    criticResult = {};
   }
 
-  // ── Positive signals ─────────────────────────────────────────────────────────
-  const honored = checkHonored(code, patternResults, kb);
+  // ── STEP 3 — MERGE AND DEDUPLICATE ──────────────────────────────────────────
+  // Remove auto-check violations that are already covered by LLM fix items
+  // (same violation_type or similar found_text).
+  const llmFix = criticResult.fix || [];
+  const llmFixTexts = llmFix.map(f => (f.problem || '').toLowerCase());
 
-  // ── Novel pattern detection ───────────────────────────────────────────────────
-  const topPatternScore = patternResults[0]?.score || 0;
-  const novelThreshold = 0.3;
-  if (topPatternScore < novelThreshold) {
-    candidatePatterns.push({
-      name: 'Unknown — inferred from low pattern match',
-      description: 'This component does not closely match any existing pattern in the library.',
-      promoted_to_candidates: false,
-    });
-  }
-
-  // Design Mind improvement: Change 4 — copy-voice violations (always present, may be empty)
-  const copyViolations = checkCopyVoice(code);
-
-  // ── Overall compliance score ─────────────────────────────────────────────────
-  // safety_block fixes (hard-constraint and primitive violations) deduct more
-  // heavily than soft fixes — they represent shippability blockers.
-  const safetyBlockCount = fix.filter(f => f.safety_block).length;
-  const softFixCount     = fix.filter(f => !f.safety_block).length;
-  let compliance = 1.0;
-  compliance -= safetyBlockCount * 0.20;        // safety_block: true → 20% each
-  compliance -= softFixCount * 0.10;            // soft fix → 10% each
-  compliance -= borderline.length * 0.05;       // each borderline deducts 5%
-  compliance -= copyViolations.length * 0.05;   // each copy violation deducts 5%
-  compliance = Math.max(0, Math.min(1, compliance));
-
-  // ── Invariant audit — structured per-primitive check ─────────────────────
-  // Covers all output types: TSX imports, shadcn imports, <style> re-implementations,
-  // and raw HTML inline Tailwind. Replaces name-based heuristics with invariant-level
-  // verification so misnamed CSS classes cannot be mistaken for block usage.
-  const invariantCheck = buildInvariantCheck(code, activePrimitivesForReview, context_used);
+  const deduplicatedViolations = violations.filter(v => {
+    const vText = (v.found_text || '').toLowerCase();
+    const vType = (v.violation_type || '').toLowerCase();
+    return !llmFixTexts.some(
+      ft => ft.includes(vType) || ft.includes(vText) || vText.length > 3 && ft.includes(vText)
+    );
+  });
 
   return {
-    honored,
-    borderline,
-    novel: candidatePatterns.length > 0 ? [{
-      description: candidatePatterns[0].description,
-      coherent_with_taste: topPatternScore > 0.1,
-      coherence_reasoning: topPatternScore > 0.1
-        ? 'Component appears consistent with genome style but fills a gap'
-        : 'Low resemblance to existing patterns — review against genome before promoting',
-    }] : [],
-    fix,
-    // primitive_violations mirrors the subset of fix items that originate from
-    // rules 22 and 25 — surfaced separately so consumers can gate on them alone.
-    primitive_violations: primitiveViolations,
-    copy_violations: copyViolations,
-    // invariant_check gives per-primitive detection method + invariant presence/absence.
-    // verdict: correct | partial | variant_violation | reimplemented | partial_inline | absent
-    invariant_check: invariantCheck,
-    candidate_patterns: candidatePatterns,
-    confidence: parseFloat(compliance.toFixed(4)),
+    auto_checks: violations,                                    // full step 1 results (unfiltered)
+    honored: criticResult.honored || [],
+    borderline: criticResult.borderline || [],
+    novel: criticResult.novel || [],
+    fix: [
+      ...deduplicatedViolations.map(v => ({
+        problem: `Auto-check: ${v.violation_type} — ${v.found_text}`,
+        rule_violated: v.rule_ref,
+        correction: `Remove or replace the offending ${v.violation_type} (found: "${v.found_text}")`,
+        safety_block: v.severity === 'blocker',
+      })),
+      ...llmFix,
+    ],
+    candidate_patterns: criticResult.candidate_patterns || [],
+    copy_violations: criticResult.copy_violations || [],
+    invariant_check: criticResult.invariant_check || [],
+    confidence: criticResult.confidence || 0,
   };
 }
 

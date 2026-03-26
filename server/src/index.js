@@ -101,45 +101,56 @@ const TOOLS = [
   {
     name: 'consult_before_build',
     description:
-      'Call this ONCE PER BLOCK before writing that block\'s code, in level order: primitives first, ' +
-      'then composites/domain blocks, then surfaces. If a task needs a Button (primitive) + Card ' +
-      '(primitive container) + Dialog (composite, uses Card as bg) + Page (surface), make 4 separate ' +
-      'calls in that order before writing any code — do not batch. Even familiar or simple blocks ' +
-      'require consultation before implementation. ' +
-      'Returns the most relevant blocks, rules, ontology references, and safety constraints for your ' +
-      'stated intent. Use the returned context to guide generation — do not build from scratch. ' +
-      'Key principle: if the returned block covers your intent via slot variation (different label, ' +
-      'domain, icon, entity type), USE that block — do not create a new one.',
+      'REQUIRED before generating ANY UI — component, page, surface, or style change.\n' +
+      'Returns the design genome: component code templates, layout blueprints, safety\n' +
+      'constraints, and copy rules for this platform. The response is a construction\n' +
+      'packet — use it as a blueprint, not as suggestions.\n\n' +
+      'HOW TO CALL:\n' +
+      '1. Describe WHAT you are building. Be specific — include who uses it, what data\n' +
+      '   it shows, what actions are available, and whether this is a new build or modification.\n' +
+      '2. Send a SCOPE HINT: "surface" (full page/panel), "block" (single component),\n' +
+      '   "token" (styling/spacing question).\n' +
+      '3. Include domain and user_type if you can infer them from the codebase.\n\n' +
+      'The server matches your description against its knowledge base. If it finds a known\n' +
+      'page blueprint, it returns a full construction plan with layout regions, component\n' +
+      'assignments, ordering rules, and hard constraints. If not, it returns the best\n' +
+      'matching components with code templates for you to compose.\n\n' +
+      'WRITING A GOOD DESCRIPTION:\n' +
+      '  Good: "Coordinator-facing page showing prioritised patients with open care gaps.\n' +
+      '        Each row: patient name, risk tier, gap status, due date. Actions: Close Gap."\n' +
+      '  Bad: "a worklist"\n\n' +
+      'HOW TO USE THE RESPONSE:\n' +
+      'Read build_mode FIRST. "surface-first" means follow the blueprint exactly.\n' +
+      '"block-composition" means compose from the returned blocks.\n' +
+      'component_tsx in each block is the EXACT code template — copy the structure,\n' +
+      'adapt only data source and state management.\n' +
+      'safety_constraints are non-negotiable.',
     inputSchema: {
       type: 'object',
-      required: ['intent_description', 'component_type', 'domain', 'user_type'],
+      required: ['intent_description', 'scope'],
       properties: {
         intent_description: {
           type: 'string',
-          description:
-            'Plain language description of what you are about to build. ' +
-            'Be specific about the user type, the data shown, and the actions available.',
+          description: 'Rich description of what to build — who uses it, what data it shows, what actions are available',
         },
-        component_type: {
+        scope: {
           type: 'string',
-          enum: ['card', 'row', 'banner', 'header', 'modal', 'drawer', 'form',
-                 'table', 'list', 'badge', 'button', 'page', 'panel', 'other'],
-          description: 'The component type being built.',
+          enum: ['surface', 'block', 'token'],
+          description: 'Routing hint: surface=full page, block=single component, token=styling question',
         },
         domain: {
           type: 'string',
           enum: ['clinical-alerts', 'patient-data', 'care-gaps', 'tasks',
-                 'care-protocols', 'assessments', 'navigation', 'data-display', 'forms', 'admin', 'other'],
-          description: 'The functional domain this component belongs to.',
+                 'navigation', 'data-display', 'forms', 'admin', 'other'],
+          description: 'Functional domain (optional — infer from codebase if possible)',
         },
         user_type: {
           type: 'array',
-          items: { type: 'string', enum: ['clinician', 'coordinator', 'patient', 'admin'] },
-          description: 'The user type(s) this component serves.',
-        },
-        product_area: {
-          type: 'string',
-          description: 'Optional: which product area this is being built for.',
+          items: {
+            type: 'string',
+            enum: ['clinician', 'coordinator', 'patient', 'admin', 'data-engineer'],
+          },
+          description: 'User type(s) this component serves (optional)',
         },
       },
     },
