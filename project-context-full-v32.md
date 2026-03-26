@@ -318,6 +318,41 @@ output:
       found: string
       correction: string
 
+  invariant_check:
+    type: array
+    description: >
+      Per-primitive invariant audit. One entry per primitive that is in scope
+      (imported, referenced as JSX, found as a raw HTML element, re-implemented
+      via a <style> block, or recommended with relevance_score ≥ 0.45).
+      Replaces name-based heuristics with invariant-level verification — a block
+      is only classified as "correct" when its family_invariants are actually
+      satisfied, not merely when a similarly-named CSS class exists.
+
+      detection_method values:
+        import               — found via @/blocks/, @/components/ui/, or @/components/
+        jsx_usage            — used as JSX element but no recognised import path found
+        style_reimplementation — re-implemented as a CSS class in a <style> block (rule 25)
+        inline_tailwind      — raw HTML element (<button>, <input> …) with inline classes
+        not_found            — in scope (recommended) but absent from the output
+
+      verdict values:
+        correct            — all family_invariants satisfied, no conflicts
+        partial            — imported/used but one or more invariants missing or className conflict
+        variant_violation  — imported but an undocumented variant prop was used
+        reimplemented      — found as a <style> block CSS class (always a rule 25 violation)
+        partial_inline     — raw HTML element with some but not all invariants inline
+        absent             — recommended but not found anywhere in the output
+    items:
+      block: string               # PascalCase primitive id, e.g. "Button"
+      detection_method: string    # one of the values above
+      invariants_present:         # family_invariant strings that were satisfied
+        type: array
+        items: string
+      invariants_missing:         # family_invariant strings that were not satisfied
+        type: array
+        items: string
+      verdict: string             # one of the verdict values above
+
   candidate_patterns:
     type: array
     description: Novel items worth promoting to the genome
