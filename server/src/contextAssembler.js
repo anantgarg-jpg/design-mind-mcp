@@ -256,14 +256,16 @@ function determineConstraintScope(id) {
 function getSafetyConstraintsInScope(intent, componentType, domain, kb) {
   const allConstraints = kb.safety.constraints || [];
   const intentLower = (intent + ' ' + domain).toLowerCase();
+  const inScopeIds = new Set(detectSafetyViolations(intent, componentType, domain, kb));
 
-  // Always return all safety constraints — per the spec: "always included, never filtered"
-  return allConstraints.map(c => ({
-    constraint_id:   c.id,
-    rule:            c.text,
-    applies_because: inferAppliesBecause(c, intentLower, componentType),
-    scope:           determineConstraintScope(c.id),
-  }));
+  return allConstraints
+    .filter(c => inScopeIds.has(c.id))
+    .map(c => ({
+      constraint_id:   c.id,
+      rule:            c.text,
+      applies_because: inferAppliesBecause(c, intentLower, componentType),
+      scope:           determineConstraintScope(c.id),
+    }));
 }
 
 // Design Mind improvement: Change 1 — safety blocking vs confidence gating
@@ -960,26 +962,17 @@ export async function consultBeforeBuild(params, _kb, _patternIndex, _ruleIndex,
     return {
       id,
       level: entry.meta.level || 'composite',
-      meta_yaml: entry.meta._metaRaw || JSON.stringify(entry.meta),
-      component_tsx: tsxMap.get(id) || '',
       family_invariants: entry.meta.family_invariants || [],
-      import_path: `@/blocks/${id}/${id}`,
+      import_path: `@/blocks/${id}/component`,
       when: Array.isArray(entry.meta.when) ? entry.meta.when.join('; ') : (entry.meta.when || ''),
       not_when: Array.isArray(entry.meta.not_when) ? entry.meta.not_when.join('; ') : (entry.meta.not_when || ''),
     };
   }).filter(Boolean);
 
-  // 5. Build primitive_guard — ALL primitive-level blocks always
-  const allPrimitives = [];
-  for (const [id, entry] of genome.blocks) {
-    if (entry.meta.level === 'primitive') {
-      allPrimitives.push({
-        id,
-        import_path: `@/blocks/${id}/${id}`,
-        family_invariants: entry.meta.family_invariants || [],
-      });
-    }
-  }
+  // Detect blocks the genome knows about but has no tsx source for
+  const blocks_missing_source = selectedIds.filter(id => genome.blocks.has(id) && !tsxMap.has(id));
+
+  // 5. primitive_guard — only primitives already in the selected blocks set
 
   // 6. Build rules array
   const rules = (llmResult.rules_applied || []).map(r => {
@@ -988,7 +981,6 @@ export async function consultBeforeBuild(params, _kb, _patternIndex, _ruleIndex,
       rule_id: r.rule_id,
       summary: r.applies_because || '',
       applies_because: r.applies_because || '',
-      full_content: ruleEntry ? ruleEntry.fullContent : '',
     };
   });
 
@@ -1018,9 +1010,10 @@ export async function consultBeforeBuild(params, _kb, _patternIndex, _ruleIndex,
     build_mode: llmResult.build_mode || { mode: 'block-composition', anchor: null },
     surface: surfaceData,
     blocks,
+    blocks_missing_source,
     primitive_guard: {
       instruction: 'Import these from their declared paths. Do not override family_invariants.',
-      primitives: allPrimitives,
+      primitives: blocks.filter(b => b.level === 'primitive'),
     },
     rules,
     safety_constraints,
@@ -1187,12 +1180,10 @@ async function consultBeforeBuildLegacy(params, kb, patternIndex, ruleIndex, sur
     .map(p => p.id)
     .sort();
 
-  // ── primitive_guard — explicit protection for ALL primitive blocks ─────────────
-  // Lists every active primitive in the knowledge base (not just the top-5 for this
-  // query) so the LLM always knows which blocks have immutable invariants regardless
-  // of what the primary retrieval returned.
+  // ── primitive_guard — only primitives in the selected result set ─────────────
+  const selectedIds = new Set(allPatterns.map(p => p.id));
   const activePrimitives = (kb.patterns || [])
-    .filter(p => p.level === 'primitive' && p.status === 'active')
+    .filter(p => p.level === 'primitive' && p.status === 'active' && selectedIds.has(p.id))
     .sort((a, b) => a.id.localeCompare(b.id));
 
   const primitive_guard = activePrimitives.length > 0 ? {
@@ -1206,7 +1197,7 @@ async function consultBeforeBuildLegacy(params, kb, patternIndex, ruleIndex, sur
     ].join(' '),
     primitives: activePrimitives.map(p => ({
       id:                p.id,
-      import_path:       `@/blocks/${p.id}/${p.id}`,
+      import_path:       `@/blocks/${p.id}/component`,
       family_invariants: p.family_invariants || [],
     })),
   } : null;
@@ -1283,9 +1274,9 @@ async function consultBeforeBuildLegacy(params, kb, patternIndex, ruleIndex, sur
       };
     } else {
       const hasStructured = !!(r.metadata.when && r.metadata.use);
-      content = hasStructured
-        ? { summary: [r.metadata.when, r.metadata.use].join(' | ').substring(0, 300) }
-        : { full_content: r.metadata.raw || '' };
+      content = { summary: hasStructured
+        ? [r.metadata.when, r.metadata.use].join(' | ').substring(0, 300)
+        : (r.metadata.summary || r.id) };
     }
     return {
       rule_id: r.id,

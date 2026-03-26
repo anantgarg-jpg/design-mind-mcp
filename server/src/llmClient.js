@@ -131,7 +131,30 @@ async function openaiCall(systemPrompt, userContent, label) {
   }
 
   const rawText = response.choices?.[0]?.message?.content ?? '';
-  return extractJson(rawText);
+  try {
+    return extractJson(rawText);
+  } catch (_) {
+    // Retry once with explicit JSON correction instruction
+    process.stdout.write(`[llmClient] ${label} JSON parse failed — retrying with correction prompt\n`);
+    let retryResponse;
+    try {
+      retryResponse = await client.chat.completions.create({
+        model,
+        max_tokens: 4096,
+        temperature: 0,
+        messages: [
+          { role: 'system',    content: systemPrompt },
+          { role: 'user',      content: userContent },
+          { role: 'assistant', content: rawText },
+          { role: 'user',      content: 'Your previous response was not valid JSON. Respond ONLY with the JSON object — no markdown, no prose, no explanation.' },
+        ],
+      });
+    } catch (err) {
+      process.stderr.write(`[llmClient] ${label} OpenAI-compatible retry error: ${err.message}\n`);
+      throw err;
+    }
+    return extractJson(retryResponse.choices?.[0]?.message?.content ?? '');
+  }
 }
 
 // ── OpenRouter helpers (TEMPORARY) ────────────────────────────────────────────
@@ -209,6 +232,7 @@ export async function callDesignMind({ genomeContext, intent, scope, domain, use
     `Scope: ${scope}`,
     `Domain: ${domain || 'unspecified'}`,
     `User types: ${(userType || []).join(', ') || 'unspecified'}`,
+    `REMINDER: Respond with ONLY the JSON object. No questions, no prose, no explanation.`,
   ].join('\n\n');
 
   try {
