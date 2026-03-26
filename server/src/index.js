@@ -105,9 +105,13 @@ const TOOLS = [
   {
     name: 'consult_before_build',
     description:
-      'Call this before generating any UI component or surface. Returns the most relevant blocks, ' +
-      'rules, ontology references, and safety constraints for your stated intent. ' +
-      'Use the returned context to guide generation — do not build from scratch. ' +
+      'Call this ONCE PER BLOCK before writing that block\'s code, in level order: primitives first, ' +
+      'then composites/domain blocks, then surfaces. If a task needs a Button (primitive) + Card ' +
+      '(primitive container) + Dialog (composite, uses Card as bg) + Page (surface), make 4 separate ' +
+      'calls in that order before writing any code — do not batch. Even familiar or simple blocks ' +
+      'require consultation before implementation. ' +
+      'Returns the most relevant blocks, rules, ontology references, and safety constraints for your ' +
+      'stated intent. Use the returned context to guide generation — do not build from scratch. ' +
       'Key principle: if the returned block covers your intent via slot variation (different label, ' +
       'domain, icon, entity type), USE that block — do not create a new one.',
     inputSchema: {

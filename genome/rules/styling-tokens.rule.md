@@ -269,39 +269,18 @@ NEVER:
   - Use accents for status badges — use the status color reference below
   - Mix accent base shades with their light/dark variants in the same context
 
-# ── TOKEN MAP: SIDEBAR ───────────────────────────────────────────────────────
-
-SIDEBAR:
-  --sidebar*       parallel token set for Panel 1 styling — always use sidebar
-                   tokens when styling Panel 1 content
-
-# ── CRITICAL NAMING DISAMBIGUATION ───────────────────────────────────────────
-
-"Alert" (capitalized) = a clinical Alert entity (ontology/entities.yaml)
-"--alert" (token) = Orange = High clinical severity color
-These are DIFFERENT things. Never confuse them.
-
-"--destructive" = BOTH "delete action" AND "Critical severity"
-A Critical alert banner and a Delete button use the same base color.
-This is intentional — both represent the highest-stakes interaction.
-
-"--info" (Cyan) = non-severity informational callouts, help surfaces
-"--accent" (Blue tint) = Low severity indicator
-These are DIFFERENT. --info is for generic information. --accent is for
-Low clinical severity. Never swap them.
-
 # ── SEVERITY COLOR FAST REFERENCE ────────────────────────────────────────────
 # Full spec in safety/severity-schema.yaml
 
   Critical  → text-destructive (#D62400) / bg-destructive-light (#FFF2F0) / border-destructive/30
   High      → text-alert-text (#944A00) / bg-alert-light (#FFF3E6) / border-alert/30
-  Medium    → text-warning-text (#987206) / bg-warning-light (#FFF8E6) / border-warning/30
+  Medium    → text-warning-text (#5C4403) / bg-warning-light (#FFF8E6) / border-warning/30
   Low       → text-accent-foreground (#003374) / bg-accent (#E8F1FD) / border-accent-foreground/20
 
 # ── STATUS COLOR FAST REFERENCE ──────────────────────────────────────────────
 
   Completed / Closed / Success   → text-success-text (#057A13) / bg-success-light (#E8FCE8)
-  Overdue                        → text-warning-text (#987206) / bg-warning-light (#FFF8E6)
+  Overdue                        → text-warning-text (#5C4403) / bg-warning-light (#FFF8E6)
   In Progress / In Outreach      → text-primary (#0060D6) / bg-accent (#E8F1FD)
   Open                           → text-muted-foreground (#636363) / border border-border
   Cancelled / Excluded           → text-muted-foreground (#636363) / bg-muted (#EBEBEB)
@@ -358,31 +337,27 @@ Base unit: 4px. All spacing is a multiple of 4.
   space-2  8px     p-2        Badge padding, chip padding, inline gaps
   space-3  12px    p-3        Alert banner padding, compact card padding
   space-4  16px    p-4        Standard card padding, section padding
-  space-6  24px    p-6        EntityContextHeader horizontal padding
   space-8  32px    p-8        Major section separation, panel gutters
   space-12 48px    p-12       Page-level vertical spacing (rare)
   space-16 64px    p-16       Reserved (almost never needed)
 
 COMPONENT SPACING CONVENTIONS:
-  Cards (bg-card):        p-4 (16px all sides)
-  Rows (list items):      px-4 py-3.5 (16px horizontal, 14px vertical)
-  Alert banners:          p-4 with gap-3 internal
-  EntityContextHeader:   px-6 py-4
-  Section gaps:           gap-4 (16px) between cards, gap-3 (12px) between rows
-  Meta row (below title): mt-1.5 (6px), gap-3 (12px) between items
-  Button groups:          gap-2 (8px) between buttons, gap-1.5 (6px) for icon buttons
+  Cards (bg-card):        p-4 (space-4, 16px all sides)
+  Rows (list items):      px-3 py-2 (space-3 horizontal, space-2 vertical — 12px / 8px)
+  Alert banners:          p-3 (space-3, 12px all sides) with gap-2 (8px) internal
+  Section gaps:           gap-3 (12px) between cards, gap-2 (8px) between rows
+  Meta row (below title): mt-1 (4px), gap-2 (8px) between items
+  Button groups:          gap-2 (8px) between buttons, gap-1 (4px) for icon buttons
 
   See data-density.rule.md for 32px compact row height default.
   See interface-guidelines.rule.md for shell authoring contract — agents do not control the shell.
 
 FLEX/GRID GAP CONVENTIONS:
-  gap-1   (4px)   icon + text inside a single element
-  gap-1.5 (6px)   tight button groups, icon-only button sets
-  gap-2   (8px)   button groups, badge groups, chip rows
-  gap-2.5 (10px)  meta item spacing in rows
-  gap-3   (12px)  row internal sections, alert internal layout
-  gap-4   (16px)  card internal sections, header sections
-  gap-6   (24px)  major content blocks within a panel
+  gap-1   (4px)   icon + text inside a single element; icon-only button sets
+  gap-1.5 (6px)   tight button groups
+  gap-2   (8px)   button groups, badge groups, chip rows; meta items in rows; alert internal layout
+  gap-3   (12px)  row internal sections; between cards in a section
+  gap-4   (16px)  card internal sections, header sections; major content blocks within a panel
 
 NEVER:
   - Use gap-0 between meaningful content elements

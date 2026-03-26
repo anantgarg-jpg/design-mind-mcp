@@ -1007,6 +1007,8 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
   // Fix 5 — because is signal-based (null if not meaningful, never "")
   const EMPTY_USAGE_SIGNAL = { renders_total: 0, products: [], override_rate: 0.0 };
 
+  const kbPatternById = new Map((kb.patterns || []).map(p => [p.id, p]));
+
   const patterns = boostedResults.map(r => {
     const usageSignal = r.metadata?.usage_signal;
     const hasUsageData = usageSignal && usageSignal.renders_total > 0;
@@ -1023,6 +1025,7 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
       because:           generateBecause(r, intent_description, ontologyRefs, domain, component_type),
       confidence:        r.metadata?.confidence || 0.9,
       usage_signal:      hasUsageData ? usageSignal : EMPTY_USAGE_SIGNAL,
+      component_src:     kbPatternById.get(r.id)?._componentSrc || null,
     };
   });
 

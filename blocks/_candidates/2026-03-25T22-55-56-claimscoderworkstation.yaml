@@ -1,0 +1,45 @@
+# Design Mind Pattern Candidate
+# Generated: 2026-03-25T22:55:56.570Z
+# Status: logged
+# NOTE: written locally — API was unreachable. Submit to design-mind-mcp when online.
+
+candidate_id: "2026-03-25T22-55-56-claimscoderworkstation"
+pattern_name: "ClaimsCoderWorkstation"
+status: logged
+frequency: 1
+frequency_count: 1
+structural_family: "status-label"
+
+reporting_projects:
+  - project_id: "design-mind-mcp"
+    last_active: "2026-03-25"
+
+description: >
+  A three-panel full-viewport workstation surface for revenue cycle coding staff. Left panel: dark sidebar navigation with worklist links and badge counts. Center panel: AI coding assistant chat with quick-action chips and inline code/card responses. Right panel: claims worklist with summary stats, filterable table showing patient, payer, amount, issues, age (days), and status columns with row-level actions.
+
+intent_it_serves: >
+  Claim processing coders need a unified workspace to triage pending claims by age and priority, consult an AI coding assistant in context, and navigate between worklist views — without switching tabs or applications.
+
+why_existing_patterns_didnt_fit: >
+  No existing surface or composite block covered the three-panel shell combining a dark navigation sidebar, a conversational AI chat panel, and a domain-specific worklist table in a single viewport-filling layout. The closest patterns were individual data-display tables and chat message blocks, but no pattern existed for their composition into a workstation shell.
+
+structural_delta: >
+  No existing surface or composite block covered the three-panel shell combining a dark navigation sidebar, a conversational AI chat panel, and a domain-specific worklist table in a single viewport-filling layout. The closest patterns were individual data-display tables and chat message blocks, but no pattern existed for their composition into a workstation shell.
+
+implementation_ref: "Desktop/claims-worklist.html"
+
+ontology_refs:
+  - tasks
+  - claims
+  - patient-data
+  - navigation
+  - data-display
+
+similar_candidates:
+  []
+
+# Instructions for human ratification:
+# 1. Review the description and intent
+# 2. Check similar_candidates — merge if duplicate
+# 3. If valid: create blocks/ClaimsCoderWorkstation/ with meta.yaml and component.tsx
+# 4. Run: node server/src/seed.js to re-index

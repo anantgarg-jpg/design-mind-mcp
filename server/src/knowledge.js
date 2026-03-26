@@ -195,7 +195,7 @@ export function loadKnowledge(basePath) {
 
         // Component source (first 2000 chars for review checks)
         meta._componentSrc = existsSync(componentPath)
-          ? readFileSync(componentPath, 'utf-8').substring(0, 2000)
+          ? readFileSync(componentPath, 'utf-8')
           : '';
 
         // Build embedding input string

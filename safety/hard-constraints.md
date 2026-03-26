@@ -133,4 +133,6 @@
 
 24. Whenever updating the code (.tsx) for any block or surface, the meta.yaml must be checked and updated to align with the changes.Similarly, if meta.yaml is generated, the .tsx must be generated for that block. 
 
-25. Whenever using existing blocks or surfaces, implement the .tsx code for the block or surface as is - do not reimagine the code. If major changes are required, register as a new candidate block. 
+25. Whenever using existing blocks or surfaces, implement the .tsx code for the block or surface as is - do not reimagine the code. If major changes are required, register as a new candidate block.
+
+26. Only build composite blocks or surfaces using the primitive blocks. Never modify existing primitives. Do not create new primitives unless the functionality is completely different from what is supported by existing primitives, regardless of domain or semantics. 
