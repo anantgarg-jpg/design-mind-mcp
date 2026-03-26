@@ -4,13 +4,9 @@
   "description": "MCP server for the Design Mind knowledge base",
   "type": "module",
   "scripts": {
-    "start": "node src/index.js",
-    "seed": "node src/seed.js",
-    "seed:vectors": "node src/seed-vectors.js"
+    "start": "node src/index.js"
   },
-  "dependencies": {
-    "@xenova/transformers": "^2.17.2"
-  },
+  "dependencies": {},
   "engines": {
     "node": ">=18.0.0"
   }

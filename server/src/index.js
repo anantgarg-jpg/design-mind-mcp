@@ -44,10 +44,7 @@ import {
 } from 'node:fs';
 
 import { loadKnowledge }                                         from './knowledge.js';
-import { buildKnowledgeIndexes, saveIndex, loadIndex }          from './vectorIndex.js';
-import { consultBeforeBuild, reviewOutput, reportPattern,
-         setUseVectorStore }                                     from './contextAssembler.js';
-import { isSeeded }                                              from './vectorstore.js';
+import { consultBeforeBuild, reviewOutput, reportPattern }      from './contextAssembler.js';
 
 // ── Paths ─────────────────────────────────────────────────────────────────────
 
@@ -55,7 +52,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname  = dirname(__filename);
 // server/src/ → up two levels → design-mind/
 const BASE_PATH  = join(__dirname, '..', '..');
-const INDEX_DIR  = join(__dirname, '..', '.index');
 
 // In SSE/HTTP mode stdout is free for logs; in stdio mode stdout carries the MCP protocol
 // so we must use stderr there to avoid corrupting the JSON-RPC stream.
@@ -255,38 +251,8 @@ async function initialize() {
   log(`[design-mind] Knowledge base: ${BASE_PATH}\n`);
 
   kb = loadKnowledge(BASE_PATH);
-
-  const patternIndexPath = join(INDEX_DIR, 'blocks.json');
-  const ruleIndexPath    = join(INDEX_DIR, 'rules.json');
-
-  const cachedPatterns = loadIndex(patternIndexPath);
-  const cachedRules    = loadIndex(ruleIndexPath);
-
-  if (cachedPatterns && cachedRules) {
-    log('[design-mind] Using cached indexes\n');
-    patternIndex = cachedPatterns;
-    ruleIndex    = cachedRules;
-  } else {
-    log('[design-mind] Building indexes (first run)...\n');
-    const indexes = buildKnowledgeIndexes(kb);
-    patternIndex  = indexes.patternIndex;
-    ruleIndex     = indexes.ruleIndex;
-    try {
-      saveIndex(patternIndex, patternIndexPath);
-      saveIndex(ruleIndex,    ruleIndexPath);
-      log('[design-mind] Indexes saved to .index/\n');
-    } catch (e) {
-      logErr(`[design-mind] WARN: could not save indexes: ${e.message}\n`);
-    }
-  }
-
-  const vectorsReady = isSeeded('dm_patterns') && isSeeded('dm_rules');
-  if (vectorsReady) {
-    setUseVectorStore(true);
-    log('[design-mind] Vector search: local semantic (flat-file cosine)\n');
-  } else {
-    log('[design-mind] Vector search: TF-IDF fallback\n');
-  }
+  patternIndex = kb.patterns;
+  ruleIndex    = kb.rules;
 }
 
 // ── Hot-reload (local dev only — disabled in production) ──────────────────────
@@ -347,11 +313,10 @@ function startHotReload(basePath) {
     log('[design-mind] Hot-reload: genome change detected — reloading knowledge base...');
     try {
       const newKb = loadKnowledge(basePath);
-      const { patternIndex: pi, ruleIndex: ri } = buildKnowledgeIndexes(newKb);
       // Atomic swap — in-flight tool calls finish against old refs
       kb           = newKb;
-      patternIndex = pi;
-      ruleIndex    = ri;
+      patternIndex = newKb.patterns;
+      ruleIndex    = newKb.rules;
       // Refresh poll targets in case rule files were added/removed
       targets  = expandTargets();
       lastSnap = snapshotMtimes(targets);
@@ -403,7 +368,6 @@ async function handleToolCall(toolName, toolArgs) {
     case 'ping': {
       const shortHash = str =>
         createHash('sha256').update(str || '').digest('hex').slice(0, 8);
-      const searchMode  = isSeeded('dm_patterns') ? 'semantic' : 'tf-idf';
       const tokenRule   = kb?.rules?.find(r => r.id === 'styling-tokens');
       const genomeRules = (kb?.rules || []).map(r => ({
         id:         r.id,
@@ -418,7 +382,6 @@ async function handleToolCall(toolName, toolArgs) {
         started_at:     BUILD_INFO.started_at,
         kb_loaded_at:   kb?._loadedAt ?? null,
         knowledge_base: BASE_PATH,
-        vector_search:  searchMode,
         kb_stats: {
           patterns:           kb?.patterns?.length            ?? 0,
           surfaces:           kb?.surfaces?.length            ?? 0,
@@ -768,27 +731,6 @@ function startHttp(port) {
       if (req.method === 'GET') {
         const candidates = store.load();
         return sendJson(res, 200, { candidates, total: candidates.length });
-      }
-    }
-
-    // ── Seed / re-index ─────────────────────────────────────────────────────
-    if (req.method === 'POST' && url.pathname === '/seed') {
-      try {
-        log('[design-mind] /seed triggered via showcase UI\n');
-        mkdirSync(INDEX_DIR, { recursive: true });
-        const kb = loadKnowledge(BASE_PATH);
-        const { patternIndex, ruleIndex } = buildKnowledgeIndexes(kb);
-        saveIndex(patternIndex, join(INDEX_DIR, 'patterns.json'));
-        saveIndex(ruleIndex,    join(INDEX_DIR, 'rules.json'));
-        log(`[design-mind] Re-indexed: ${patternIndex.documents.length} patterns, ${ruleIndex.documents.length} rules\n`);
-        return sendJson(res, 200, {
-          status:   'ok',
-          patterns: patternIndex.documents.length,
-          rules:    ruleIndex.documents.length,
-        });
-      } catch (err) {
-        logErr(`[design-mind] /seed error: ${err.message}\n`);
-        return sendJson(res, 500, { error: err.message });
       }
     }
 

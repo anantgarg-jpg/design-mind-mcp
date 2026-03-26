@@ -10,12 +10,8 @@
 
 import { writeFileSync, readFileSync, readdirSync, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { query } from './vectorIndex.js';
-import { embedOne } from './embedder.js';
-import { search, isSeeded } from './vectorstore.js';
-
-// ── Tokenizer (mirrors vectorIndex.js — no new dependency) ───────────────────
-// Used for not_when penalty and composition hint checks.
+// ── Tokenizer ─────────────────────────────────────────────────────────────────
+// Used for not_when penalty, composition hint checks, and keyword scoring.
 function tokenize(text) {
   if (!text || typeof text !== 'string') return [];
   return text
@@ -135,30 +131,49 @@ function buildGapProbe(topPattern) {
   };
 }
 
-// Set to true by index.js after confirming the vector store has been seeded
-let _useVectorStore = false;
-export function setUseVectorStore(val) { _useVectorStore = val; }
-
 /**
- * Unified search: flat-file vector store (semantic) when seeded, TF-IDF otherwise.
- * Always returns [{id, score, metadata}] regardless of backend.
+ * Keyword-based scoring: score each item in the array against a query text.
+ * Returns [{id, score, metadata}] sorted by score descending, capped at k results.
+ * Items are expected to have id, summary, when, description, embedding_hint, or raw fields.
  */
+function keywordScore(text, items, k) {
+  const queryTokens = tokenize(text);
+  if (queryTokens.length === 0) return [];
+  const querySet = new Set(queryTokens);
+
+  const scored = items.map(item => {
+    const fields = [
+      item.id || '',
+      item.summary || '',
+      item.description || '',
+      item.embedding_hint || '',
+      item.when || '',
+      item.use || '',
+      item.raw || '',
+      item.component_type || '',
+      item.domain || '',
+      (item.tags || []).join(' '),
+    ].join(' ');
+    const itemTokens = tokenize(fields);
+    const itemSet = new Set(itemTokens);
+    const intersection = [...querySet].filter(t => itemSet.has(t)).length;
+    const union = new Set([...querySet, ...itemSet]).size;
+    const score = union > 0 ? intersection / union : 0;
+    return { id: item.id, score, metadata: item };
+  });
+
+  return scored
+    .filter(r => r.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, k);
+}
+
 async function queryPatterns(text, k, patternIndex) {
-  if (_useVectorStore) {
-    const vec = await embedOne(text);
-    const hits = search('dm_patterns', vec, k);
-    return hits.map(h => ({ id: h.payload.id, score: h.score, metadata: h.payload }));
-  }
-  return query(patternIndex, text, k);
+  return keywordScore(text, patternIndex || [], k);
 }
 
 async function queryRules(text, k, ruleIndex) {
-  if (_useVectorStore) {
-    const vec = await embedOne(text);
-    const hits = search('dm_rules', vec, k);
-    return hits.map(h => ({ id: h.payload.id, score: h.score, metadata: h.payload }));
-  }
-  return query(ruleIndex, text, k);
+  return keywordScore(text, ruleIndex || [], k);
 }
 
 // Surface matching — TF-IDF Jaccard on embedding_input (surfaces are few enough
@@ -1043,7 +1058,7 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
   // Blocks above the relevance threshold + structural inclusions, sorted
   // alphabetically by id so the same intent always yields the same ordered set
   // regardless of floating-point tie-breaking differences across runs/threads.
-  const CANONICAL_THRESHOLD = _useVectorStore ? 0.45 : 0.28;
+  const CANONICAL_THRESHOLD = 0.28;
   const canonical_block_set = allPatterns
     .filter(p => p.relevance_score >= CANONICAL_THRESHOLD || p.structural_inclusion)
     .map(p => p.id)
@@ -1172,9 +1187,8 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
   // Vector store: cosine similarity 0.0–1.0, good match ~0.70+
   // TF-IDF: naturally tops out ~0.5–0.6, scaled by /0.55 so ~0.5 maps to ~0.9
   const topPatternScore = boostedResults[0]?.score || 0;
-  const confidence = _useVectorStore
-    ? parseFloat(Math.min(topPatternScore, 1.0).toFixed(4))
-    : parseFloat(Math.min(topPatternScore / 0.55, 1.0).toFixed(4));
+  // Keyword scores naturally top out ~0.5–0.6; scale by /0.55 so ~0.5 maps to ~0.9
+  const confidence = parseFloat(Math.min(topPatternScore / 0.55, 1.0).toFixed(4));
 
   const coverageGap = confidence < 0.6;
 
@@ -1195,8 +1209,7 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
 
   // ── Gap detection — pattern coverage + ontology gaps ───────────────────────
   // ontologyGaps (Fix 4) are prepended: unmatched actions before near-matches.
-  // Vector store: low match < 0.45 cosine. TF-IDF: low match < 0.25 raw.
-  const lowThreshold = _useVectorStore ? 0.45 : 0.25;
+  const lowThreshold = 0.25;
   const gaps = [...ontologyGaps];
   if (boostedResults.length === 0) {
     gaps.push('No pattern matches found. This is likely a novel UI element — flag with DESIGN MIND comment.');
@@ -2161,9 +2174,8 @@ export async function reviewOutput(params, kb, patternIndex) {
   const honored = checkHonored(code, patternResults, kb);
 
   // ── Novel pattern detection ───────────────────────────────────────────────────
-  // Vector store: novel if cosine < 0.40. TF-IDF: novel if raw score < 0.3.
   const topPatternScore = patternResults[0]?.score || 0;
-  const novelThreshold = _useVectorStore ? 0.40 : 0.3;
+  const novelThreshold = 0.3;
   if (topPatternScore < novelThreshold) {
     candidatePatterns.push({
       name: 'Unknown — inferred from low pattern match',
