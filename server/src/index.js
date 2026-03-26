@@ -59,8 +59,12 @@ const INDEX_DIR  = join(__dirname, '..', '.index');
 
 // In SSE/HTTP mode stdout is free for logs; in stdio mode stdout carries the MCP protocol
 // so we must use stderr there to avoid corrupting the JSON-RPC stream.
+// console.log() is used (not process.stdout.write) because Railway's logging agent
+// routes console.log output to severity="info"; raw fd writes can mis-route to "error".
 const TRANSPORT_ENV = (process.env.TRANSPORT || 'stdio').toLowerCase();
-const log    = msg => (TRANSPORT_ENV === 'stdio' ? process.stderr : process.stdout).write(msg);
+const log    = TRANSPORT_ENV === 'stdio'
+  ? msg => process.stderr.write(msg)
+  : msg => console.log(msg.replace(/\n$/, ''));
 const logErr = msg => process.stderr.write(msg);
 
 // ── Build info ────────────────────────────────────────────────────────────────
@@ -298,15 +302,32 @@ async function handleToolCall(toolName, toolArgs) {
       return await reviewOutput(toolArgs, kb, patternIndex);
     case 'report_pattern':
       return await reportPattern(toolArgs, BASE_PATH);
-    case 'ping':
+    case 'ping': {
+      const searchMode = isSeeded('dm_patterns') ? 'semantic' : 'tf-idf';
+      const tokenRule  = kb?.rules?.find(r => r.id === 'styling-tokens');
+      const genomeRules = (kb?.rules || []).map(r => ({
+        id:         r.id,
+        version:    r.version   || '1.0.0',
+        confidence: r.confidence ?? 0.9,
+      }));
       return {
         server:         'design-mind-mcp',
         commit:         BUILD_INFO.commit,
         commit_msg:     BUILD_INFO.commit_msg,
         started_at:     BUILD_INFO.started_at,
         knowledge_base: BASE_PATH,
-        vector_search:  isSeeded('dm_patterns') ? 'semantic' : 'tf-idf',
+        vector_search:  searchMode,
+        kb_stats: {
+          patterns:           kb?.patterns?.length            ?? 0,
+          surfaces:           kb?.surfaces?.length            ?? 0,
+          rules:              kb?.rules?.length               ?? 0,
+          safety_constraints: kb?.safety?.constraints?.length ?? 0,
+          ontology_keys:      Object.keys(kb?.ontology ?? {}),
+        },
+        genome_rules:       genomeRules,
+        token_set_version:  tokenRule?.version ?? 'unknown',
       };
+    }
     default:
       throw new Error(`Unknown tool: ${toolName}`);
   }
