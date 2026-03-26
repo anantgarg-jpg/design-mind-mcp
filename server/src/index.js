@@ -34,13 +34,13 @@
  *   }
  */
 
-import { createInterface } from 'node:readline';
-import { createServer }    from 'node:http';
-import { randomUUID }      from 'node:crypto';
-import { fileURLToPath }   from 'node:url';
-import { dirname, join }   from 'node:path';
+import { createInterface }        from 'node:readline';
+import { createServer }           from 'node:http';
+import { randomUUID, createHash } from 'node:crypto';
+import { fileURLToPath }          from 'node:url';
+import { dirname, join }          from 'node:path';
 import {
-  readFileSync, writeFileSync, existsSync, mkdirSync,
+  readFileSync, writeFileSync, existsSync, mkdirSync, statSync, readdirSync,
 } from 'node:fs';
 
 import { loadKnowledge }                                         from './knowledge.js';
@@ -285,6 +285,100 @@ async function initialize() {
   }
 }
 
+// ── Hot-reload (local dev only — disabled in production) ──────────────────────
+//
+// Polls mtime of genome directories and key files every HOT_RELOAD_INTERVAL ms
+// (default 2000). When a change is detected, re-runs loadKnowledge +
+// buildKnowledgeIndexes and swaps the module-level refs atomically.
+//
+// Not enabled when NODE_ENV=production (Railway) — files don't change in a
+// running container and the poll overhead is unnecessary.
+// Force-enable with HOT_RELOAD=true; force-disable with HOT_RELOAD=false.
+
+function startHotReload(basePath) {
+  const forceOn  = process.env.HOT_RELOAD === 'true';
+  const forceOff = process.env.HOT_RELOAD === 'false';
+  const inProd   = process.env.NODE_ENV   === 'production';
+  if (forceOff || (inProd && !forceOn)) return;
+
+  const POLL_MS   = parseInt(process.env.HOT_RELOAD_INTERVAL || '2000', 10);
+  const DEBOUNCE  = 400; // ms to wait after first change before reloading
+
+  // Paths to poll for mtime changes. On Linux, fs.watch is not recursive so
+  // we snapshot directory-level mtimes rather than using inotify.
+  const pollTargets = [
+    join(basePath, 'genome', 'rules'),
+    join(basePath, 'genome', 'taste.md'),
+    join(basePath, 'genome', 'principles.md'),
+    join(basePath, 'blocks'),
+    join(basePath, 'ontology'),
+    join(basePath, 'safety', 'hard-constraints.md'),
+  ];
+
+  // Expand rules directory to individual file paths (catches version/confidence edits)
+  function expandTargets() {
+    const paths = [...pollTargets];
+    const rulesDir = join(basePath, 'genome', 'rules');
+    try {
+      for (const f of readdirSync(rulesDir)) {
+        if (f.endsWith('.rule.md')) paths.push(join(rulesDir, f));
+      }
+    } catch { /* rules dir may not exist yet */ }
+    return paths;
+  }
+
+  function snapshotMtimes(paths) {
+    const snap = {};
+    for (const p of paths) {
+      try { snap[p] = statSync(p).mtimeMs; } catch { snap[p] = 0; }
+    }
+    return snap;
+  }
+
+  let targets    = expandTargets();
+  let lastSnap   = snapshotMtimes(targets);
+  let reloadTimer = null;
+
+  async function doReload() {
+    log('[design-mind] Hot-reload: genome change detected — reloading knowledge base...');
+    try {
+      const newKb = loadKnowledge(basePath);
+      const { patternIndex: pi, ruleIndex: ri } = buildKnowledgeIndexes(newKb);
+      // Atomic swap — in-flight tool calls finish against old refs
+      kb           = newKb;
+      patternIndex = pi;
+      ruleIndex    = ri;
+      // Refresh poll targets in case rule files were added/removed
+      targets  = expandTargets();
+      lastSnap = snapshotMtimes(targets);
+      log(
+        `[design-mind] Hot-reload: done — ` +
+        `${newKb.patterns.length} patterns, ${newKb.rules.length} rules, ` +
+        `loaded_at=${newKb._loadedAt}`
+      );
+    } catch (err) {
+      logErr(`[design-mind] Hot-reload: FAILED — ${err.message}\n`);
+      // Keep stale kb — better than null
+    }
+    reloadTimer = null;
+  }
+
+  setInterval(() => {
+    const current = snapshotMtimes(targets);
+    let changed = false;
+    for (const p of targets) {
+      if (current[p] !== lastSnap[p]) { changed = true; break; }
+    }
+    if (!changed) return;
+
+    lastSnap = current; // update immediately so we don't double-trigger
+    if (reloadTimer) return; // debounce — reload already scheduled
+    reloadTimer = setTimeout(doReload, DEBOUNCE);
+  }, POLL_MS);
+
+  log(`[design-mind] Hot-reload: active (polling every ${POLL_MS}ms, NODE_ENV=${process.env.NODE_ENV || 'dev'})`);
+}
+
 // ── Tool dispatch ─────────────────────────────────────────────────────────────
 
 async function handleToolCall(toolName, toolArgs) {
@@ -303,18 +397,22 @@ async function handleToolCall(toolName, toolArgs) {
     case 'report_pattern':
       return await reportPattern(toolArgs, BASE_PATH);
     case 'ping': {
-      const searchMode = isSeeded('dm_patterns') ? 'semantic' : 'tf-idf';
-      const tokenRule  = kb?.rules?.find(r => r.id === 'styling-tokens');
+      const shortHash = str =>
+        createHash('sha256').update(str || '').digest('hex').slice(0, 8);
+      const searchMode  = isSeeded('dm_patterns') ? 'semantic' : 'tf-idf';
+      const tokenRule   = kb?.rules?.find(r => r.id === 'styling-tokens');
       const genomeRules = (kb?.rules || []).map(r => ({
         id:         r.id,
-        version:    r.version   || '1.0.0',
+        version:    r.version    || '1.0.0',
         confidence: r.confidence ?? 0.9,
+        status:     'active',
       }));
       return {
         server:         'design-mind-mcp',
         commit:         BUILD_INFO.commit,
         commit_msg:     BUILD_INFO.commit_msg,
         started_at:     BUILD_INFO.started_at,
+        kb_loaded_at:   kb?._loadedAt ?? null,
         knowledge_base: BASE_PATH,
         vector_search:  searchMode,
         kb_stats: {
@@ -323,6 +421,8 @@ async function handleToolCall(toolName, toolArgs) {
           rules:              kb?.rules?.length               ?? 0,
           safety_constraints: kb?.safety?.constraints?.length ?? 0,
           ontology_keys:      Object.keys(kb?.ontology ?? {}),
+          taste_hash:         shortHash(kb?.taste),
+          principles_hash:    shortHash(kb?.principles),
         },
         genome_rules:       genomeRules,
         token_set_version:  tokenRule?.version ?? 'unknown',
@@ -704,6 +804,7 @@ function startHttp(port) {
 
 async function main() {
   await initialize();
+  startHotReload(BASE_PATH);
 
   const transport = (process.env.TRANSPORT || 'stdio').toLowerCase();
 

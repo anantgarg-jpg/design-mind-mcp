@@ -290,6 +290,8 @@ export function loadKnowledge(basePath) {
     }
   }
 
+  kb._loadedAt = new Date().toISOString();
+
   kbLog(
     `[knowledge] Loaded: ${kb.patterns.length} patterns, ${kb.surfaces.length} surfaces, ` +
     `${kb.rules.length} rules, ${kb.safety.constraints.length} safety constraints`
