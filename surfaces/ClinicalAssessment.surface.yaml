@@ -38,3 +38,34 @@ never:
   - Omit a safety flag (e.g. Review badge) when a self-harm indicator question
     receives any non-zero answer
   - Navigate away on submit — show inline success state with score and severity
+
+regions:
+  - slot: header
+    block_id: EntityContextHeader
+    props_hint: "entityName={patient.lastFirst} primaryLabel='MRN' primaryValue={patient.mrn} secondaryLabel='DOB' secondaryValue={patient.dob}"
+    layout_hint: "flex flex-row items-center justify-between px-6 py-4 sticky top-0 z-20 bg-card border-b border-border"
+
+  - slot: safety-alert
+    block_id: AlertBanner
+    props_hint: "severity='high' title='Review Required' body='A self-harm indicator question received a non-zero response.' onAcknowledge={handleReviewAcknowledge}"
+    layout_hint: "flex flex-col w-full"
+
+  - slot: instrument-selector
+    block_id: Select
+    props_hint: "label='Instrument' placeholder='Select screening instrument' options=['PHQ-9','GAD-7','SDOH','CAGE'] required={true}"
+    layout_hint: "flex flex-col gap-2 px-6 py-4 border-b border-border"
+
+  - slot: questions
+    block_id: AssessmentTab
+    props_hint: "instrument={selectedInstrument} patient={patient} onComplete={handleAssessmentComplete}"
+    layout_hint: "flex flex-col flex-1 overflow-y-auto px-6 py-4"
+
+  - slot: submit-bar
+    block_id: Button
+    props_hint: "variant='primary' label='Record Assessment' disabled={!allAnswered} size='default'"
+    layout_hint: "flex flex-row items-center justify-between px-6 py-4 border-t border-border sticky bottom-0 bg-background gap-3"
+
+  - slot: loading
+    block_id: Skeleton
+    props_hint: "variant='card' count={9}"
+    layout_hint: "flex flex-col gap-4 px-6 py-4"

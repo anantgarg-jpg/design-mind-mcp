@@ -31,3 +31,24 @@ never:
   - Allow editing or deleting a log entry
   - Show a "Log Outreach" button inside this surface (use New Intake tab instead)
   - Paginate — show all 24h records in a single scrollable list
+
+regions:
+  - slot: toolbar
+    block_id: SectionHeader
+    props_hint: "label='OUTREACH LOG — LAST 24 HOURS' count={totalCount}"
+    layout_hint: "flex flex-row items-center justify-between px-4 py-2 sticky top-0 z-10 bg-background border-b border-border"
+
+  - slot: list
+    block_id: ActivityLogRow
+    props_hint: "entityName={entry.patientName} activityType={entry.outreachType} outcome={entry.outcome} actor={entry.coordinatorName} timestamp={entry.loggedAt} flagged={entry.outcome === 'no-answer'}"
+    layout_hint: "flex flex-col divide-y divide-border/40 overflow-y-auto flex-1"
+
+  - slot: empty-state
+    block_id: Alert
+    props_hint: "variant='default' title='No outreach logged in the last 24 hours.'"
+    layout_hint: "flex items-center justify-center p-8"
+
+  - slot: loading
+    block_id: Skeleton
+    props_hint: "variant='text' count={8}"
+    layout_hint: "flex flex-col gap-2 px-4 py-3"

@@ -34,3 +34,39 @@ never:
   - Submit partial records silently
   - Auto-populate patient identity from a previous entry without explicit confirmation
   - Navigate away on submit — show inline success state and offer "Log another"
+
+regions:
+  - slot: header
+    block_id: SectionHeader
+    props_hint: "label='LOG OUTREACH'"
+    layout_hint: "flex flex-row items-center px-6 py-4 border-b border-border"
+
+  - slot: identity-section
+    block_id: Form
+    props_hint: "fields=[{name:'patientSearch',label:'Patient',required:true},{name:'mrn',label:'MRN',required:true}]"
+    layout_hint: "flex flex-col gap-4 px-6 py-4"
+
+  - slot: patient-search
+    block_id: Input
+    props_hint: "placeholder='Search by name or MRN' label='Patient' required={true}"
+    layout_hint: "flex flex-col gap-2 w-full"
+
+  - slot: outreach-type
+    block_id: Select
+    props_hint: "label='Outreach Type' placeholder='Select type' options=['Phone','Text','Email','In-Person'] required={true}"
+    layout_hint: "flex flex-col gap-2 w-full"
+
+  - slot: outreach-outcome
+    block_id: RadioGroup
+    props_hint: "label='Outcome' options=[{value:'reached',label:'Reached'},{value:'no-answer',label:'No Answer'},{value:'left-message',label:'Left Message'}] required={true}"
+    layout_hint: "flex flex-col gap-3 px-6"
+
+  - slot: notes
+    block_id: Input
+    props_hint: "placeholder='Notes (optional)' label='Notes'"
+    layout_hint: "flex flex-col gap-2 w-full px-6"
+
+  - slot: submit-bar
+    block_id: Button
+    props_hint: "variant='primary' label='Log Outreach' disabled={!formValid} size='default'"
+    layout_hint: "flex flex-row items-center justify-between px-6 py-4 border-t border-border sticky bottom-0 bg-background gap-3"

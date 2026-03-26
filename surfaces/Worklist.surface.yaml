@@ -41,3 +41,24 @@ never:
   - Show a patient count as a headline metric (implies quota, not care)
   - Use "No results" as an empty state — it is clinically misleading
   - Allow bulk selection without explicit confirmation (safety rule 12)
+
+regions:
+  - slot: toolbar
+    block_id: SectionHeader
+    props_hint: "label='WORKLIST' count={openItemCount} countVariant='urgent'"
+    layout_hint: "flex flex-row items-center justify-between px-4 py-2 sticky top-0 z-10 bg-background border-b border-border"
+
+  - slot: list
+    block_id: EntityRow
+    props_hint: "entityName={patient.name} score={patient.riskScore} tier={patient.riskTier} primaryAction={{ label: 'Close Gap', onClick: handleCloseGap }}"
+    layout_hint: "flex flex-col divide-y divide-border overflow-y-auto flex-1"
+
+  - slot: empty-state
+    block_id: Alert
+    props_hint: "variant='default' title='Panel clear' description='No patients require coordinator action right now.'"
+    layout_hint: "flex items-center justify-center p-8"
+
+  - slot: loading
+    block_id: Skeleton
+    props_hint: "variant='card' count={5}"
+    layout_hint: "flex flex-col gap-2 px-4 py-3"

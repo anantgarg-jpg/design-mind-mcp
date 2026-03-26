@@ -41,3 +41,34 @@ never:
   - Display patient name in First Last order (always Last, First — rule 8)
   - Show MRN without the "MRN" label (rule 9)
   - Show DOB in short format — always MMM D, YYYY (rule 10)
+
+regions:
+  - slot: header
+    block_id: EntityContextHeader
+    props_hint: "entityName={patient.lastFirst} primaryLabel='MRN' primaryValue={patient.mrn} secondaryLabel='DOB' secondaryValue={patient.dob} tier={patient.riskTier} alertCount={patient.activeAlertCount}"
+    layout_hint: "flex flex-row items-center justify-between px-6 py-4 sticky top-0 z-20 bg-card border-b border-border"
+
+  - slot: alerts
+    block_id: AlertBanner
+    props_hint: "severity={alert.severity} title={alert.title} body={alert.body} onAcknowledge={handleAcknowledge}"
+    layout_hint: "flex flex-col gap-0 w-full"
+
+  - slot: tabs
+    block_id: Tabs
+    props_hint: "defaultValue='care-gaps' tabs=[{value:'care-gaps',label:'Care Gaps'},{value:'tasks',label:'Tasks'},{value:'assessment',label:'Assessment'}]"
+    layout_hint: "flex flex-col flex-1 overflow-hidden"
+
+  - slot: list
+    block_id: ActionableRow
+    props_hint: "variant='row' title={gap.measureName} label={gap.measureCode} labelMono={true} status={gap.status} accent={gap.overdue ? 'warning' : 'accent'} primaryAction={{ label: 'Close Gap', onClick: handleCloseGap }} meta=[{icon: CalendarIcon, text: gap.dueDate}]"
+    layout_hint: "flex flex-col bg-card rounded-lg border border-border overflow-hidden"
+
+  - slot: empty-state
+    block_id: Alert
+    props_hint: "variant='default' title='Panel clear' description='No open care gaps or tasks for this patient.'"
+    layout_hint: "flex items-center justify-center p-8"
+
+  - slot: loading
+    block_id: Skeleton
+    props_hint: "variant='card' count={4}"
+    layout_hint: "flex flex-col gap-2 px-4 py-3"
