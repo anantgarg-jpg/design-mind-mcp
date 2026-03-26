@@ -45,12 +45,48 @@ output:
     description: Ranked relevant patterns from the library
     items:
       id: string
+      level: string           # 'primitive' | 'composite' | null — use this to enforce rules 22 & 25
+      family_invariants:      # CSS properties frozen by this block — never override these on primitives
+        type: array
+        items: string
       relevance_score: number
       when: string
       not_when: string
       because: string
       confidence: number
       usage_signal: object
+
+  canonical_block_set:
+    type: array
+    description: >
+      Alphabetically sorted list of block IDs at or above the relevance
+      threshold (plus structural inclusions). Identical for the same intent
+      across threads — use this as the authoritative set of blocks to compose
+      from. Do not invent blocks that are not in this set without first calling
+      report_pattern.
+    items:
+      type: string
+
+  primitive_guard:
+    type: object
+    description: >
+      Lists ALL active primitive blocks in the knowledge base regardless of
+      query relevance. Always present when primitives exist. These blocks have
+      immutable family_invariants — they must be imported from their declared
+      import_path and used as-is (hard-constraint #25). Only additive className
+      classes (positioning, sizing, spacing, layout) may be passed to them
+      (hard-constraint #22).
+    properties:
+      rule_refs: array          # references to hard-constraints.md rules 22 & 25
+      instruction: string       # machine-readable directive for code generation
+      primitives:
+        type: array
+        items:
+          id: string
+          import_path: string   # canonical import e.g. '@/blocks/Button/Button'
+          family_invariants:    # must not be overridden via className
+            type: array
+            items: string
 
   rules:
     type: array

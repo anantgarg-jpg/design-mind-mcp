@@ -50,6 +50,19 @@ function structuralBoost(patternComponentType, queryComponentType) {
   return related.includes(patternComponentType) ? 0.35 : 0;
 }
 
+// ── Stable sort ───────────────────────────────────────────────────────────────
+// When two results have scores within SCORE_EPSILON of each other, sort
+// alphabetically by id. This guarantees the same pattern order is returned
+// across different threads / runs for the same input — critical for consistency.
+const SCORE_EPSILON = 0.001;
+function stableSort(results) {
+  return results.slice().sort((a, b) => {
+    const diff = b.score - a.score;
+    if (Math.abs(diff) < SCORE_EPSILON) return a.id.localeCompare(b.id);
+    return diff;
+  });
+}
+
 // FAMILY_MAP and familyRankScore removed — structural_family is deprecated for scoring.
 // component_type structural boost (stage1 via structuralBoost) remains active.
 
@@ -844,6 +857,8 @@ function buildStructuralInclusions(primaryTopN, allRetrieved, kb, componentType,
 
     inclusions.push({
       id:               best.id,
+      level:            best.level || null,
+      family_invariants: best.family_invariants || [],
       relevance_score:  candScore,
       structural_family: best.structural_family || null,
       component_type:   best.component_type || null,
@@ -930,7 +945,7 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
   // Ranking: component_type structural boost (stage1 via TYPE_FAMILIES).
   // structural_family FAMILY_MAP boost removed — deprecated.
   // not_when penalty applied before top-5 slice (Change 1).
-  const _rawBoosted = patternResults
+  const _rawBoosted = stableSort(patternResults
     .map(r => {
       const raw_score      = r.score;
       const stage1         = structuralBoost(r.metadata?.component_type, component_type);
@@ -943,12 +958,11 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
         structurally_matched: stage1 > 0,
         family_match: false,
       };
-    })
-    .sort((a, b) => b.score - a.score);
+    }));
 
   const intentTokens = tokenize(intent_description);
-  const boostedResults = applyNotWhenPenalty(_rawBoosted, intentTokens)
-    .sort((a, b) => b.score - a.score)
+  // stableSort guarantees the same order for the same scores across threads.
+  const boostedResults = stableSort(applyNotWhenPenalty(_rawBoosted, intentTokens))
     .slice(0, 5);
 
   let ruleResults = await queryRules(searchText, 3, ruleIndex);
@@ -997,7 +1011,9 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
     const usageSignal = r.metadata?.usage_signal;
     const hasUsageData = usageSignal && usageSignal.renders_total > 0;
     return {
-      id: r.id,
+      id:                r.id,
+      level:             r.metadata?.level || null,
+      family_invariants: r.metadata?.family_invariants || [],
       relevance_score:   parseFloat(r.score.toFixed(4)),
       structural_family: r.metadata?.structural_family || null,
       component_type:    r.metadata?.component_type || null,
@@ -1019,6 +1035,40 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
   );
   // Combined pattern list used in the response
   const allPatterns = [...patterns, ...structuralInclusions];
+
+  // ── canonical_block_set — stable, sorted block list for cross-thread consistency ──
+  // Blocks above the relevance threshold + structural inclusions, sorted
+  // alphabetically by id so the same intent always yields the same ordered set
+  // regardless of floating-point tie-breaking differences across runs/threads.
+  const CANONICAL_THRESHOLD = _useVectorStore ? 0.45 : 0.28;
+  const canonical_block_set = allPatterns
+    .filter(p => p.relevance_score >= CANONICAL_THRESHOLD || p.structural_inclusion)
+    .map(p => p.id)
+    .sort();
+
+  // ── primitive_guard — explicit protection for ALL primitive blocks ─────────────
+  // Lists every active primitive in the knowledge base (not just the top-5 for this
+  // query) so the LLM always knows which blocks have immutable invariants regardless
+  // of what the primary retrieval returned.
+  const activePrimitives = (kb.patterns || [])
+    .filter(p => p.level === 'primitive' && p.status === 'active')
+    .sort((a, b) => a.id.localeCompare(b.id));
+
+  const primitive_guard = activePrimitives.length > 0 ? {
+    rule_refs: ['safety/hard-constraints.md#22', 'safety/hard-constraints.md#25'],
+    instruction: [
+      'All primitive blocks must be imported from @/blocks/<BlockId>/<BlockId> and used as-is (hard-constraint #25).',
+      'Never redefine or reimplement a primitive inline.',
+      'Only additive className classes are permitted on primitives: positioning, sizing, spacing, and layout (hard-constraint #22).',
+      'Never pass className values that conflict with a primitive\'s family_invariants.',
+      'To change an invariant, update the source block\'s meta.yaml and .tsx with design-leadership justification — never inline.',
+    ].join(' '),
+    primitives: activePrimitives.map(p => ({
+      id:                p.id,
+      import_path:       `@/blocks/${p.id}/${p.id}`,
+      family_invariants: p.family_invariants || [],
+    })),
+  } : null;
 
   // ── Structural guidance — dominant family + invariants ──────────────────────
   // When multiple top patterns share a structural family, surface the invariants
@@ -1242,6 +1292,8 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
     ...(structuralGuidance             ? { structural_guidance: structuralGuidance } : {}),
     intent_quality: { score: intentQuality.score, missing: intentQuality.missing },
     patterns: allPatterns,
+    canonical_block_set,
+    ...(primitive_guard                ? { primitive_guard }                       : {}),
     ...(compositions.length > 0        ? { compositions }                          : {}),
     ...(gap_probe                      ? { gap_probe }                             : {}),
     rules,
@@ -1314,6 +1366,154 @@ export async function consultBeforeBuild(params, kb, patternIndex, ruleIndex, su
   }
 
   return response;
+}
+
+// ── Primitive block protection checks (rules 22 & 25) ────────────────────────
+//
+// Rule 22: consuming blocks must not pass className overrides that conflict with
+//          a primitive's family_invariants. Only additive classes are permitted.
+// Rule 25: existing blocks must be used as-is — no reimplementation inline.
+//
+// INVARIANT_CLASS_PREFIXES: Tailwind prefixes that govern the visual identity of
+// a primitive and are frozen by its family_invariants. Passing these as className
+// overrides violates rule 22.
+const INVARIANT_CLASS_PREFIXES = [
+  'rounded', 'font-', 'whitespace-', 'text-xs', 'text-sm', 'text-base', 'text-lg',
+  'text-xl', 'text-2xl', 'text-3xl', 'bg-', 'border-', 'ring-', 'focus-',
+  'transition-', 'shadow-', 'outline-', 'inline-flex', 'items-', 'justify-',
+  'opacity-', 'scale-', 'leading-', 'tracking-', 'decoration-',
+];
+
+// ADDITIVE_CLASS_PREFIXES: purely layout, sizing, spacing, and positioning classes
+// that are always safe to pass as className overrides per rule 22.
+const ADDITIVE_CLASS_PREFIXES = [
+  'gap-', 'space-x-', 'space-y-', 'p-', 'px-', 'py-', 'pt-', 'pb-', 'pl-', 'pr-',
+  'm-', 'mx-', 'my-', 'mt-', 'mb-', 'ml-', 'mr-',
+  'w-', 'h-', 'min-w-', 'max-w-', 'min-h-', 'max-h-', 'size-',
+  'absolute', 'relative', 'fixed', 'sticky', 'static',
+  'top-', 'right-', 'bottom-', 'left-', 'inset-',
+  'z-', 'col-span-', 'row-span-', 'flex-1', 'flex-none', 'flex-shrink', 'flex-grow',
+  'self-', 'place-', 'overflow-', 'truncate', 'cursor-', 'pointer-events-',
+  'hidden', 'block', 'shrink-', 'grow-',
+];
+
+function classHasInvariantConflict(className) {
+  if (!className) return false;
+  return className.trim().split(/\s+/).some(cls => {
+    if (!cls) return false;
+    // If it matches an additive prefix it is always safe — check first
+    const isAdditive = ADDITIVE_CLASS_PREFIXES.some(prefix =>
+      cls === prefix.replace(/-$/, '') || cls.startsWith(prefix)
+    );
+    if (isAdditive) return false;
+    // Otherwise check if it conflicts with an invariant property group
+    return INVARIANT_CLASS_PREFIXES.some(prefix =>
+      cls === prefix.replace(/-$/, '') || cls.startsWith(prefix)
+    );
+  });
+}
+
+/**
+ * Scans the generated code for two categories of primitive violations:
+ *   1. className overrides that conflict with family_invariants (rule 22)
+ *   2. Primitive blocks defined locally instead of imported (rule 25)
+ *
+ * @param {string}   code            - The generated TSX/JSX code
+ * @param {object[]} primitiveBlocks - Active primitive blocks from kb.patterns
+ * @returns {object[]} Array of fix-shaped violation objects with safety_block: true
+ */
+function checkPrimitiveViolations(code, primitiveBlocks) {
+  const violations = [];
+
+  for (const block of primitiveBlocks) {
+    const id = block.id;
+    if (!block.family_invariants || block.family_invariants.length === 0) continue;
+
+    // Is this primitive referenced at all in the code?
+    if (!new RegExp(`<${id}[\\s/>]`).test(code)) continue;
+
+    // ── Check 1: conflicting className override ─────────────────────────────
+    // Match both literal className="..." and expression className={cn("...")}
+    const literalRe  = new RegExp(`<${id}[^>]{0,400}className\\s*=\\s*["'\`]([^"'\`]*)["'\`]`, 's');
+    const exprRe     = new RegExp(`<${id}[^>]{0,400}className\\s*=\\s*\\{[^}]*["'\`]([^"'\`]*)["'\`]`, 's');
+
+    for (const re of [literalRe, exprRe]) {
+      const m = code.match(re);
+      if (m && classHasInvariantConflict(m[1])) {
+        const invariantSample = (block.family_invariants || []).slice(0, 3).join('; ');
+        violations.push({
+          problem: `className override on primitive '${id}' conflicts with its family_invariants`,
+          rule_violated: 'safety/hard-constraints.md rule 22',
+          correction:
+            `Only additive classes (positioning, sizing, spacing, layout) may be passed to '${id}'. ` +
+            `Invariants in force: ${invariantSample}. ` +
+            `To change an invariant, update blocks/${id}/meta.yaml and blocks/${id}/${id}.tsx with ` +
+            `design-leadership justification — never override inline.`,
+          safety_block: true,
+        });
+        break; // one violation per block is enough
+      }
+    }
+
+    // ── Check 2: primitive reimplemented inline (rule 25) ───────────────────
+    // Detect: `const Button = ...` or `function Button(` without a corresponding
+    // import from the blocks directory, which signals the block was rebuilt locally.
+    const redefineRe = new RegExp(`(?:^|\\n)(?:const|function|let|var)\\s+${id}\\s*[=(]`, 'i');
+    const importRe   = new RegExp(`import[^;]*\\b${id}\\b[^;]*from[^;]*['"][^'"]*blocks`, 'i');
+    if (redefineRe.test(code) && !importRe.test(code)) {
+      violations.push({
+        problem: `Primitive block '${id}' appears to be redefined locally rather than imported`,
+        rule_violated: 'safety/hard-constraints.md rule 25',
+        correction:
+          `Import ${id} directly from '@/blocks/${id}/${id}' and use it as-is. ` +
+          `Never reimplement a primitive block inline. ` +
+          `If structural changes are required, register a candidate via report_pattern.`,
+        safety_block: true,
+      });
+    }
+  }
+
+  return violations;
+}
+
+/**
+ * Compares the blocks actually imported in the generated code against the
+ * blocks recommended by consult_before_build (from context_used.patterns).
+ * Flags high-confidence recommended blocks that are absent from the output.
+ *
+ * @param {string} code         - The generated code
+ * @param {object} contextUsed  - The full context returned by consult_before_build
+ * @returns {object[]} Array of borderline-shaped observations
+ */
+function checkBlockIdentity(code, contextUsed) {
+  const issues = [];
+  if (!contextUsed?.patterns) return issues;
+
+  // Extract block IDs that were imported from the @/blocks directory
+  const importMatches = [...code.matchAll(
+    /import\s+(?:\{[^}]*\}|\w+)\s+from\s+['"]@\/blocks\/(\w+)\/\w+['"]/g
+  )];
+  const usedBlockIds = new Set(importMatches.map(m => m[1]));
+
+  // Flag primary (non-structural) recommended blocks with high relevance scores
+  // that were not used — these are the most likely to cause design drift.
+  const highConfRecommended = (contextUsed.patterns || []).filter(
+    p => p.relevance_score >= 0.65 && !p.structural_inclusion
+  );
+
+  for (const rec of highConfRecommended) {
+    if (!usedBlockIds.has(rec.id)) {
+      issues.push({
+        observation: `High-confidence recommended block '${rec.id}' (score: ${rec.relevance_score}) was not imported in the generated output`,
+        tension: `consult_before_build identified this as a primary pattern match — unused blocks risk design-system drift and inconsistency`,
+        recommendation:
+          `Verify this omission was intentional. If a different block was chosen instead, confirm it satisfies the same design intent and genome rules. ` +
+          `If this block should have been used, import it from '@/blocks/${rec.id}/${rec.id}'.`,
+      });
+    }
+  }
+
+  return issues;
 }
 
 // ── TOOL 2: review_output ─────────────────────────────────────────────────────
@@ -1643,6 +1843,23 @@ export async function reviewOutput(params, kb, patternIndex) {
     }
   }
 
+  // ── Primitive block violations (rules 22 & 25) ───────────────────────────────
+  // Rule 22: no className override of family_invariants on primitive blocks.
+  // Rule 25: primitives must be imported and used as-is, never reimplemented.
+  const activePrimitivesForReview = (kb.patterns || []).filter(
+    p => p.level === 'primitive' && p.status === 'active'
+  );
+  const primitiveViolations = checkPrimitiveViolations(code, activePrimitivesForReview);
+  fix.push(...primitiveViolations);
+
+  // ── Block identity check — were the recommended blocks actually used? ────────
+  // Compares blocks imported in the generated code against consult_before_build's
+  // high-confidence recommendations. Absent high-confidence blocks go to borderline.
+  if (context_used) {
+    const identityIssues = checkBlockIdentity(code, context_used);
+    borderline.push(...identityIssues);
+  }
+
   // ── Non-canonical terminology ────────────────────────────────────────────────
   const termViolations = checkNonCanonicalTerms(code, kb);
   fix.push(...termViolations);
@@ -1692,8 +1909,13 @@ export async function reviewOutput(params, kb, patternIndex) {
   const copyViolations = checkCopyVoice(code);
 
   // ── Overall compliance score ─────────────────────────────────────────────────
+  // safety_block fixes (hard-constraint and primitive violations) deduct more
+  // heavily than soft fixes — they represent shippability blockers.
+  const safetyBlockCount = fix.filter(f => f.safety_block).length;
+  const softFixCount     = fix.filter(f => !f.safety_block).length;
   let compliance = 1.0;
-  compliance -= fix.length * 0.15;             // each fix deducts 15%
+  compliance -= safetyBlockCount * 0.20;        // safety_block: true → 20% each
+  compliance -= softFixCount * 0.10;            // soft fix → 10% each
   compliance -= borderline.length * 0.05;       // each borderline deducts 5%
   compliance -= copyViolations.length * 0.05;   // each copy violation deducts 5%
   compliance = Math.max(0, Math.min(1, compliance));
@@ -1709,6 +1931,9 @@ export async function reviewOutput(params, kb, patternIndex) {
         : 'Low resemblance to existing patterns — review against genome before promoting',
     }] : [],
     fix,
+    // primitive_violations mirrors the subset of fix items that originate from
+    // rules 22 and 25 — surfaced separately so consumers can gate on them alone.
+    primitive_violations: primitiveViolations,
     copy_violations: copyViolations,
     candidate_patterns: candidatePatterns,
     confidence: parseFloat(compliance.toFixed(4)),

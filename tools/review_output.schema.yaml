@@ -30,6 +30,9 @@ output:
 
   borderline:
     type: array
+    description: >
+      Tensions between competing rules, plus any high-confidence recommended
+      blocks from consult_before_build that were not imported in the output.
     items:
       observation: string
       tension: string
@@ -44,9 +47,37 @@ output:
 
   fix:
     type: array
+    description: >
+      All violations requiring correction before the output is shippable.
+      Includes hard-constraint violations, primitive violations (rules 22 & 25),
+      and soft genome violations. Items with safety_block: true must be resolved
+      first — they represent non-negotiable blockers.
     items:
       problem: string
       rule_violated: string
+      correction: string
+      safety_block: boolean   # true = blocker; false = soft fix
+
+  primitive_violations:
+    type: array
+    description: >
+      Subset of fix items that originate specifically from hard-constraint rules
+      22 (className override of family_invariants) and 25 (primitive block
+      reimplemented inline). All items here also appear in fix with
+      safety_block: true. Surfaced separately so consumers can gate on primitive
+      compliance independently of other fix categories.
+    items:
+      problem: string
+      rule_violated: string   # always 'safety/hard-constraints.md rule 22' or '... rule 25'
+      correction: string
+      safety_block: boolean   # always true
+
+  copy_violations:
+    type: array
+    description: Copy-voice and clinical language violations
+    items:
+      rule: string
+      found: string
       correction: string
 
   candidate_patterns:
@@ -59,4 +90,7 @@ output:
 
   confidence:
     type: number
-    description: Overall genome compliance score (0.0–1.0)
+    description: >
+      Overall genome compliance score (0.0–1.0). Safety-block violations
+      (hard-constraint and primitive) deduct 20% each; soft fixes 10%;
+      borderline and copy violations 5% each.
