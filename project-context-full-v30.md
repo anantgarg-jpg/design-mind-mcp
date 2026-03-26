@@ -1,6 +1,6 @@
 # Design Mind MCP — Project Context
 
-> Auto-generated from repo on 2026-03-25. Do not edit manually — run `node scripts/generate-context.js` to refresh.
+> Auto-generated from repo on 2026-03-26. Do not edit manually — run `node scripts/generate-context.js` to refresh.
 
 **Repo:** https://github.com/anantgarg-jpg/design-mind-mcp
 **Hosted MCP:** https://design-mind-mcp-production.up.railway.app/sse
@@ -80,12 +80,48 @@ output:
     description: Ranked relevant patterns from the library
     items:
       id: string
+      level: string           # 'primitive' | 'composite' | null — use this to enforce rules 22 & 25
+      family_invariants:      # CSS properties frozen by this block — never override these on primitives
+        type: array
+        items: string
       relevance_score: number
       when: string
       not_when: string
       because: string
       confidence: number
       usage_signal: object
+
+  canonical_block_set:
+    type: array
+    description: >
+      Alphabetically sorted list of block IDs at or above the relevance
+      threshold (plus structural inclusions). Identical for the same intent
+      across threads — use this as the authoritative set of blocks to compose
+      from. Do not invent blocks that are not in this set without first calling
+      report_pattern.
+    items:
+      type: string
+
+  primitive_guard:
+    type: object
+    description: >
+      Lists ALL active primitive blocks in the knowledge base regardless of
+      query relevance. Always present when primitives exist. These blocks have
+      immutable family_invariants — they must be imported from their declared
+      import_path and used as-is (hard-constraint #25). Only additive className
+      classes (positioning, sizing, spacing, layout) may be passed to them
+      (hard-constraint #22).
+    properties:
+      rule_refs: array          # references to hard-constraints.md rules 22 & 25
+      instruction: string       # machine-readable directive for code generation
+      primitives:
+        type: array
+        items:
+          id: string
+          import_path: string   # canonical import e.g. '@/blocks/Button/Button'
+          family_invariants:    # must not be overridden via className
+            type: array
+            items: string
 
   rules:
     type: array
@@ -232,6 +268,9 @@ output:
 
   borderline:
     type: array
+    description: >
+      Tensions between competing rules, plus any high-confidence recommended
+      blocks from consult_before_build that were not imported in the output.
     items:
       observation: string
       tension: string
@@ -246,9 +285,37 @@ output:
 
   fix:
     type: array
+    description: >
+      All violations requiring correction before the output is shippable.
+      Includes hard-constraint violations, primitive violations (rules 22 & 25),
+      and soft genome violations. Items with safety_block: true must be resolved
+      first — they represent non-negotiable blockers.
     items:
       problem: string
       rule_violated: string
+      correction: string
+      safety_block: boolean   # true = blocker; false = soft fix
+
+  primitive_violations:
+    type: array
+    description: >
+      Subset of fix items that originate specifically from hard-constraint rules
+      22 (className override of family_invariants) and 25 (primitive block
+      reimplemented inline). All items here also appear in fix with
+      safety_block: true. Surfaced separately so consumers can gate on primitive
+      compliance independently of other fix categories.
+    items:
+      problem: string
+      rule_violated: string   # always 'safety/hard-constraints.md rule 22' or '... rule 25'
+      correction: string
+      safety_block: boolean   # always true
+
+  copy_violations:
+    type: array
+    description: Copy-voice and clinical language violations
+    items:
+      rule: string
+      found: string
       correction: string
 
   candidate_patterns:
@@ -261,7 +328,10 @@ output:
 
   confidence:
     type: number
-    description: Overall genome compliance score (0.0–1.0)
+    description: >
+      Overall genome compliance score (0.0–1.0). Safety-block violations
+      (hard-constraint and primitive) deduct 20% each; soft fixes 10%;
+      borderline and copy violations 5% each.
 ```
 
 
@@ -4579,7 +4649,7 @@ summary: >
 when:
   - a single section needs expand/collapse behavior
   - progressive disclosure of optional detail within a card or row
-  - "Show more" / "Show less" patterns
+  - '"Show more" / "Show less" patterns'
 
 not_when:
   - multiple collapsible sections in a group (use Accordion)
