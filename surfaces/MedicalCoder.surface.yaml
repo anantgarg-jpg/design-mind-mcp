@@ -1,0 +1,46 @@
+id: MedicalCoder
+type: surface
+user_type: [coordinator]
+
+intent: >
+  Three-panel workspace for medical coders managing insurance claims.
+  Left panel holds a thread-based navigation history for different claim worklists.
+  Center panel is an AI chat assistant that adapts its context to what's open in the canvas.
+  Right panel is the main canvas showing the home dashboard, claim worklists, or claim detail pages with tabs.
+  The primary workflow is: review metrics on home, open a worklist via chat prompt, drill into a claim, resolve issues through AI-suggested fixes.
+
+what_it_omits:
+  - item: Clinical notes and patient health records
+    reason: "Different role and access control. Medical coders work with billing codes and payer data — clinical context belongs in the EHR, not the coding workspace."
+  - item: Bulk claim actions without confirmation
+    reason: "Billing modifications affect revenue and compliance. Bulk changes require explicit per-claim review."
+  - item: Resolved and closed claims mixed into active worklists
+    reason: "Closed claims are historical record. The worklist is an action surface — mixing closed items degrades scannability and creates false urgency."
+
+empty_state_meaning: >
+  All claims are coded correctly and no action is required. This is a positive billing signal — not an error state.
+
+ordering: >
+  Claims sorted by urgency: denial risk first, then dollar amount, then days open.
+  Never alphabetical. Never recency alone. Order encodes the cost of inaction.
+
+actions:
+  - label: "Apply Suggested Code"
+    stage: claim detail — chat panel CTA
+    constraint: "Updates claim status to Ready to Submit. Requires AI resolution suggestion to be present."
+  - label: "Submit Claim"
+    stage: claim detail — after fix applied
+    constraint: "Sends claim to payer. Status updates to Submitted. One step, no additional confirmation for single claim."
+  - label: "Open Worklist"
+    stage: home chat prompt chips
+    constraint: "Creates a new thread in left nav, loads worklist in main canvas. Does not navigate away from home until thread is created."
+  - label: "Open Claim Detail"
+    stage: worklist row click
+    constraint: "Opens new tab within current thread canvas. Does not replace worklist tab."
+
+never:
+  - Replace the worklist tab when opening a claim — always add a new tab within the same thread
+  - Dismiss or hide the chat panel — it is always visible and context-aware
+  - Show a generic confirmation dialog for single-claim resolution actions
+  - Mix different thread contexts — each thread is isolated to its worklist and opened claims
+  - Use the home canvas to show worklist data — home is metrics only

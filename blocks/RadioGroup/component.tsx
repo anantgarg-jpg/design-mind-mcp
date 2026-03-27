@@ -52,7 +52,7 @@ export function RadioGroupBlock({
       {options.map((option) => (
         <div
           key={option.value}
-          className="flex items-start gap-2 min-h-[44px]"
+          className="flex items-start gap-2 min-h-11"
         >
           <RadioGroupItem
             value={option.value}

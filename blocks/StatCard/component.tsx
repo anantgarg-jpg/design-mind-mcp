@@ -9,7 +9,7 @@ import { Card } from "@blocks/Card/component"
 //
 // INVARIANTS:
 //   Label: text-sm (12px) font-medium uppercase tracking-wide text-muted-foreground
-//   Value: text-[32px] font-medium tabular-nums leading-none (title/x-large)
+//   Value: text-4xl font-medium tabular-nums leading-none (title/x-large)
 //   Max 4 StatCards per row.
 //
 // Container: Card block with elevation prop — no local card styling.
@@ -23,11 +23,15 @@ import { Card } from "@blocks/Card/component"
 
 type StatVariant = "default" | "urgent" | "warning" | "success"
 
-const VARIANT_CONFIG: Record<StatVariant, { valueClass: string }> = {
-  default: { valueClass: "text-foreground" },
-  urgent:  { valueClass: "text-destructive" },
-  warning: { valueClass: "text-warning" },
-  success: { valueClass: "text-success" },
+// What this overrides: no shadcn component involved — applies text colour to the value <p>.
+// Semantic tokens map variant intent to design-system colour vars. Never raw Tailwind colours.
+// Renamed from VARIANT_CONFIG (nested shape) to VARIANT_CLASSES (flat Record<Variant, string>)
+// to match the standard block override pattern.
+const VARIANT_CLASSES: Record<StatVariant, string> = {
+  default: "text-foreground",
+  urgent:  "text-destructive",
+  warning: "text-warning",
+  success: "text-success",
 }
 
 interface StatCardProps {
@@ -51,8 +55,6 @@ export function StatCard({
   onClick,
   className,
 }: StatCardProps) {
-  const v = VARIANT_CONFIG[variant]
-
   return (
     <Card
       elevation={elevation}
@@ -63,7 +65,8 @@ export function StatCard({
         <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
           {label}
         </p>
-        <p className={cn("text-[32px] font-medium tabular-nums leading-none", v.valueClass)}>
+        {/* TODO: replace text-4xl with a design token when a value size scale is added (was text-[32px]) */}
+        <p className={cn("text-4xl font-medium tabular-nums leading-none", VARIANT_CLASSES[variant])}>
           {value}
         </p>
         {subtitle && (

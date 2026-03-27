@@ -40,7 +40,7 @@ export function Textarea({
       rows={rows}
       className={cn(
         "rounded-md border border-subtle bg-card px-3 py-2 text-base",
-        "min-h-[80px] resize-y",
+        "min-h-20 resize-y",
         "placeholder:text-muted-foreground",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         error && "border-destructive",

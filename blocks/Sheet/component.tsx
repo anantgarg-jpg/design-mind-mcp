@@ -47,7 +47,8 @@ export function Sheet({
       <SheetContent
         side={side}
         className={cn(
-          "bg-card shadow-lg min-w-[320px] max-w-[540px]",
+          // TODO: replace max-w-[540px] with design token when sheet max-width scale is added (540px; max-w-lg = 512px, max-w-xl = 576px — neither matches)
+          "bg-card shadow-lg min-w-80 max-w-[540px]",
           "focus-visible:outline-none",
           className,
         )}

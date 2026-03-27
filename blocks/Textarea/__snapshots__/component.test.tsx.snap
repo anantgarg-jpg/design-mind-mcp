@@ -1,0 +1,17 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Textarea > snapshots > default 1`] = `
+<textarea
+  class="flex w-full disabled:cursor-not-allowed disabled:opacity-50 md:text-sm rounded-md border border-subtle bg-card px-3 py-2 text-base min-h-20 resize-y placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+  placeholder="Enter text..."
+  rows="3"
+/>
+`;
+
+exports[`Textarea > snapshots > with error 1`] = `
+<textarea
+  class="flex w-full disabled:cursor-not-allowed disabled:opacity-50 md:text-sm rounded-md border bg-card px-3 py-2 text-base min-h-20 resize-y placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring border-destructive"
+  placeholder="Required"
+  rows="3"
+/>
+`;

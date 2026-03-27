@@ -60,6 +60,15 @@ const ACCENT_BORDER: Record<string, string> = {
   none:    "border-l-transparent",
 }
 
+// What shadcn defaults this overrides: n/a — ActionableRow is a plain <div>.
+// VARIANT_CLASSES replaces inline conditional arrays (isRow && [...], isCard && [...]).
+// Declaring variants as a named map makes them auditable and overridable via className.
+// hover:bg-muted/60 (row) and hover:bg-accent/50 (card) are explicit here rather than inlined.
+const VARIANT_CLASSES: Record<"row" | "card", string> = {
+  row:  "px-4 py-3.5 bg-card border-b border-border/40 last:border-0 border-l-2 hover:bg-muted/60",
+  card: "p-4 bg-card border border-border/60 rounded-lg shadow-sm hover:bg-accent/50",
+}
+
 export function ActionableRow({
   variant = "row",
   title,
@@ -77,9 +86,6 @@ export function ActionableRow({
   dimmed,
   className,
 }: ActionableRowProps) {
-  const isRow  = variant === "row"
-  const isCard = variant === "card"
-
   return (
     <div
       role={onRowClick ? "button" : undefined}
@@ -88,15 +94,8 @@ export function ActionableRow({
       onKeyDown={onRowClick ? (e) => { if (e.key === "Enter" || e.key === " ") onRowClick() } : undefined}
       className={cn(
         "group flex items-start gap-3 transition-colors",
-        isRow && [
-          "px-4 py-3.5 bg-card border-b border-border/40 last:border-0 border-l-2",
-          "hover:bg-muted/60",
-          ACCENT_BORDER[accent] ?? "border-l-transparent",
-        ],
-        isCard && [
-          "p-4 bg-card border border-border/60 rounded-lg shadow-sm",
-          "hover:bg-accent/50",
-        ],
+        VARIANT_CLASSES[variant],
+        variant === "row" && (ACCENT_BORDER[accent] ?? "border-l-transparent"),
         onRowClick && "cursor-pointer",
         dimmed && "opacity-50 pointer-events-none",
         className

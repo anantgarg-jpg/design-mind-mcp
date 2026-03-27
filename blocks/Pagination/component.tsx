@@ -83,7 +83,7 @@ export function PaginationBar({
             onClick={() => page > 1 && onPageChange(page - 1)}
             aria-disabled={page <= 1}
             className={cn(
-              "min-w-[44px] min-h-[44px]",
+              "min-w-11 min-h-11",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               page <= 1 && "pointer-events-none opacity-50"
             )}
@@ -103,7 +103,7 @@ export function PaginationBar({
                 aria-current={p === page ? "page" : undefined}
                 className={cn(
                   "h-9 w-9 rounded-md text-sm",
-                  "min-w-[44px] min-h-[44px]",
+                  "min-w-11 min-h-11",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   p === page && "bg-primary text-primary-foreground font-medium pointer-events-none"
                 )}
@@ -119,7 +119,7 @@ export function PaginationBar({
             onClick={() => page < pageCount && onPageChange(page + 1)}
             aria-disabled={page >= pageCount}
             className={cn(
-              "min-w-[44px] min-h-[44px]",
+              "min-w-11 min-h-11",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               page >= pageCount && "pointer-events-none opacity-50"
             )}

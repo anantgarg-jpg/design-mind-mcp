@@ -78,7 +78,7 @@ export function CommandPalette({
                     value={action.label}
                     keywords={action.keywords}
                     onSelect={action.onSelect}
-                    className="py-2 px-3 rounded-md min-h-[44px] flex items-center gap-2 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="py-2 px-3 rounded-md min-h-11 flex items-center gap-2 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     {action.icon}
                     <span>{action.label}</span>

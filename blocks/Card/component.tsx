@@ -1,12 +1,5 @@
 import { cn } from "@/lib/utils"
-import {
-  Card as ShadcnCard,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { Card as ShadcnCard } from "@/components/ui/card"
 
 // ── Genome sources ────────────────────────────────────────────────────────────
 // Block:    blocks/Card/meta.yaml
@@ -16,7 +9,6 @@ import {
 // INVARIANTS (meta.yaml):
 //   rounded-lg border border-subtle bg-card
 //   shadow-sm when on muted/tinted background, no shadow on white background
-//   p-4 content padding
 //
 // Elevation (styling-tokens.rule.md):
 //   flat       — no shadow, border-driven (white-on-white)
@@ -24,21 +16,18 @@ import {
 //   shadow-md  — card-express, onboarding/expressive flows
 //
 // State feedback (styling-tokens.rule.md):
-//   hover:    bg-foreground/[0.04]
-//   active:   bg-foreground/[0.08]
+//   hover:    bg-foreground/5
+//   active:   bg-foreground/10
 //   focused:  ring-2 ring-ring ring-offset-1
 //   selected: border-2 border-primary
 //   disabled: opacity-50, pointer-events-none, no shadow, border border-subtle
 //
-// No nested cards permitted.
+// No nested cards permitted. Content padding is the caller's responsibility.
 
 type CardElevation = "flat" | "sm" | "md"
 
 interface CardProps {
-  title?: string
-  description?: string
   children: React.ReactNode
-  footer?: React.ReactNode
   /** Shadow elevation: "flat" (no shadow), "sm" (raised), "md" (expressive) */
   elevation?: CardElevation
   /** Makes the card interactive with hover/active/focus states */
@@ -57,10 +46,7 @@ const elevationClass: Record<CardElevation, string> = {
 }
 
 export function Card({
-  title,
-  description,
   children,
-  footer,
   elevation = "flat",
   onClick,
   selected = false,
@@ -78,7 +64,7 @@ export function Card({
       aria-disabled={disabled || undefined}
       aria-selected={selected || undefined}
       className={cn(
-        "rounded-lg bg-card",
+        "rounded-lg bg-card p-2",
         disabled
           ? "border border-subtle opacity-50 pointer-events-none"
           : elevation === "flat"
@@ -87,21 +73,14 @@ export function Card({
         selected && !disabled && "border-2 border-primary",
         isInteractive && [
           "cursor-pointer transition-colors",
-          "hover:bg-foreground/[0.04]",
-          "active:bg-foreground/[0.08]",
+          "hover:bg-foreground/5",
+          "active:bg-foreground/10",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
         ],
         className,
       )}
     >
-      {(title || description) && (
-        <CardHeader className="p-4 pb-0">
-          {title && <CardTitle className="text-base font-semibold text-foreground">{title}</CardTitle>}
-          {description && <CardDescription className="text-sm text-muted-foreground">{description}</CardDescription>}
-        </CardHeader>
-      )}
-      <CardContent className="p-4">{children}</CardContent>
-      {footer && <CardFooter className="p-4 pt-0">{footer}</CardFooter>}
+      {children}
     </ShadcnCard>
   )
 }

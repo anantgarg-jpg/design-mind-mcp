@@ -34,7 +34,7 @@ export function Switch({
   return (
     <div
       className={cn(
-        "flex items-center gap-3 min-h-[44px]", // 44px touch target (rule 21)
+        "flex items-center gap-3 min-h-11", // 44px touch target (rule 21)
         className,
       )}
     >

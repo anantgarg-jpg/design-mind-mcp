@@ -79,7 +79,7 @@ export function Combobox({
                 role="button"
                 tabIndex={0}
                 aria-label="Clear selection"
-                className="rounded-sm p-0.5 hover:bg-muted min-w-[44px] min-h-[44px] flex items-center justify-center"
+                className="rounded-sm p-0.5 hover:bg-muted min-w-11 min-h-11 flex items-center justify-center"
                 onClick={(e) => {
                   e.stopPropagation()
                   onValueChange("")
@@ -117,7 +117,7 @@ export function Combobox({
                     onValueChange(option.value)
                     setOpen(false)
                   }}
-                  className="py-1.5 px-2 rounded-sm min-h-[44px] flex items-center gap-2 cursor-pointer"
+                  className="py-1.5 px-2 rounded-sm min-h-11 flex items-center gap-2 cursor-pointer"
                 >
                   <Check
                     className={cn(

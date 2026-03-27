@@ -41,7 +41,8 @@ export function Tooltip({
           className={cn(
             "rounded-md shadow-sm z-60",
             "bg-foreground text-background text-sm px-3 py-1.5",
-            "max-w-[220px]",
+            // TODO: replace max-w-56 with design token when tooltip max-width scale is added (was max-w-[220px] = 220px; max-w-56 = 224px, closest standard value)
+            "max-w-56",
             className,
           )}
         >

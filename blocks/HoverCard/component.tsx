@@ -42,7 +42,7 @@ export function HoverCardBlock({
       <HoverCardContent
         align={align}
         className={cn(
-          "rounded-lg shadow-md bg-card border border-border p-4 max-w-[320px]",
+          "rounded-lg shadow-md bg-card border border-border p-4 max-w-xs",
           className
         )}
       >

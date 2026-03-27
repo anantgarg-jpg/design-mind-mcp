@@ -6,14 +6,13 @@ structural_family: content-container
 family_invariants:
   - "rounded-lg border border-subtle bg-card"
   - "shadow-sm when on muted/tinted background, no shadow on white background"
-  - "p-4 content padding"
 confidence: 0.85
-version: 1.0.0
+version: 1.1.0
 
 summary: >
-  Surface container for grouping related content with optional header,
-  content body, and footer sections. Wraps shadcn Card with project
-  shadow tokens and enforced nesting rules.
+  Pure surface container. Accepts any blocks or text as children — no
+  internal layout, padding, or content structure is imposed. Callers are
+  responsible for padding and content organisation.
 
 when:
   - grouping related content into a visually distinct surface
@@ -33,11 +32,12 @@ variants:
 
 key_rules:
   - elevation prop controls shadow — flat (default), sm (raised), md (expressive)
-  - hover uses bg-foreground/[0.04], active adds scale-[0.97] + bg-foreground/[0.08]
-  - selected state uses bg-primary/10 border-primary/30
+  - hover uses bg-foreground/5, active uses bg-foreground/10
+  - selected state uses border-2 border-primary
   - disabled state uses opacity-50 pointer-events-none
   - no nested cards
   - never use shadow transitions for hover — background color shift only
+  - content padding is the caller's responsibility
 
 embedding_hint: >
   card container surface panel tile group

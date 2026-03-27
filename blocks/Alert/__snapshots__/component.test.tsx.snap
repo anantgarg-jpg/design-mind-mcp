@@ -1,0 +1,45 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Alert > snapshots > default variant 1`] = `
+<div
+  class="relative w-full text-sm [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground [&>svg~*]:pl-7 bg-background text-foreground rounded-lg border p-4 border-border"
+  role="alert"
+>
+  <div
+    class="flex flex-col gap-1"
+  >
+    <h5
+      class="mb-1 tracking-tight font-semibold text-base"
+    >
+      Info
+    </h5>
+    <div
+      class="[&_p]:leading-relaxed text-sm text-muted-foreground"
+    >
+      Message body
+    </div>
+  </div>
+</div>
+`;
+
+exports[`Alert > snapshots > destructive variant 1`] = `
+<div
+  class="relative w-full text-sm [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg~*]:pl-7 dark:border-destructive [&>svg]:text-destructive rounded-lg border p-4 border-destructive text-destructive"
+  role="alert"
+>
+  <div
+    class="flex flex-col gap-1"
+  >
+    <h5
+      class="mb-1 tracking-tight font-semibold text-base"
+    >
+      Error
+    </h5>
+    <div
+      class="[&_p]:leading-relaxed text-sm text-muted-foreground"
+    >
+      Something went wrong
+    </div>
+  </div>
+</div>
+`;

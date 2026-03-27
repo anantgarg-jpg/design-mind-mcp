@@ -61,7 +61,8 @@ export function NavigationMenuBlock({
                   {item.label}
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
-                  <ul className="grid gap-3 p-4 w-[400px]">
+                  {/* TODO: replace w-96 with design token when nav dropdown width scale is added (was w-[400px] = 400px; w-96 = 384px, closest standard value) */}
+                  <ul className="grid gap-3 p-4 w-96">
                     {item.children.map((child) => (
                       <li key={child.href}>
                         <NavigationMenuLink

@@ -1,0 +1,71 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Tabs > snapshots > default (first tab active) 1`] = `
+<div
+  class=""
+  data-orientation="horizontal"
+  dir="ltr"
+>
+  <div
+    aria-orientation="horizontal"
+    class="inline-flex items-center text-muted-foreground border-b border-border bg-transparent rounded-none w-full justify-start gap-0 h-auto p-0"
+    data-orientation="horizontal"
+    role="tablist"
+    style="outline: none;"
+    tabindex="0"
+  >
+    <button
+      aria-controls="radix-:rf:-content-a"
+      aria-selected="true"
+      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background text-sm font-semibold text-muted-foreground rounded-none border-b-2 border-transparent px-4 py-2 min-h-11 data-[state=active]:text-foreground data-[state=active]:border-primary data-[state=active]:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      data-orientation="horizontal"
+      data-radix-collection-item=""
+      data-state="active"
+      id="radix-:rf:-trigger-a"
+      role="tab"
+      tabindex="-1"
+      type="button"
+    >
+      Tab A
+    </button>
+    <button
+      aria-controls="radix-:rf:-content-b"
+      aria-selected="false"
+      class="inline-flex items-center justify-center whitespace-nowrap transition-all disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background text-sm font-semibold text-muted-foreground rounded-none border-b-2 border-transparent px-4 py-2 min-h-11 data-[state=active]:text-foreground data-[state=active]:border-primary data-[state=active]:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      data-orientation="horizontal"
+      data-radix-collection-item=""
+      data-state="inactive"
+      id="radix-:rf:-trigger-b"
+      role="tab"
+      tabindex="-1"
+      type="button"
+    >
+      Tab B
+    </button>
+  </div>
+  <div
+    aria-labelledby="radix-:rf:-trigger-a"
+    class="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring mt-4"
+    data-orientation="horizontal"
+    data-state="active"
+    id="radix-:rf:-content-a"
+    role="tabpanel"
+    style="animation-duration: 0s;"
+    tabindex="0"
+  >
+    <div>
+      Content A
+    </div>
+  </div>
+  <div
+    aria-labelledby="radix-:rf:-trigger-b"
+    class="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring mt-4"
+    data-orientation="horizontal"
+    data-state="inactive"
+    hidden=""
+    id="radix-:rf:-content-b"
+    role="tabpanel"
+    tabindex="0"
+  />
+</div>
+`;

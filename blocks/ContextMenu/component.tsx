@@ -52,7 +52,7 @@ export function ContextMenu({
       <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
       <ContextMenuContent
         className={cn(
-          "rounded-md shadow-md z-20 bg-popover text-popover-foreground min-w-[8rem]",
+          "rounded-md shadow-md z-20 bg-popover text-popover-foreground min-w-32",
           className,
         )}
       >
@@ -65,7 +65,7 @@ export function ContextMenu({
                 onSelect={item.onSelect}
                 disabled={item.disabled}
                 className={cn(
-                  "py-1 text-sm cursor-pointer min-h-[44px] flex items-center gap-2",
+                  "py-1 text-sm cursor-pointer min-h-11 flex items-center gap-2",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   item.destructive && "text-destructive focus:text-destructive",
                 )}

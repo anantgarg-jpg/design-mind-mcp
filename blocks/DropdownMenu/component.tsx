@@ -55,7 +55,7 @@ export function DropdownMenuBlock({
       <DropdownMenuContent
         align={align}
         className={cn(
-          "rounded-md shadow-md bg-popover py-1 min-w-[8rem]",
+          "rounded-md shadow-md bg-popover py-1 min-w-32",
           className
         )}
       >
@@ -73,7 +73,7 @@ export function DropdownMenuBlock({
                 disabled={item.disabled}
                 onClick={item.onClick}
                 className={cn(
-                  "px-3 py-2 text-base cursor-pointer min-h-[44px] flex items-center gap-2",
+                  "px-3 py-2 text-base cursor-pointer min-h-11 flex items-center gap-2",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   item.destructive && "text-destructive focus:text-destructive"
                 )}

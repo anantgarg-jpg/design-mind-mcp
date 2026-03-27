@@ -24,6 +24,16 @@ interface AlertProps {
   className?: string
 }
 
+// What shadcn defaults this overrides:
+// - shadcn Alert "destructive" applies border/text colour via its own CSS var chain.
+//   We declare border-destructive + text-destructive explicitly so design-system
+//   tokens are authoritative regardless of shadcn's variable resolution.
+// - "default" declares border-border explicitly for parity and auditability.
+const VARIANT_CLASSES: Record<"default" | "destructive", string> = {
+  default:     "border-border",
+  destructive: "border-destructive text-destructive",
+}
+
 export function Alert({
   title,
   children,
@@ -36,8 +46,7 @@ export function Alert({
       variant={variant}
       className={cn(
         "rounded-lg border p-4",
-        variant === "default" && "border-border",
-        variant === "destructive" && "border-destructive text-destructive",
+        VARIANT_CLASSES[variant],
         className,
       )}
     >

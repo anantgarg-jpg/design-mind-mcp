@@ -55,7 +55,7 @@ export function Tabs({
             disabled={tab.disabled}
             className={cn(
               "text-sm font-semibold text-muted-foreground rounded-none border-b-2 border-transparent",
-              "px-4 py-2 min-h-[44px]",
+              "px-4 py-2 min-h-11",
               "data-[state=active]:text-foreground data-[state=active]:border-primary data-[state=active]:shadow-none",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             )}

@@ -47,7 +47,7 @@ export function Select({
     <ShadcnSelect value={value} onValueChange={onValueChange} disabled={disabled}>
       <SelectTrigger
         className={cn(
-          "h-11 min-h-[44px] rounded-md border border-subtle bg-card px-3 text-base",
+          "h-11 min-h-11 rounded-md border border-subtle bg-card px-3 text-base",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           error && "border-destructive",
           className,

@@ -1,0 +1,37 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Card > snapshots > disabled 1`] = `
+<div
+  aria-disabled="true"
+  class="text-card-foreground rounded-lg bg-card p-2 border border-subtle opacity-50 pointer-events-none"
+>
+  content
+</div>
+`;
+
+exports[`Card > snapshots > flat (default) 1`] = `
+<div
+  class="text-card-foreground rounded-lg bg-card p-2 border border-subtle"
+>
+  content
+</div>
+`;
+
+exports[`Card > snapshots > interactive with sm elevation 1`] = `
+<div
+  class="text-card-foreground rounded-lg bg-card p-2 shadow-sm cursor-pointer transition-colors hover:bg-foreground/5 active:bg-foreground/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+  role="button"
+  tabindex="0"
+>
+  content
+</div>
+`;
+
+exports[`Card > snapshots > selected 1`] = `
+<div
+  aria-selected="true"
+  class="text-card-foreground rounded-lg bg-card p-2 border-2 border-primary"
+>
+  content
+</div>
+`;
