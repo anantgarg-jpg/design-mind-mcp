@@ -13,7 +13,7 @@ server/      — MCP stdio server (the Claude Code tool)
 api/         — Hosted candidate submission API
 genome/      — Rules, taste, and principles
 ontology/    — Canonical entity names, actions, states, copy voice
-blocks/      — Ratified UI blocks (meta.yaml + component.tsx)
+blocks/      — Ratified UI blocks (meta.yaml specs)
 surfaces/    — Surface specs (workflow intent for full artifacts)
 safety/      — Hard constraints and severity schema
 memory/      — Episodic build log
@@ -28,7 +28,7 @@ The Design Mind organises knowledge at three levels:
 | Level | Location | What it encodes |
 |-------|----------|-----------------|
 | **Tokens** | `genome/rules/styling-tokens.rule.md` | Colors, typography, spacing — the visual primitives |
-| **Blocks** | `blocks/*/meta.yaml` | Reusable UI structures with product decisions baked in — from status badge to form layout. Three sub-levels: `primitive` (single-purpose), `composite` (assembles primitives), `domain` (product-specific) |
+| **Blocks** | `blocks/*/meta.yaml` | Reusable UI structures with product decisions baked in — from status badge to form layout. Two sub-levels: `primitive` (single-purpose), `composite` (assembles primitives). Implementations live in `@innovaccer/ui-assets` npm package. |
 | **Surfaces** | `surfaces/*.surface.yaml` | Full artifacts with workflow intent — encodes *why* a surface exists, what it omits, ordering logic, available actions, and hard "never" rules |
 
 ---
@@ -81,7 +81,7 @@ cd server && npm install
 export ANTHROPIC_API_KEY=your-key-here
 ```
 
-The server uses the Anthropic API (claude-sonnet-4-5) to reason over the genome at query time. Without the key, `consult_before_build` returns a fallback response with no surface match or block selection.
+The server uses the Anthropic API (claude-sonnet-4-6) to reason over the genome at query time. Without the key, `consult_before_build` returns a fallback response with no surface match or block selection.
 
 ---
 
@@ -154,7 +154,7 @@ cd api && node src/index.js
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `ANTHROPIC_API_KEY` | — | **Required.** Anthropic API key for LLM reasoning (claude-sonnet-4-5) |
+| `ANTHROPIC_API_KEY` | — | **Required.** Anthropic API key for LLM reasoning (claude-sonnet-4-6) |
 | `TRANSPORT` | `stdio` | Set to `sse` to enable HTTP/SSE transport |
 | `PORT` | `8080` | HTTP port (Railway sets this automatically) |
 | `API_KEY` | `dm-local-dev-key` | Key for `/candidates` endpoint — **change in production** |
@@ -233,7 +233,7 @@ The legacy `knowledge.js` loader remains active alongside `genomeLoader.js` — 
 
 ### LLM composition
 
-`llmClient.js` calls the Anthropic API (`claude-sonnet-4-5`) for both tools:
+`llmClient.js` calls the Anthropic API (`claude-sonnet-4-6`) for both tools:
 
 - `callDesignMind` — used by `consult_before_build`. Sends the full serialised genome as context, then the intent/scope/domain/user_type. The model selects matching blocks, identifies the surface (if any), applies rules and safety constraints, and returns a structured JSON response.
 - `callCritic` — used by `review_output`. Sends the genome plus the generated code and auto-check results. Returns `honored`, `borderline`, `fix`, `novel`, and `copy_violations` arrays.
@@ -255,4 +255,4 @@ The genome context string is sent as a `cache_control: { type: "ephemeral" }` bl
 
 ### Environment variable required
 
-`ANTHROPIC_API_KEY` must be set. Without it, `callDesignMind` and `callCritic` return a fallback object with `build_mode: { mode: "block-composition" }`, empty `blocks`, and a gap entry explaining the LLM is not configured. The server starts and serves all four tools regardless — the API key is only needed for LLM-powered responses.
+`ANTHROPIC_API_KEY` must be set (or `OPENAI_API_KEY` + `OPENAI_BASE_URL` for compatible endpoints). Without it, `callDesignMind` and `callCritic` return a fallback object with `surface.matched: false`, empty `workflows`, and a gap entry explaining the LLM is not configured. The server starts and serves all four tools regardless — the API key is only needed for LLM-powered responses.

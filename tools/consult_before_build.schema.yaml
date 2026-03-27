@@ -1,34 +1,27 @@
 tool: consult_before_build
-version: 2.0.0
+version: 3.0.0
 description: >
   REQUIRED before generating ANY UI — component, page, surface, or style change.
-  Returns the design genome: component code templates, layout blueprints, safety
-  constraints, and copy rules for this platform. The response is a construction
-  packet — use it as a blueprint, not as suggestions.
+  Returns the design genome construction packet: surface matching, layout structure,
+  per-workflow block assignments, safety constraints, and copy rules.
+  The response is a blueprint, not a suggestion.
+
+  PRE-FLIGHT:
+  Ensure @innovaccer/ui-assets is in the project's package.json.
+  Ensure import '@innovaccer/ui-assets/tokens' is in the project entry file.
 
   HOW TO CALL:
-  1. Describe WHAT you are building. Be specific — include who uses it, what data
-     it shows, what actions are available, and whether this is a new build or modification.
-  2. Send a SCOPE HINT: "surface" (full page/panel), "block" (single component),
-     "token" (styling/spacing question).
-  3. Include domain and user_type if you can infer them from the codebase.
-
-  The server matches your description against its knowledge base. If it finds a known
-  page blueprint, it returns a full construction plan with layout regions, component
-  assignments, ordering rules, and hard constraints. If not, it returns the best
-  matching components with code templates for you to compose.
-
-  WRITING A GOOD DESCRIPTION:
-    Good: "Coordinator-facing page showing prioritised patients with open care gaps.
-          Each row: patient name, risk tier, gap status, due date. Actions: Close Gap."
-    Bad: "a worklist"
+  1. Describe WHAT you are building — who uses it, what data, what actions.
+  2. Send a SCOPE HINT: "surface" | "block" | "token".
+  3. Include domain and user_type if inferable.
+  4. DECOMPOSE the intent into WORKFLOWS — bounded UI sections as { id, intent, region? }.
 
   HOW TO USE THE RESPONSE:
-  Read build_mode FIRST. "surface-first" means follow the blueprint exactly.
-  "block-composition" means compose from the returned blocks.
-  component_tsx in each block is the EXACT code template — copy the structure,
-  adapt only data source and state management.
-  safety_constraints are non-negotiable.
+  1. Read surface.matched first. If true, layout is authoritative. If false, layout is generated.
+  2. For each workflow, import blocks using exact import_instruction from @innovaccer/ui-assets.
+  3. family_invariants are CSS classes that must never be changed.
+  4. safety_applied constraints are non-negotiable.
+  5. After generating code, call review_output.
 
 input:
   intent_description:
@@ -54,69 +47,87 @@ input:
       enum: ["clinician", "coordinator", "patient", "admin", "data-engineer"]
     required: false
 
-output:
-  build_mode:
-    type: object
-    description: >
-      How to proceed. mode="surface-first" means a known page blueprint was matched —
-      follow it exactly. mode="block-composition" means compose from returned blocks.
+  project_root:
+    type: string
+    required: false
+    description: "Absolute path to the consuming project root. Auto-detected if omitted."
 
-  surface:
-    type: object
-    description: Surface blueprint data when build_mode is surface-first.
-
-  blocks:
+  workflows:
     type: array
-    description: Matched blocks with code templates and constraints.
+    required: false
+    description: >
+      Optional workflow decompositions. Each represents a bounded UI section.
+      When provided, the response maps blocks to each workflow individually.
+      When omitted, the entire intent is treated as a single workflow.
     items:
       id: string
-      level: string
-      meta_yaml: string
-      component_tsx: string
-      family_invariants:
-        type: array
-        items: string
-      import_path: string
-      when: string
-      not_when: string
+      intent: string
+      region: string   # optional
 
-  primitive_guard:
+output:
+  surface:
+    type: object
+    description: Surface matching result.
+    properties:
+      matched: boolean
+      confidence: number
+      surface_id: string   # null if not matched
+      import_instruction: string   # null if not matched
+
+  layout:
     type: object
     description: >
-      ALL active primitive blocks — always present. family_invariants are immutable.
+      Layout structure. source="surface" means regions come from a surface spec (authoritative).
+      source="generated" means the LLM composed regions from genome principles.
     properties:
-      instruction: string
-      primitives:
+      source: string   # "surface" | "generated"
+      regions:
         type: array
         items:
           id: string
-          import_path: string
-          family_invariants:
-            type: array
-            items: string
+          order: number
+          blocks: array
+          never: array
 
-  rules:
+  workflows:
     type: array
-    description: Applicable cross-component rules with full content.
+    description: Per-workflow block assignments. Each block is enriched with genome metadata.
+    items:
+      id: string
+      intent: string
+      blocks:
+        type: array
+        items:
+          id: string
+          level: string   # "primitive" | "composite"
+          npm_path: string
+          import_instruction: string
+          family_invariants: array
+          when: string
+          not_when: string
+
+  blocks:
+    type: array
+    description: Flat list of all blocks across all workflows (backwards compatibility).
+
+  rules_applied:
+    type: array
     items:
       rule_id: string
-      summary: string
       applies_because: string
-      full_content: string
 
-  safety_constraints:
+  safety_applied:
     type: array
-    description: Hard constraints in scope for this intent.
     items:
-      constraint_id: string
-      rule: string
+      constraint_id: number
       applies_because: string
 
   ontology_refs:
     type: array
-    description: Relevant ontology concept references.
     items:
-      type: string
+      concept: string
+      canonical_name: string
+      ui_label: string
 
   confidence:
     type: number
@@ -125,5 +136,3 @@ output:
   gaps:
     type: array
     description: What the system does not have coverage for.
-    items:
-      type: string

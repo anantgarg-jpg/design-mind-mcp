@@ -36,14 +36,14 @@ const CRITIC_SYSTEM_PROMPT = readFileSync(
   'utf8'
 );
 
-const FALLBACK_BUILD_MODE = { mode: 'block-composition', anchor: null };
-
 function makeFallback(gap) {
   return {
-    build_mode: FALLBACK_BUILD_MODE,
-    selected_blocks: [],
-    regions: [],
+    surface: { matched: false, confidence: 0, surface_id: null, import_instruction: null },
+    layout: { source: 'generated', regions: [] },
+    workflows: [],
     rules_applied: [],
+    safety_applied: [],
+    ontology_refs: [],
     confidence: 0,
     gaps: [gap],
   };
@@ -77,7 +77,10 @@ function getProvider() {
 // ── Anthropic helpers ─────────────────────────────────────────────────────────
 
 function makeAnthropicClient() {
-  return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  return new Anthropic({
+    apiKey: process.env.ANTHROPIC_API_KEY,
+    defaultHeaders: { 'anthropic-beta': 'extended-cache-ttl-2025-04-11' },
+  });
 }
 
 async function anthropicParseWithRetry(client, model, systemPrompt, messages, label) {
@@ -184,7 +187,7 @@ async function openRouterCall(systemPrompt, userContent, label) {
   let response;
   try {
     response = await client.chat.completions.create({
-      model: 'anthropic/claude-sonnet-4-5',
+      model: 'anthropic/claude-sonnet-4-6',
       max_tokens: 2500,
       temperature: 0,
       messages: [
@@ -232,7 +235,7 @@ async function geminiCall(systemPrompt, userContent, label) {
 /**
  * Call the Design Mind agent.
  */
-export async function callDesignMind({ genomeContext, intent, scope, domain, userType }) {
+export async function callDesignMind({ genomeContext, intent, scope, domain, userType, workflows }) {
   const provider = getProvider();
 
   if (!provider) {
@@ -240,14 +243,18 @@ export async function callDesignMind({ genomeContext, intent, scope, domain, use
     return makeFallback('LLM not configured — returning retrieval-only results');
   }
 
-  const userContent = [
-    genomeContext,
+  const dynamicParts = [
     `Intent: ${intent}`,
     `Scope: ${scope}`,
     `Domain: ${domain || 'unspecified'}`,
     `User types: ${(userType || []).join(', ') || 'unspecified'}`,
-    `REMINDER: Respond with ONLY the JSON object. No questions, no prose, no explanation.`,
-  ].join('\n\n');
+  ];
+  if (workflows && workflows.length > 0) {
+    dynamicParts.push(`Workflows:\n${JSON.stringify(workflows, null, 2)}`);
+  }
+  dynamicParts.push('REMINDER: Respond with ONLY the JSON object. No questions, no prose, no explanation.');
+
+  const userContent = [genomeContext, ...dynamicParts].join('\n\n');
 
   try {
     if (provider === 'anthropic') {
@@ -255,11 +262,11 @@ export async function callDesignMind({ genomeContext, intent, scope, domain, use
       const messages = [{
         role: 'user',
         content: [
-          { type: 'text', text: genomeContext, cache_control: { type: 'ephemeral' } },
-          { type: 'text', text: `Intent: ${intent}\nScope: ${scope}\nDomain: ${domain || 'unspecified'}\nUser types: ${(userType || []).join(', ') || 'unspecified'}` },
+          { type: 'text', text: genomeContext, cache_control: { type: 'extended' } },
+          { type: 'text', text: dynamicParts.join('\n') },
         ],
       }];
-      return await anthropicParseWithRetry(client, 'claude-sonnet-4-5', DESIGN_MIND_SYSTEM_PROMPT, messages, 'callDesignMind');
+      return await anthropicParseWithRetry(client, 'claude-sonnet-4-6', DESIGN_MIND_SYSTEM_PROMPT, messages, 'callDesignMind');
     }
 
     if (provider === 'openai') {
@@ -282,7 +289,7 @@ export async function callDesignMind({ genomeContext, intent, scope, domain, use
 /**
  * Call the Critic agent.
  */
-export async function callCritic({ generatedCode, originalIntent, genomeContext, autoCheckResults }) {
+export async function callCritic({ generatedCode, originalIntent, genomeContext, autoCheckResults, contextUsed }) {
   const provider = getProvider();
 
   if (!provider) {
@@ -290,9 +297,16 @@ export async function callCritic({ generatedCode, originalIntent, genomeContext,
     return makeFallback('LLM not configured — returning retrieval-only results');
   }
 
+  const reviewPayload = {
+    generated_code: generatedCode,
+    original_intent: originalIntent,
+    auto_check_results: autoCheckResults,
+    ...(contextUsed ? { consultation_context: contextUsed } : {}),
+  };
+
   const userContent = [
     genomeContext,
-    JSON.stringify({ generated_code: generatedCode, original_intent: originalIntent, auto_check_results: autoCheckResults }),
+    JSON.stringify(reviewPayload),
   ].join('\n\n');
 
   try {
@@ -301,11 +315,11 @@ export async function callCritic({ generatedCode, originalIntent, genomeContext,
       const messages = [{
         role: 'user',
         content: [
-          { type: 'text', text: genomeContext, cache_control: { type: 'ephemeral' } },
-          { type: 'text', text: JSON.stringify({ generated_code: generatedCode, original_intent: originalIntent, auto_check_results: autoCheckResults }) },
+          { type: 'text', text: genomeContext, cache_control: { type: 'extended' } },
+          { type: 'text', text: JSON.stringify(reviewPayload) },
         ],
       }];
-      return await anthropicParseWithRetry(client, 'claude-sonnet-4-5', CRITIC_SYSTEM_PROMPT, messages, 'callCritic');
+      return await anthropicParseWithRetry(client, 'claude-sonnet-4-6', CRITIC_SYSTEM_PROMPT, messages, 'callCritic');
     }
 
     if (provider === 'openai') {

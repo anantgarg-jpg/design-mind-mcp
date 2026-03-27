@@ -98,6 +98,118 @@ function isTokensImported(projectRoot) {
   return walk(projectRoot, 0);
 }
 
+// ── Token mismatch detection ─────────────────────────────────────────────
+// Compares CSS custom properties in the package tokens file against any
+// project-level CSS files that redefine the same variables.
+
+const CSS_EXTS = new Set(['.css']);
+const CSS_VAR_RE = /--([\w-]+)\s*:\s*([^;]+);/g;
+
+function parseCustomProperties(css) {
+  const props = new Map();
+  let m;
+  const re = new RegExp(CSS_VAR_RE.source, 'g');
+  while ((m = re.exec(css)) !== null) {
+    props.set(m[1], m[2].trim());
+  }
+  return props;
+}
+
+function findTokenMismatches(projectRoot) {
+  const mismatches = [];
+
+  // 1. Read package tokens
+  const pkgTokensPath = join(
+    projectRoot, 'node_modules', PACKAGE_NAME, 'src', 'tokens', 'index.css'
+  );
+  if (!existsSync(pkgTokensPath)) return mismatches; // package tokens not accessible
+
+  let packageTokens;
+  try {
+    packageTokens = parseCustomProperties(readFileSync(pkgTokensPath, 'utf-8'));
+  } catch {
+    return mismatches;
+  }
+  if (packageTokens.size === 0) return mismatches;
+
+  // 2. Scan project CSS files for overlapping custom property definitions
+  const projectCssFiles = [];
+
+  function walkForCss(dir, depth) {
+    if (depth > 5) return;
+    let entries;
+    try { entries = readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    for (const entry of entries) {
+      if (entry.name.startsWith('.') || entry.name === 'node_modules' || entry.name === 'dist' || entry.name === 'build') continue;
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walkForCss(full, depth + 1);
+      } else if (entry.isFile() && CSS_EXTS.has(extname(entry.name))) {
+        projectCssFiles.push(full);
+      }
+    }
+  }
+  walkForCss(projectRoot, 0);
+
+  // 3. Compare each project CSS file against package tokens
+  for (const cssFile of projectCssFiles) {
+    // Skip the package's own tokens file if it somehow appears outside node_modules
+    if (cssFile.includes('node_modules')) continue;
+
+    let content;
+    try { content = readFileSync(cssFile, 'utf-8'); } catch { continue; }
+
+    const projectProps = parseCustomProperties(content);
+    for (const [name, projectValue] of projectProps) {
+      if (!packageTokens.has(name)) continue; // not a package token — skip
+      const packageValue = packageTokens.get(name);
+      // Normalize values for comparison (strip whitespace, lowercase hex)
+      const normProject = projectValue.replace(/\s+/g, ' ').toLowerCase();
+      const normPackage = packageValue.replace(/\s+/g, ' ').toLowerCase();
+      if (normProject !== normPackage) {
+        const relPath = cssFile.replace(projectRoot + '/', '');
+        mismatches.push({
+          token: `--${name}`,
+          package_value: packageValue,
+          project_value: projectValue,
+          project_file: relPath,
+        });
+      }
+    }
+  }
+
+  // 4. Check tailwind.config for color overrides (best-effort regex)
+  for (const configName of ['tailwind.config.js', 'tailwind.config.ts', 'tailwind.config.mjs']) {
+    const configPath = join(projectRoot, configName);
+    if (!existsSync(configPath)) continue;
+    let configContent;
+    try { configContent = readFileSync(configPath, 'utf-8'); } catch { continue; }
+
+    // Look for theme.extend.colors definitions that match package token names
+    // This is a best-effort regex approach — not a full AST parse
+    const colorBlockRe = /colors\s*:\s*\{([^}]+)\}/gs;
+    let cm;
+    while ((cm = colorBlockRe.exec(configContent)) !== null) {
+      const block = cm[1];
+      for (const tokenName of packageTokens.keys()) {
+        // Check if the token name appears as a key in the colors block
+        const keyRe = new RegExp(`['"]?${tokenName.replace(/-/g, '[-]?')}['"]?\\s*:`, 'i');
+        if (keyRe.test(block)) {
+          mismatches.push({
+            token: `--${tokenName}`,
+            package_value: packageTokens.get(tokenName),
+            project_value: `(overridden in ${configName} theme.extend.colors)`,
+            project_file: configName,
+          });
+        }
+      }
+    }
+    break; // only check first config file found
+  }
+
+  return mismatches;
+}
+
 // ── Semver helpers ────────────────────────────────────────────────────────────
 function stripRange(v) {
   return v ? v.replace(/^[^0-9]*/, '') : null;
@@ -157,6 +269,20 @@ export async function check(projectRoot) {
     warnings.push(
       `⚠️  **Design tokens not imported.** Add this to your app entry point:\n` +
       `   \`import '${PACKAGE_NAME}/tokens'\``
+    );
+  }
+
+  // 4. Token mismatch check
+  const mismatches = findTokenMismatches(root);
+  if (mismatches.length > 0) {
+    const lines = mismatches.map(m =>
+      `   • \`${m.token}\`: package="${m.package_value}" vs project="${m.project_value}" (${m.project_file})`
+    );
+    warnings.push(
+      `⚠️  **Token mismatch detected** — ${mismatches.length} token(s) in your project override values from ${PACKAGE_NAME}/tokens:\n` +
+      lines.join('\n') + '\n' +
+      `   If these overrides are intentional (sub-branding, theming), this is safe to ignore.\n` +
+      `   If not, remove the duplicate definitions to use the package defaults.`
     );
   }
 

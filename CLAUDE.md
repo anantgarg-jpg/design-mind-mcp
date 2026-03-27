@@ -2,18 +2,20 @@
 
 ## Block Consultation Protocol
 
-Before writing ANY UI code, identify all blocks needed across all levels. Then call `consult_before_build` once per block, in this strict level order:
+Before writing ANY UI code, call `consult_before_build` with the application intent and decomposed workflows. The tool returns surface matching, layout structure, and per-workflow block assignments.
 
-1. **Primitives first** (Button, Card, Badge, Icon, etc.) — resolve these before moving up. Primitive `family_invariants` are immutable and must be known before composites are designed.
-2. **Composites/Domain blocks second** (Dialog, Alert, Row, etc.) — only after all primitives are addressed. Example: a Dialog uses Card as its background container; consult Card first, then Dialog.
-3. **Surfaces last** (Page, Panel) — only after composites are addressed.
+**How to call:**
+1. Describe the full application intent (who uses it, what data, what actions)
+2. Decompose the intent into workflows — bounded UI sections as `{ id, intent, region? }` objects
+3. Include scope, domain, and user_type
+4. The response includes `surface` (matched or not), `layout` (regions), and `workflows` (per-workflow blocks)
 
-**Rules:**
-- One call per block — never batch multiple blocks into a single consultation
-- Do not skip levels — if a composite uses a primitive, the primitive must be consulted first
-- Never use `component_type: "page"` or `"panel"` as a proxy for block-level consultation of lower-level components
-- Even familiar or simple blocks require a call before implementation — no exceptions
-- If `consult_before_build` returns `build_mode: "block-composition"`, that is **not clearance to build**. It means no surface matched — you must restart the protocol at primitive level, consulting every block the UI needs individually before writing any code.
+**How to use the response:**
+- Read `surface.matched` first — if true, the layout regions are authoritative (from a surface spec)
+- If `surface.matched` is false, `layout` is an LLM-generated skeleton — treat as strong recommendation
+- Import all blocks from `@innovaccer/ui-assets` using the exact `import_instruction` in the response
+- Never reimplement blocks inline. Never override `family_invariants`.
+- After generating code, call `review_output` with the generated code, original intent, and the consultation response as `context_used`
 
 ## Git Policy
 

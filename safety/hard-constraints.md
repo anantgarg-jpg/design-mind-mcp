@@ -131,8 +131,6 @@
 
 23. When a primitive or composite Block's component or meta.yaml is modified, all consuming Blocks and surfaces that import or compose that Block must be reviewed and updated to reflect the change. No upstream change may be committed without verifying downstream consumers remain compliant.
 
-24. Whenever updating the code (.tsx) for any block or surface, the meta.yaml must be checked and updated to align with the changes.Similarly, if meta.yaml is generated, the .tsx must be generated for that block. 
+24. Import blocks from @innovaccer/ui-assets using the exact tier path (block-primitives, block-composites, surfaces). Never import from shadcn (@/components/ui/), local paths, or relative paths when a genome block exists. Never reimplement a block inline. If a block needs changes that alter its structure, register a candidate pattern via report_pattern.
 
-25. Whenever using existing blocks or surfaces, implement the .tsx code for the block or surface as is - do not reimagine the code. If major changes are required, register as a new candidate block.
-
-26. Only build composite blocks or surfaces using the primitive blocks. Never modify existing primitives. Do not create new primitives unless the functionality is completely different from what is supported by existing primitives, regardless of domain or semantics. 
+25. Only build composite blocks or surfaces using the primitive blocks. Never modify existing primitives. Do not create new primitives unless the functionality is completely different from what is supported by existing primitives, regardless of domain or semantics. 

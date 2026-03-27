@@ -12,6 +12,7 @@ import { writeFileSync, readFileSync, readdirSync, existsSync, mkdirSync, append
 import { join } from 'node:path';
 import { loadGenome, getGenomeForLLM } from './genomeLoader.js';
 import { callDesignMind, callCritic } from './llmClient.js';
+import { loadTokenAllowlist } from './tokenResolver.js';
 
 // ── Episodic memory writer ────────────────────────────────────────────────────
 function logEpisodic(entry) {
@@ -36,178 +37,6 @@ function tokenize(text) {
     .filter(t => t.length >= 2);
 }
 
-// Maps query component_type to the pattern component_types it should structurally match.
-// "list" queries match "row" and "card" patterns since lists are composed of rows/cards.
-const TYPE_FAMILIES = {
-  list:   ['row', 'card'],
-  row:    ['row'],
-  card:   ['card'],
-  table:  ['row', 'table'],
-  banner: ['banner'],
-  header: ['header'],
-  form:   ['form'],
-  badge:  ['badge'],
-  button: ['button'],
-  modal:  ['modal'],
-  drawer: ['drawer'],
-  page:   ['page', 'panel'],
-  panel:  ['panel', 'page'],
-  other:  ['other'],
-};
-
-function structuralBoost(patternComponentType, queryComponentType) {
-  if (!queryComponentType || !patternComponentType) return 0;
-  const related = TYPE_FAMILIES[queryComponentType] || [queryComponentType];
-  return related.includes(patternComponentType) ? 0.35 : 0;
-}
-
-// ── Stable sort ───────────────────────────────────────────────────────────────
-// When two results have scores within SCORE_EPSILON of each other, sort
-// alphabetically by id. This guarantees the same pattern order is returned
-// across different threads / runs for the same input — critical for consistency.
-const SCORE_EPSILON = 0.001;
-function stableSort(results) {
-  return results.slice().sort((a, b) => {
-    const diff = b.score - a.score;
-    if (Math.abs(diff) < SCORE_EPSILON) return a.id.localeCompare(b.id);
-    return diff;
-  });
-}
-
-// FAMILY_MAP and familyRankScore removed — structural_family is deprecated for scoring.
-// component_type structural boost (stage1 via structuralBoost) remains active.
-
-// ── Change 1: not_when penalty ────────────────────────────────────────────────
-// Demotes blocks whose not_when text overlaps strongly with the intent.
-function applyNotWhenPenalty(scoredBlocks, intentTokens) {
-  return scoredBlocks.map(block => {
-    const notWhenVal = block.metadata?.not_when;
-    const notWhenText = Array.isArray(notWhenVal)
-      ? notWhenVal.join(' ')
-      : (notWhenVal || '');
-    const notWhenTokens = tokenize(notWhenText);
-    const overlap = notWhenTokens.filter(t => intentTokens.includes(t)).length;
-    if (overlap >= 2) {
-      const demotedScore = block.score * 0.3;
-      return {
-        ...block,
-        score: demotedScore,
-        adjusted_score: demotedScore,
-        not_when_penalised: true,
-      };
-    }
-    return block;
-  });
-}
-
-// ── Change 2: composition hints ───────────────────────────────────────────────
-// When two blocks each score in the ambiguous zone and are structurally distinct,
-// suggest composing them rather than inventing a third block.
-// Accepts boostedResults (raw scored blocks) so _embedding_hint is read from
-// r.metadata — it is not exposed in the patterns output.
-function buildCompositionHints(boostedResults) {
-  const qualifiers = boostedResults.filter(r => r.score >= 0.45 && r.score <= 0.72);
-  const hints = [];
-  for (let i = 0; i < qualifiers.length && hints.length < 2; i++) {
-    for (let j = i + 1; j < qualifiers.length && hints.length < 2; j++) {
-      const a = qualifiers[i];
-      const b = qualifiers[j];
-      const aFam = a.metadata?.structural_family;
-      const bFam = b.metadata?.structural_family;
-      if (aFam && aFam === bFam) continue;
-      const aTokens = tokenize(a.metadata?.embedding_hint || a.metadata?.summary || '');
-      const bTokens = tokenize(b.metadata?.embedding_hint || b.metadata?.summary || '');
-      const overlap = aTokens.filter(t => bTokens.includes(t)).length;
-      if (overlap > 3) continue;
-      const aSummary = (a.metadata?.summary || '').trim().replace(/\s+/g, ' ').substring(0, 120);
-      const bSummary = (b.metadata?.summary || '').trim().replace(/\s+/g, ' ').substring(0, 120);
-      hints.push({
-        blocks: [a.id, b.id],
-        rationale: `${aSummary} ${bSummary}`.trim().substring(0, 220),
-        usage: `Render ${b.id} inside ${a.id}'s secondary metadata slot.`,
-      });
-    }
-  }
-  return hints;
-}
-
-// ── Change 3: structure-vs-content gap probe ──────────────────────────────────
-// Fires only in the 0.55–0.74 ambiguous zone to pre-empt false report_pattern calls.
-function buildGapProbe(topPattern) {
-  if (!topPattern) return null;
-  const score = topPattern.relevance_score;
-  if (score < 0.55 || score > 0.74) return null;
-  return {
-    matched_block: topPattern.id,
-    confidence: score,
-    question: `Does your intent change the slot structure of ${topPattern.id}, or just its content — labels, domain, entity type, icon?`,
-    if_content: `Use ${topPattern.id} as-is. Content changes do not require a new block or report_pattern.`,
-    if_structure: `Describe the structural difference specifically, then consider calling report_pattern. Do not invent a new block without first confirming the structure genuinely differs.`,
-  };
-}
-
-/**
- * Keyword-based scoring: score each item in the array against a query text.
- * Returns [{id, score, metadata}] sorted by score descending, capped at k results.
- * Items are expected to have id, summary, when, description, embedding_hint, or raw fields.
- */
-function keywordScore(text, items, k) {
-  const queryTokens = tokenize(text);
-  if (queryTokens.length === 0) return [];
-  const querySet = new Set(queryTokens);
-
-  const scored = items.map(item => {
-    const fields = [
-      item.id || '',
-      item.summary || '',
-      item.description || '',
-      item.embedding_hint || '',
-      item.when || '',
-      item.use || '',
-      item.raw || '',
-      item.component_type || '',
-      item.domain || '',
-      (item.tags || []).join(' '),
-    ].join(' ');
-    const itemTokens = tokenize(fields);
-    const itemSet = new Set(itemTokens);
-    const intersection = [...querySet].filter(t => itemSet.has(t)).length;
-    const union = new Set([...querySet, ...itemSet]).size;
-    const score = union > 0 ? intersection / union : 0;
-    return { id: item.id, score, metadata: item };
-  });
-
-  return scored
-    .filter(r => r.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, k);
-}
-
-async function queryPatterns(text, k, patternIndex) {
-  return keywordScore(text, patternIndex || [], k);
-}
-
-async function queryRules(text, k, ruleIndex) {
-  return keywordScore(text, ruleIndex || [], k);
-}
-
-// Surface matching — TF-IDF Jaccard on embedding_input (surfaces are few enough
-// that a full vector store is not needed; linear scan is fast)
-function querySurfaces(text, surfaces) {
-  if (!surfaces || surfaces.length === 0) return null;
-  const textWords = new Set(text.toLowerCase().split(/\s+/).filter(w => w.length > 2));
-  let best = null, bestScore = 0;
-  for (const s of surfaces) {
-    const surfaceWords = new Set((s.embedding_input || '').split(/\s+/).filter(w => w.length > 2));
-    const intersection = [...textWords].filter(w => surfaceWords.has(w)).length;
-    const union = new Set([...textWords, ...surfaceWords]).size;
-    const score = union > 0 ? intersection / union : 0;
-    if (score > bestScore) { bestScore = score; best = { surface: s, score }; }
-  }
-  // Only return a surface match if it's reasonably confident
-  return bestScore > 0.08 ? best : null;
-}
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function toArray(val) {
@@ -215,713 +44,6 @@ function toArray(val) {
   if (Array.isArray(val)) return val;
   if (typeof val === 'string') return [val];
   return [];
-}
-
-function formatWhen(whenVal) {
-  if (!whenVal) return 'Not specified';
-  if (Array.isArray(whenVal)) return whenVal.map(w => `• ${w}`).join('\n');
-  return String(whenVal);
-}
-
-function formatNotWhen(notWhenVal) {
-  if (!notWhenVal) return 'Not specified';
-  if (Array.isArray(notWhenVal)) return notWhenVal.map(w => `• ${w}`).join('\n');
-  return String(notWhenVal);
-}
-
-// Change 2: Determine whether a constraint is "direct" (governs the component
-// being built right now) or "carry_forward" (applies to sub-components —
-// confirmation dialogs, modal copy, form error states, button behavior).
-// Based on reading each constraint's text:
-//   9  — destructive confirmation → sub-component (confirmation dialog)
-//   12 — unsaved-changes warning → sub-component behavior
-//   13 — form error token → sub-component error state
-//   16 — confirmation dialog copy → sub-component dialog
-//   17 — modal secondary "Close" label → sub-component button behavior
-// All others govern the component's own layout, display, or visual treatment.
-const CARRY_FORWARD_IDS = new Set([9, 12, 13, 16, 17]);
-// C22: no className override of family_invariants
-// C23: downstream review when composed block changes
-// C24: meta.yaml sync when .tsx changes
-// These are commit/review-time constraints, not design-time.
-const GOVERNANCE_IDS = new Set([22, 23, 24]);
-
-function determineConstraintScope(id) {
-  if (GOVERNANCE_IDS.has(id)) return 'governance';
-  if (CARRY_FORWARD_IDS.has(id)) return 'carry_forward';
-  return 'direct';
-}
-
-// Identify which safety constraints are in scope for an intent
-function getSafetyConstraintsInScope(intent, componentType, domain, kb) {
-  const allConstraints = kb.safety.constraints || [];
-  const intentLower = (intent + ' ' + domain).toLowerCase();
-  const inScopeIds = new Set(detectSafetyViolations(intent, componentType, domain, kb));
-
-  return allConstraints
-    .filter(c => inScopeIds.has(c.id))
-    .map(c => ({
-      constraint_id:   c.id,
-      rule:            c.text,
-      applies_because: inferAppliesBecause(c, intentLower, componentType),
-      scope:           determineConstraintScope(c.id),
-    }));
-}
-
-// Design Mind improvement: Change 1 — safety blocking vs confidence gating
-// CONSTRAINT_RELEVANCE maps component_type / domain to the constraint IDs that are
-// structurally in scope. Only constraints for types/domains in this map are flagged.
-// Unlisted types fall through to the terminology constraints (13, 14) which always apply.
-const CONSTRAINT_RELEVANCE = {
-  'banner':          [1, 2, 3, 4, 5, 6, 7],   // severity color + alert dismissal
-  'clinical-alerts': [1, 2, 3, 4, 5, 6, 7],
-  'header':          [8, 9, 10],               // patient identity
-  'patient-data':    [8, 9, 10],
-  'form':            [11, 12],                 // confirmation
-  'modal':           [11, 12],
-  'table':           [12],                     // bulk action only
-  'list':            [12],
-};
-
-function detectSafetyViolations(intent, componentType, domain, kb) {
-  const idsFromType   = CONSTRAINT_RELEVANCE[componentType] || [];
-  const idsFromDomain = CONSTRAINT_RELEVANCE[domain]        || [];
-  const inScope       = new Set([...idsFromType, ...idsFromDomain]);
-
-  // Unlisted component types always check terminology + copy/language + CTA + accessibility (13–21)
-  if (idsFromType.length === 0 && idsFromDomain.length === 0) {
-    [13, 14, 15, 16, 17, 18, 19, 20, 21].forEach(id => inScope.add(id));
-  }
-
-  // Copy, language, CTA display, and accessibility constraints always apply regardless of component type
-  [15, 16, 17, 18, 19, 20, 21].forEach(id => inScope.add(id));
-
-  return [...inScope].sort((a, b) => a - b);
-}
-
-function inferAppliesBecause(constraint, intentLower, componentType) {
-  const id = constraint.id;
-  // Severity color rules (1-4)
-  if (id <= 4) return 'Severity colors are always in scope when building clinical UI';
-  // Alert dismissal rules (5-7)
-  if (id <= 7) {
-    if (intentLower.includes('alert') || intentLower.includes('dismiss') || componentType === 'banner') {
-      return 'Alert dismissal rules apply to this component type';
-    }
-    return 'Alert rules included — verify no dismiss control exists on critical alerts';
-  }
-  // Patient identity rules (8-10)
-  if (id <= 10) {
-    if (intentLower.includes('patient') || componentType === 'header') {
-      return 'Patient identity display rules apply';
-    }
-    return 'Patient identity rules included — verify any patient fields use canonical display';
-  }
-  // Confirmation rules (11-12)
-  if (id <= 12) {
-    if (intentLower.includes('delete') || intentLower.includes('bulk') || intentLower.includes('modify')) {
-      return 'This action modifies or deletes data — confirmation required';
-    }
-    return 'Confirm any destructive or bulk actions with explicit consequence statement';
-  }
-  // Terminology + copy/language + CTA display + accessibility rules (13–21) — always apply
-  return 'Clinical terminology, copy/language, CTA display, and accessibility rules always apply';
-}
-
-// ── Fix 3: Ontology resolver — text-based, with domain defaults ───────────────
-// Resolves ontology refs by matching against intent_description text (canonical names +
-// synonyms). Merges with domain-based defaults. Returns shaped objects with build-relevant
-// notes. Replaces the old pattern-ref lookup (getOntologyRefs) which only matched
-// whatever the top pattern declared and returned [] for unrecognised concepts.
-const DOMAIN_ONTOLOGY_DEFAULTS = {
-  'clinical-alerts': ['Alert', 'AlertSeverity'],
-  'patient-data':    ['Patient'],
-  'care-gaps':       ['CareGap', 'Patient'],
-  'tasks':           ['Task'],
-};
-
-function resolveOntologyFromIntent(intentDescription, domain, kb) {
-  const intentLower = (intentDescription || '').toLowerCase();
-  const result = [];
-  const seen = new Set();
-
-  const allEntities = kb.ontology.entities || {};
-  const allStates   = kb.ontology.states   || {};
-  const allActions  = kb.ontology.actions  || {};
-
-  function addEntityEntry(key, entity) {
-    const canonical = entity.canonical_name || key;
-    if (seen.has(canonical)) return;
-    seen.add(canonical);
-    result.push({
-      concept:        canonical,
-      canonical_name: canonical,
-      ui_label:       canonical,
-      source:         'ontology/entities.yaml',
-      notes: entity.definition
-        ? entity.definition.replace(/\s+/g, ' ').trim().substring(0, 200)
-        : '',
-    });
-  }
-
-  function addStateGroupEntry(groupKey, group) {
-    if (seen.has(groupKey)) return;
-    seen.add(groupKey);
-    const valueLabels = group.values
-      ? Object.values(group.values).map(v => v.canonical_name).filter(Boolean).join(', ')
-      : '';
-    result.push({
-      concept:        groupKey,
-      canonical_name: groupKey,
-      ui_label:       groupKey,
-      source:         'ontology/states.yaml',
-      notes:          valueLabels ? `Values: ${valueLabels}` : '',
-    });
-  }
-
-  function addActionEntry(key, action) {
-    const canonical = action.canonical_name || key;
-    if (seen.has(canonical)) return;
-    seen.add(canonical);
-    const noteParts = [];
-    if (action.meaning) {
-      noteParts.push(action.meaning.replace(/\s+/g, ' ').trim().substring(0, 100));
-    }
-    if (action.confirmation_required !== undefined) {
-      noteParts.push(`confirmation_required: ${action.confirmation_required}`);
-    }
-    if (action.audit_logged !== undefined) {
-      noteParts.push(`audit_logged: ${action.audit_logged}`);
-    }
-    if (action.applies_to && action.applies_to.length > 0) {
-      noteParts.push(`applies_to: [${action.applies_to.join(', ')}]`);
-    }
-    if (action.constraint) {
-      noteParts.push(action.constraint);
-    }
-    result.push({
-      concept:        canonical,
-      canonical_name: canonical,
-      ui_label:       action.ui_label || canonical,
-      source:         'ontology/actions.yaml',
-      notes:          noteParts.join('. '),
-    });
-  }
-
-  // ── Text matching: entities ───────────────────────────────────────────────
-  for (const [key, entity] of Object.entries(allEntities)) {
-    const names = [entity.canonical_name, ...(entity.synonyms || [])].filter(Boolean);
-    if (names.some(n => intentLower.includes(n.toLowerCase()))) {
-      addEntityEntry(key, entity);
-    }
-  }
-
-  // ── Text matching: state groups ───────────────────────────────────────────
-  for (const [groupKey, group] of Object.entries(allStates)) {
-    if (!group.values) continue;
-    const groupLower = groupKey.toLowerCase();
-    let matched = intentLower.includes(groupLower);
-    if (!matched) {
-      for (const [, valObj] of Object.entries(group.values)) {
-        const terms = [valObj.canonical_name, ...(valObj.synonyms || [])].filter(Boolean);
-        if (terms.some(t => intentLower.includes(t.toLowerCase()))) {
-          matched = true;
-          break;
-        }
-      }
-    }
-    if (matched) addStateGroupEntry(groupKey, group);
-  }
-
-  // ── Text matching: actions ────────────────────────────────────────────────
-  for (const [key, action] of Object.entries(allActions)) {
-    const names = [action.canonical_name, ...(action.synonyms || [])].filter(Boolean);
-    if (names.some(n => intentLower.includes(n.toLowerCase()))) {
-      addActionEntry(key, action);
-    }
-  }
-
-  // ── Domain defaults (merged, deduplicated) ────────────────────────────────
-  const defaults = DOMAIN_ONTOLOGY_DEFAULTS[domain] || [];
-  for (const conceptName of defaults) {
-    if (seen.has(conceptName)) continue;
-    // Check entities
-    const entity = allEntities[conceptName];
-    if (entity) { addEntityEntry(conceptName, entity); continue; }
-    // Check state groups
-    const stateGroup = allStates[conceptName];
-    if (stateGroup) { addStateGroupEntry(conceptName, stateGroup); continue; }
-    // Check actions
-    const action = allActions[conceptName];
-    if (action) { addActionEntry(conceptName, action); }
-  }
-
-  return result;
-}
-
-// ── Fix 4: Ontology gap detector ───────────────────────────────────────────────
-// After the resolver runs, extract candidate action/entity names from
-// intent_description and check each against the ontology. Returns gap strings
-// for any candidate that has no canonical definition.
-// Order: unmatched (no synonym) before near-matched (synonym exists) — the
-// unmatched case is more urgent because there's no canonical to redirect to.
-function detectOntologyGaps(intentDescription, kb) {
-  const gaps = [];
-  const intent = intentDescription || '';
-  const allActions = kb.ontology.actions || {};
-
-  // Build canonical lookup and synonym lookup for actions
-  const canonicalActions = new Map(); // lowercase canonical → action entry
-  const synonymActions   = new Map(); // lowercase synonym → { canonical, entry }
-
-  for (const [, action] of Object.entries(allActions)) {
-    const c = (action.canonical_name || '').toLowerCase();
-    if (c) canonicalActions.set(c, action);
-    for (const syn of (action.synonyms || [])) {
-      const s = syn.toLowerCase();
-      if (!synonymActions.has(s)) {
-        synonymActions.set(s, { canonical: action.canonical_name, entry: action });
-      }
-    }
-  }
-
-  // Extract candidate action words from intent using two strategies:
-  //   1. Words after "= " in "Severity = Action1, Action2, Action3" patterns
-  //   2. Words in "actions per item:", "actions:", "user can" phrases
-  const candidates = new Set();
-
-  // Strategy 1: "= Word1, Word2, …" — stops at . ; ( or end
-  const eqPattern = /=\s*([A-Za-z][A-Za-z,\s/]*?)(?:[.;(]|$)/g;
-  let m;
-  while ((m = eqPattern.exec(intent)) !== null) {
-    for (const w of m[1].split(/[,\s/]+/)) {
-      const clean = w.replace(/[^a-zA-Z]/g, '');
-      if (clean.length >= 3 && /^[A-Z]/.test(clean)) candidates.add(clean);
-    }
-  }
-
-  // Strategy 2: after "actions per item:", "actions:", "user can" up to the period
-  const phrasePat = /(?:actions?(?:\s+per\s+\w+)?|user\s+can)\s*[:\s]\s*([^.]+)/gi;
-  while ((m = phrasePat.exec(intent)) !== null) {
-    for (const w of m[1].split(/[,;\s/]+/)) {
-      const clean = w.replace(/[^a-zA-Z]/g, '');
-      if (clean.length >= 3 && /^[A-Z]/.test(clean)) candidates.add(clean);
-    }
-  }
-
-  // Skip words that are clearly severity levels, entities, or common modifiers
-  const skipWords = new Set([
-    'Critical', 'High', 'Medium', 'Low', 'The', 'And', 'For', 'With',
-    'This', 'That', 'Each', 'All', 'Item', 'Items', 'View', 'Page',
-    'Full', 'Today', 'Care', 'When', 'Only', 'After', 'From', 'Into',
-    'Once', 'Last', 'First', 'Includes', 'Shows', 'Agent', 'Source',
-    'Badge', 'Name', 'Reason', 'State', 'Empty', 'Patient', 'Manager',
-    'Work', 'Queue', 'Priority', 'MRN', 'Timestamp',
-  ]);
-
-  const noMatch   = [];  // not canonical, not a synonym of anything
-  const nearMatch = [];  // not canonical, but is a synonym → near-match
-
-  for (const candidate of candidates) {
-    if (skipWords.has(candidate)) continue;
-    const lower = candidate.toLowerCase();
-    if (canonicalActions.has(lower)) continue; // exact canonical → no gap
-    const syn = synonymActions.get(lower);
-    if (syn) {
-      nearMatch.push({ candidate, canonical: syn.canonical, synonyms: syn.entry.synonyms || [] });
-    } else {
-      noMatch.push({ candidate });
-    }
-  }
-
-  // Unmatched (most urgent) first, then near-matched
-  for (const { candidate } of noMatch) {
-    gaps.push(
-      `Action '${candidate}' is referenced in the intent but has no canonical definition in ontology/actions.yaml. ` +
-      `No close synonym match found. If this is a new action, it should be added to ontology/actions.yaml before this component is built.`
-    );
-  }
-  for (const { candidate, canonical, synonyms } of nearMatch) {
-    gaps.push(
-      `Action '${candidate}' is referenced in the intent but has no canonical definition in ontology/actions.yaml. ` +
-      `Verify with the ontology owner before building — using non-canonical labels creates product-wide inconsistency. ` +
-      `Closest canonical action may be '${canonical}' (synonyms include: ${synonyms.join(', ')}).`
-    );
-  }
-
-  return gaps;
-}
-
-// ── (legacy — kept for direct pattern-ref resolution if needed internally) ────
-function _getOntologyRefsByPattern(ontologyRefs, kb) {
-  const result = [];
-  if (!ontologyRefs || typeof ontologyRefs !== 'object') return result;
-
-  const entities = ontologyRefs.entities || [];
-  const states = ontologyRefs.states || [];
-  const actions = ontologyRefs.actions || [];
-
-  const allEntities = kb.ontology.entities || {};
-  const allStates = kb.ontology.states || {};
-  const allActions = kb.ontology.actions || {};
-
-  for (const entityName of toArray(entities)) {
-    const entity = allEntities[entityName];
-    if (entity) {
-      result.push({
-        concept: 'entity',
-        canonical_name: entity.canonical_name || entityName,
-        ui_label: entity.canonical_name || entityName,
-        notes: entity.definition
-          ? entity.definition.replace(/\s+/g, ' ').trim().substring(0, 200)
-          : '',
-      });
-    }
-  }
-
-  for (const stateName of toArray(states)) {
-    let found = false;
-    for (const [groupKey, group] of Object.entries(allStates)) {
-      if (groupKey === stateName && group.values) {
-        result.push({
-          concept: 'status',
-          canonical_name: groupKey,
-          ui_label: groupKey,
-          notes: `Values: ${Object.keys(group.values).join(', ')}`,
-        });
-        found = true;
-        break;
-      }
-    }
-    if (!found) {
-      result.push({ concept: 'status', canonical_name: stateName, ui_label: stateName, notes: '' });
-    }
-  }
-
-  for (const actionName of toArray(actions)) {
-    const action = allActions[actionName];
-    if (action) {
-      result.push({
-        concept: 'action',
-        canonical_name: action.canonical_name || actionName,
-        ui_label: action.ui_label || actionName,
-        notes: [
-          action.meaning ? action.meaning.replace(/\s+/g, ' ').trim().substring(0, 150) : '',
-          action.confirmation_required ? `Confirmation required: "${action.confirmation_copy}"` : '',
-          action.constraint || '',
-        ].filter(Boolean).join(' | '),
-      });
-    }
-  }
-
-  return result;
-}
-
-// ── Fix 5: Signal-based because generator ─────────────────────────────────────
-// Replaces the old template-string approach. Extracts specific signals from the
-// intent and pattern metadata, then builds a targeted explanation from them.
-// Returns null (never "") if no meaningful because can be generated.
-//
-// Signal priority:
-//   1. Action names from intent found in pattern fields (when/summary/embedding_hint)
-//   2. Ontology refs resolved for this intent that are relevant to the pattern
-//   3. critical_rules or safety_refs that directly relate to intent constraints
-//   4. Structural fallback if no specific signals fire
-// Low-confidence matches get an honest "low confidence" note with a reconsider hint.
-function generateBecause(patternResult, intentDesc, matchedOntologyRefs, domain, componentType) {
-  const patternId    = patternResult.id || '';
-  const meta         = patternResult.metadata || {};
-  const summary      = (meta.summary || '').trim();
-  const whenArr      = Array.isArray(meta.when)     ? meta.when     : (meta.when     ? [String(meta.when)]     : []);
-  const notWhenArr   = Array.isArray(meta.not_when)  ? meta.not_when : (meta.not_when  ? [String(meta.not_when)]  : []);
-  const critRules    = Array.isArray(meta.critical_rules) ? meta.critical_rules : [];
-  const safetyRefs   = Array.isArray(meta.safety_refs)    ? meta.safety_refs    : [];
-  const embHint      = (meta.embedding_hint || '').toLowerCase();
-  const intentLower  = (intentDesc || '').toLowerCase();
-  const score        = typeof patternResult.score === 'number'
-    ? patternResult.score
-    : (patternResult.relevance_score || 0);
-
-  if (!intentDesc && !summary) return null;
-
-  // Full searchable text of the pattern
-  const patternText = [summary, ...whenArr, embHint, ...critRules, ...safetyRefs]
-    .join(' ').toLowerCase();
-
-  // ── Signal 1: action words from intent that appear in pattern fields ─────
-  const ACTION_WORDS = [
-    'acknowledge', 'dismiss', 'escalate', 'archive', 'delete',
-    'assign', 'accept', 'snooze', 'close gap', 'close',
-  ];
-  const matchedActions = ACTION_WORDS.filter(a =>
-    intentLower.includes(a) && patternText.includes(a)
-  );
-
-  // ── Signal 2: ontology refs relevant to this pattern ────────────────────
-  const relevantOntologyRefs = (matchedOntologyRefs || []).filter(ref =>
-    patternText.includes((ref.canonical_name || '').toLowerCase())
-  ).map(ref => ref.canonical_name);
-
-  // ── Signal 3: critical_rules / safety_refs that map to intent ───────────
-  const hasSeverityInIntent    = /critical|severity|high|medium|low/.test(intentLower);
-  const hasConfirmationInIntent = /confirmation|confirm/.test(intentLower);
-
-  const severitySafetyMatch = (hasSeverityInIntent || hasConfirmationInIntent) &&
-    safetyRefs.length > 0 &&
-    safetyRefs.some(sr => /critical|dismiss|severity|acknowledge/.test(sr.toLowerCase()));
-
-  const severityCritRulesMatch = hasSeverityInIntent && critRules.length > 0 &&
-    critRules.some(r => /critical|dismiss|acknowledge|severity/.test(r.toLowerCase()));
-
-  const confirmationCritRulesMatch = hasConfirmationInIntent && critRules.length > 0 &&
-    critRules.some(r => /confirm|destructive/.test(r.toLowerCase()));
-
-  // ── Extract severity action rules from intent (e.g. "Critical = Acknowledge only") ──
-  const criticalRuleMatch = intentDesc.match(/Critical\s*=\s*([^;.]+)/i);
-  const otherSeverityMatch = intentDesc.match(/(?:High|Medium|Low)[/\w,\s]*=\s*([^;.(]+)/i);
-
-  // ── Low confidence path ──────────────────────────────────────────────────
-  if (score < 0.55) {
-    // Find the most structurally relevant not_when hint
-    const relevantNotWhen = notWhenArr.find(nw => {
-      const nwl = nw.toLowerCase();
-      return nwl.includes('paged') || nwl.includes('single') || nwl.includes('scroll') ||
-             nwl.includes('queue') || nwl.includes('priority') || nwl.includes('list');
-    });
-    const summaryHint = summary ? ` — ${summary.substring(0, 100)}` : '';
-    const notWhenHint = relevantNotWhen
-      ? ` Review: not_when says "${relevantNotWhen}".`
-      : '';
-    return (
-      `Matched at low confidence${summaryHint}.${notWhenHint} ` +
-      `Only use if the intent genuinely requires this pattern's structure.`
-    );
-  }
-
-  // ── Assemble the because string from fired signals ───────────────────────
-  const parts = [];
-
-  // Opening clause: what specific thing in the intent drove the match
-  if (hasSeverityInIntent && (severityCritRulesMatch || patternText.includes('severity'))) {
-    // Severity-aware pattern + severity-based intent
-    const critClause  = criticalRuleMatch  ? `Critical=${criticalRuleMatch[1].trim()}`  : '';
-    const otherClause = otherSeverityMatch ? otherSeverityMatch[1].trim().substring(0, 60) : '';
-    const actionDetail = [critClause, otherClause].filter(Boolean).join(', ');
-    parts.push(
-      `the intent describes severity-grouped alerts with per-severity action rules` +
-      (actionDetail ? ` (${actionDetail})` : '')
-    );
-  } else if (hasConfirmationInIntent && confirmationCritRulesMatch) {
-    parts.push(`the intent specifies a confirmation dialog for destructive actions`);
-  } else if (matchedActions.length > 0) {
-    parts.push(
-      `the intent's actions (${matchedActions.join(', ')}) appear in ${patternId}'s ` +
-      `when/summary/embedding_hint fields`
-    );
-  } else if (relevantOntologyRefs.length > 0) {
-    parts.push(
-      `ontology concepts from the intent (${relevantOntologyRefs.join(', ')}) ` +
-      `align with ${patternId}'s declared use case`
-    );
-  } else {
-    // Structural fallback
-    parts.push(
-      summary
-        ? `the ${domain} ${componentType} intent structurally aligns with: ${summary.substring(0, 100)}`
-        : `${patternId} is the closest genome pattern for this ${componentType} intent`
-    );
-  }
-
-  // Second clause: what makes this pattern specifically authoritative
-  if (severitySafetyMatch) {
-    parts.push(
-      `${patternId}'s safety_refs (${safetyRefs.slice(0, 2).join(', ')}) ` +
-      `enforce exactly the constraints the intent describes`
-    );
-  } else if (confirmationCritRulesMatch) {
-    parts.push(`${patternId} is the designated block for destructive confirmation`);
-  } else if (matchedActions.length > 0 && critRules.length > 0) {
-    const relevantRule = critRules.find(r =>
-      matchedActions.some(a => r.toLowerCase().includes(a))
-    );
-    if (relevantRule) {
-      parts.push(`critical_rule: "${relevantRule.substring(0, 100)}"`);
-    }
-  }
-
-  return parts.length > 0
-    ? `Matched because ${parts.join('. ')}.`
-    : (summary
-        ? `Matched because the ${domain} ${componentType} intent aligns with: ${summary}.`
-        : null);
-}
-
-// ── Fix 1: Secondary structural retrieval pass ─────────────────────────────────
-// For page and panel component types only, a second pass finds blocks from four
-// structural families that are invisible to the primary vector search because their
-// embedding vocabulary doesn't overlap with display-heavy intent language.
-//
-// The pass scans kb.patterns directly (bypassing the index) so it always finds the
-// canonical structural block even if it scored near-zero in retrieval. Blocks with
-// a structural_role field are preferred over those without one.
-//
-// Structural inclusions are APPENDED after the primary top-N — they are additive,
-// not substitutions. structural_inclusion: true marks them so the agent can treat
-// them differently from retrieval-ranked results.
-
-const STRUCTURAL_PASS_FAMILIES = [
-  'actionable-list-row',
-  'section-divider',
-  'page-navigation',
-  'section-organiser',
-];
-
-// Intent-specific because string for each structural family.
-// References signals from the intent where possible.
-function generateStructuralBecause(blockId, meta, intentDesc) {
-  const family = meta?.structural_family || '';
-  const intentLower = (intentDesc || '').toLowerCase();
-
-  const hasList   = /queue|list|items|work item|worklist/i.test(intentDesc);
-  const hasAction = /action|acknowledge|dismiss|accept|snooze|escalate/i.test(intentDesc);
-  const hasSeverityGrouping = /grouped by severity|severity.*group|critical\s*[→>]/i.test(intentDesc) ||
-    (/critical/i.test(intentDesc) && /high/i.test(intentDesc) && /medium/i.test(intentDesc) && /low/i.test(intentDesc));
-
-  // Extract severity sequence from intent for SectionHeader because
-  const severitySeqMatch = intentDesc.match(/Critical\s*[→>]\s*High\s*[→>]\s*Medium\s*[→>]\s*Low/i);
-  const severitySeq = severitySeqMatch ? severitySeqMatch[0] : 'Critical → High → Medium → Low';
-
-  switch (family) {
-    case 'actionable-list-row': {
-      if (hasList && hasAction) {
-        const severityNote = hasSeverityGrouping
-          ? ` The intent's severity-grouped structure (${severitySeq}) maps directly to ${blockId}'s scan-and-act model — one row per item, primary action right-aligned, accent stripe driven by severity.`
-          : '';
-        return (
-          `Included as a structural block — page-level intents that describe a list, queue, or collection of items ` +
-          `require a row container pattern. ${blockId} is the canonical list row for any scan-and-act workflow.` +
-          severityNote +
-          ` Consider this the default row block unless the intent specifically calls for a read-only or non-actionable list.`
-        );
-      }
-      return (
-        `Included as a structural block — ${blockId} defines how individual items are rendered ` +
-        `in the collection this page describes.`
-      );
-    }
-
-    case 'section-divider':
-      if (hasSeverityGrouping) {
-        return (
-          `Included as a structural block — the intent describes severity-grouped sections (${severitySeq}). ` +
-          `${blockId} is the canonical block for naming and counting groups within a list. ` +
-          `Use one ${blockId} per severity group with countVariant matching the group's urgency level.`
-        );
-      }
-      return (
-        `Included as a structural block — ${blockId} provides section labels to organize the grouped ` +
-        `content this page describes.`
-      );
-
-    case 'page-navigation':
-      return (
-        `Included as a structural block — ${blockId} is available if the item count can grow beyond a single ` +
-        `viewport. Review the data-density rule before enabling pagination — if all critical items must be ` +
-        `visible at once, prefer scroll over pagination.`
-      );
-
-    case 'section-organiser':
-      return (
-        `Included as a structural block — ${blockId} provides filter, search, and sort controls above ` +
-        `the list. Use if the user needs to filter items by severity, date, or patient attributes.`
-      );
-
-    default:
-      return (
-        `Included as a structural block — ${blockId} supports the ${family} structure this page requires.`
-      );
-  }
-}
-
-// Build the structural inclusions list for a page/panel intent.
-// allRetrieved = _rawBoosted (all 8 pre-slice results, used only to look up
-//                retrieval scores for display — not for candidate selection)
-// primaryTopN  = boostedResults (the top-5 already in the patterns output)
-//
-// Candidate selection uses kb.patterns (the full library) rather than the
-// retrieval pool, because the whole point of this pass is to surface blocks
-// that the primary retrieval missed. Confidence is the tie-breaker within
-// each family pool — the most-ratified block wins, not the highest TF-IDF scorer.
-function buildStructuralInclusions(primaryTopN, allRetrieved, kb, componentType, intentDesc, domain) {
-  if (!['page', 'panel'].includes(componentType)) return [];
-
-  const primaryIds      = new Set(primaryTopN.map(r => r.id));
-  // Build a score lookup from the retrieval pool for display purposes only
-  const retrievedScores = new Map(allRetrieved.map(r => [r.id, parseFloat(r.score.toFixed(4))]));
-
-  const EMPTY_USAGE_SIGNAL = { renders_total: 0, products: [], override_rate: 0.0 };
-  const inclusions = [];
-
-  for (const targetFamily of STRUCTURAL_PASS_FAMILIES) {
-    // ── Step 1: find best candidate from the full block library ──────────────
-    // Scan kb.patterns (not retrieval results) so we always find the canonical
-    // block regardless of whether it scored in the primary retrieval pass.
-    const allCandidates = (kb.patterns || []).filter(p =>
-      p.structural_family === targetFamily &&
-      p.status === 'active'    // skip placeholder / deprecated
-    );
-    if (allCandidates.length === 0) continue;
-
-    // Prefer blocks with structural_role (Fix 4) over those without.
-    // Within the preferred pool, sort by confidence — most-ratified wins.
-    const withRole = allCandidates.filter(p => p.structural_role);
-    const pool     = withRole.length > 0 ? withRole : allCandidates;
-    const best     = pool.slice().sort((a, b) => (b.confidence || 0) - (a.confidence || 0))[0];
-    if (!best) continue;
-
-    // ── Step 2: skip if already surfaced in the primary top-5 ────────────────
-    if (primaryIds.has(best.id)) continue;
-
-    // ── Step 3: build the inclusion entry ─────────────────────────────────────
-    // Use retrieval score if the block happened to appear in the retrieval pool,
-    // otherwise 0 (explicitly excluded by score cutoff, not a retrieval failure).
-    const candScore = retrievedScores.get(best.id) || 0;
-
-    inclusions.push({
-      id:               best.id,
-      level:            best.level || null,
-      family_invariants: best.family_invariants || [],
-      relevance_score:  candScore,
-      structural_family: best.structural_family || null,
-      component_type:   best.component_type || null,
-      summary:          (best.summary || '').trim(),
-      when:             formatWhen(best.when),
-      not_when:         formatNotWhen(best.not_when),
-      because:          generateStructuralBecause(best.id, best, intentDesc),
-      confidence:       best.confidence || 0.0,
-      structural_inclusion: true,
-      usage_signal:     EMPTY_USAGE_SIGNAL,
-    });
-  }
-
-  return inclusions;
-}
-
-// ── Change 1: Intent quality gate ────────────────────────────────────────────
-// Scores the input against four signals before retrieval runs.
-// If score < 0.5, returns a needs_clarification response — no patterns, no rules.
-function scoreIntentQuality(intentDescription, userType, componentType) {
-  const signals = {
-    hasUserContext:      Array.isArray(userType) && userType.length > 0,
-    hasDataDescription:  /patient|record|list|gap|task|alert|protocol|score|count|metric|data|form|table|row|card/i.test(intentDescription),
-    hasActionContext:    /action|button|click|close|assign|submit|view|edit|create|confirm|acknowledge|filter|select|search|add|remove/i.test(intentDescription),
-    hasSpecificity:      intentDescription.trim().split(/\s+/).length > 8,
-  };
-  const score   = Object.values(signals).filter(Boolean).length / Object.keys(signals).length;
-  const missing = Object.entries(signals)
-    .filter(([, v]) => !v)
-    .map(([k]) => k.replace('has', '').replace(/([A-Z])/g, '_$1').toLowerCase().slice(1));
-  return { score, signals, missing };
 }
 
 // ── TOOL 1: consult_before_build ─────────────────────────────────────────────
@@ -936,6 +58,7 @@ export async function consultBeforeBuild(params, _kb, _patternIndex, _ruleIndex,
     scope = 'block',
     domain,
     user_type,
+    workflows,
   } = params;
 
   // 1. Load genome (cached after first call)
@@ -949,557 +72,436 @@ export async function consultBeforeBuild(params, _kb, _patternIndex, _ruleIndex,
     scope,
     domain,
     userType: user_type,
+    workflows,
   });
 
-  // 3. Build blocks array
-  const selectedIds = llmResult.selected_blocks || [];
-  const blocks = selectedIds.map(id => {
-    const entry = genome.blocks.get(id);
-    if (!entry) return null;
+  // 3. Map surface
+  const surfaceResult = llmResult.surface || { matched: false, confidence: 0, surface_id: null, import_instruction: null };
+
+  // 4. Map layout
+  const layoutResult = llmResult.layout || { source: 'generated', regions: [] };
+
+  // 5. Map workflows — enrich blocks with genome data
+  const enrichBlock = (block) => {
+    const entry = genome.blocks.get(block.id);
+    if (!entry) return block;
     const npmPath = entry.meta.npm_path || '';
     return {
-      id,
-      level: entry.meta.level || 'composite',
-      family_invariants: entry.meta.family_invariants || [],
+      ...block,
       npm_path: npmPath,
-      import_instruction: npmPath ? `import { ${id} } from '${npmPath}'` : '',
+      import_instruction: npmPath ? `import { ${block.id} } from '${npmPath}'` : '',
+      family_invariants: entry.meta.family_invariants || [],
       when: Array.isArray(entry.meta.when) ? entry.meta.when.join('; ') : (entry.meta.when || ''),
       not_when: Array.isArray(entry.meta.not_when) ? entry.meta.not_when.join('; ') : (entry.meta.not_when || ''),
     };
-  }).filter(Boolean);
+  };
 
-  // 5. primitive_guard — only primitives already in the selected blocks set
+  let workflowResults;
+  if (llmResult.workflows && llmResult.workflows.length > 0) {
+    // New format: per-workflow blocks
+    workflowResults = llmResult.workflows.map(wf => ({
+      ...wf,
+      blocks: (wf.blocks || []).map(enrichBlock),
+    }));
+  } else if (llmResult.selected_blocks) {
+    // Old format fallback: flat block list → single implicit workflow
+    const blocks = llmResult.selected_blocks.map(id => enrichBlock({ id, level: 'composite' })).filter(b => b.npm_path);
+    workflowResults = [{ id: 'main', intent: intent_description, blocks }];
+  } else {
+    workflowResults = [];
+  }
 
-  // 6. Build rules array
-  const rules = (llmResult.rules_applied || []).map(r => {
-    const ruleEntry = genome.rules.get(r.rule_id);
-    return {
-      rule_id: r.rule_id,
-      summary: r.applies_because || '',
-      applies_because: r.applies_because || '',
-    };
-  });
+  // Flatten all blocks for backwards compatibility
+  const allBlocks = workflowResults.flatMap(wf => wf.blocks || []);
 
-  // 7. Build safety constraints
-  const safety_constraints = (llmResult.safety_applied || []).map(s => ({
-    constraint_id: s.constraint_id,
-    rule: '',
-    applies_because: s.applies_because || '',
-  }));
-
-  // 8. Surface data if surface-first
-  const surfaceId = llmResult.build_mode?.anchor?.surface_id;
-  const surfaceData = surfaceId ? genome.surfaces.get(surfaceId) || null : null;
-
-  // 9. Log to episodic memory
+  // 6. Log to episodic memory
   logEpisodic({
     timestamp: new Date().toISOString(),
     intent: intent_description,
     scope,
     domain,
-    build_mode: llmResult.build_mode?.mode,
-    selected_blocks: selectedIds,
+    workflows: workflows || [],
+    surface_matched: surfaceResult.matched,
+    selected_blocks: allBlocks.map(b => b.id),
     confidence: llmResult.confidence,
   });
 
   return {
-    build_mode: llmResult.build_mode || { mode: 'block-composition', anchor: null },
-    surface: surfaceData,
-    blocks,
-    primitive_guard: {
-      instruction: 'Import these from their declared paths. Do not override family_invariants.',
-      primitives: blocks.filter(b => b.level === 'primitive'),
-    },
-    rules,
-    safety_constraints,
+    surface: surfaceResult,
+    layout: layoutResult,
+    workflows: workflowResults,
+    blocks: allBlocks,
+    rules_applied: llmResult.rules_applied || [],
+    safety_applied: llmResult.safety_applied || [],
     ontology_refs: llmResult.ontology_refs || [],
     confidence: llmResult.confidence || 0,
     gaps: llmResult.gaps || [],
   };
 }
 
-// ── TOOL 1 (legacy path — keyword-only fallback, kept for reviewOutput internals) ──
+
+// ── New validation functions ──────────────────────────────────────────────────
 
 /**
- * @internal
- * Legacy keyword-based retrieval. Called by reviewOutput which still needs kb/patternIndex.
+ * Validates that all blocks are imported from the correct source (@innovaccer/ui-assets).
+ * Detects: shadcn duplication, wrong tier, local reimplementation, style block reimplementation,
+ * className invariant conflicts.
  */
-async function consultBeforeBuildLegacy(params, kb, patternIndex, ruleIndex, surfaces) {
-  const {
-    intent_description,
-    component_type = 'other',
-    domain = 'other',
-    user_type = [],
-    product_area = '',
-  } = params;
+function validateBlockSources(code, genome) {
+  const violations = [];
+  const genomeBlockIds = new Set(genome.blocks.keys());
 
-  // ── Intent quality gate (pre-retrieval) ─────────────────────────────────────
-  const intentQuality = scoreIntentQuality(intent_description, user_type, component_type);
-  if (intentQuality.score < 0.5) {
-    return {
-      status:         'needs_clarification',
-      intent_quality: {
-        score:   intentQuality.score,
-        missing: intentQuality.missing,
-      },
-      questions: [
-        'What data is displayed or acted on in this component? (e.g. a list of care protocols, a patient summary card, a form for logging outreach)',
-        'What actions can the user take? (e.g. close a gap, assign a task, filter the list, submit a form)',
-      ],
-      patterns:           null,
-      rules:              null,
-      safety_constraints: null,
-      ontology_refs:      null,
-      similar_builds:     null,
-      confidence:         null,
-      gaps:               null,
-    };
+  // 1. Parse all imports
+  const imports = [];
+
+  // NPM canonical: import { X } from '@innovaccer/ui-assets/block-primitives/X'
+  const npmRe = /import\s+\{([^}]+)\}\s+from\s+['"]@innovaccer\/ui-assets\/(block-primitives|block-composites|surfaces)\/(\w+)['"]/g;
+  let m;
+  while ((m = npmRe.exec(code)) !== null) {
+    const names = m[1].split(',').map(s => s.trim()).filter(Boolean);
+    imports.push({ names, source: 'npm', tier: m[2], blockPath: m[3] });
   }
 
-  // Compose search text from all input fields
-  const searchText = [
-    intent_description,
-    component_type,
-    domain,
-    toArray(user_type).join(' '),
-    product_area,
-  ].join(' ');
-
-  // ── Keyword retrieval (TF-IDF Jaccard, pre-LLM candidate selection) ──────────
-  const patternResults = await queryPatterns(searchText, 8, patternIndex);
-
-  // Ranking: component_type structural boost (stage1 via TYPE_FAMILIES).
-  // structural_family FAMILY_MAP boost removed — deprecated.
-  // not_when penalty applied before top-5 slice (Change 1).
-  const _rawBoosted = stableSort(patternResults
-    .map(r => {
-      const raw_score      = r.score;
-      const stage1         = structuralBoost(r.metadata?.component_type, component_type);
-      const adjusted_score = raw_score + stage1;
-      return {
-        ...r,
-        raw_score,
-        adjusted_score,
-        score: adjusted_score,
-        structurally_matched: stage1 > 0,
-        family_match: false,
-      };
-    }));
-
-  const intentTokens = tokenize(intent_description);
-  // stableSort guarantees the same order for the same scores across threads.
-  const boostedResults = stableSort(applyNotWhenPenalty(_rawBoosted, intentTokens))
-    .slice(0, 5);
-
-  let ruleResults = await queryRules(searchText, 3, ruleIndex);
-
-  // styling-tokens and copy-voice apply to every component — always include both
-  // regardless of query relevance so the model always has the token reference
-  // and the copy/language rules before generating any output.
-  // Change 6 — structural inclusions based on component_type:
-  //   accessibility:        always (page, form, modal additionally required)
-  //   destructive-actions:  modal, drawer, form
-  //   interface-guidelines: page, panel
-  // Deduplication ensures retrieval results are not double-listed.
-  const enriched = new Map(kb.rules.map(r => [r.id, r]));
-
-  const structuralIncludes = new Set(['styling-tokens', 'copy-voice', 'accessibility']);
-  if (['modal', 'drawer', 'form'].includes(component_type)) {
-    structuralIncludes.add('destructive-actions');
-  }
-  if (['page', 'panel'].includes(component_type)) {
-    structuralIncludes.add('interface-guidelines');
+  // shadcn: import { X } from '@/components/ui/x'
+  const shadcnRe = /import\s+\{([^}]+)\}\s+from\s+['"]@\/components\/ui\/[\w-]+['"]/g;
+  while ((m = shadcnRe.exec(code)) !== null) {
+    const names = m[1].split(',').map(s => s.trim()).filter(s => /^[A-Z]/.test(s));
+    for (const name of names) {
+      if (genomeBlockIds.has(name)) {
+        const entry = genome.blocks.get(name);
+        const level = entry?.meta?.level || 'composite';
+        const tier = level === 'primitive' ? 'block-primitives' : 'block-composites';
+        violations.push({
+          violation_type: 'shadcn-duplication',
+          found_text: m[0],
+          correction: `import { ${name} } from '@innovaccer/ui-assets/${tier}/${name}'`,
+          severity: 'blocker',
+          rule_ref: 'safety/hard-constraints.md rule 25',
+        });
+      }
+    }
+    imports.push({ names, source: 'shadcn' });
   }
 
-  for (const alwaysId of structuralIncludes) {
-    if (!ruleResults.some(r => r.id === alwaysId)) {
-      const rule = enriched.get(alwaysId);
-      if (rule) ruleResults = [...ruleResults, { id: rule.id, score: 1.0, metadata: rule }];
+  // Local/relative: import { X } from '@/components/X' or './X' or '../ui/X'
+  const localRe = /import\s+\{([^}]+)\}\s+from\s+['"]((?:@\/|\.\.?\/)[^'"]+)['"]/g;
+  while ((m = localRe.exec(code)) !== null) {
+    if (m[2].startsWith('@innovaccer/')) continue; // already handled
+    if (m[2].startsWith('@/components/ui/')) continue; // already handled as shadcn
+    const names = m[1].split(',').map(s => s.trim()).filter(s => /^[A-Z]/.test(s));
+    for (const name of names) {
+      if (genomeBlockIds.has(name)) {
+        const entry = genome.blocks.get(name);
+        const level = entry?.meta?.level || 'composite';
+        const tier = level === 'primitive' ? 'block-primitives' : 'block-composites';
+        violations.push({
+          violation_type: 'local-import-duplication',
+          found_text: m[0],
+          correction: `import { ${name} } from '@innovaccer/ui-assets/${tier}/${name}'`,
+          severity: 'blocker',
+          rule_ref: 'safety/hard-constraints.md rule 25',
+        });
+      }
+    }
+    imports.push({ names, source: 'local', path: m[2] });
+  }
+
+  // 2. Check wrong-tier imports
+  for (const imp of imports) {
+    if (imp.source !== 'npm') continue;
+    for (const name of imp.names) {
+      const cleanName = name.replace(/\s+as\s+\w+/, '').trim();
+      if (!genomeBlockIds.has(cleanName)) continue;
+      const entry = genome.blocks.get(cleanName);
+      const level = entry?.meta?.level || 'composite';
+      const expectedTier = level === 'primitive' ? 'block-primitives' : 'block-composites';
+      if (imp.tier !== expectedTier) {
+        violations.push({
+          violation_type: 'wrong-tier-import',
+          found_text: `${cleanName} imported from ${imp.tier}`,
+          correction: `import { ${cleanName} } from '@innovaccer/ui-assets/${expectedTier}/${cleanName}'`,
+          severity: 'blocker',
+          rule_ref: 'safety/hard-constraints.md rule 25',
+        });
+      }
     }
   }
-  // Merge raw (and any other fields stripped by the index) back into each result
-  ruleResults = ruleResults.map(r => ({
-    ...r,
-    metadata: { ...enriched.get(r.id), ...r.metadata },
-  }));
 
-  // ── Ontology refs — text-based resolver (Fixes 3 & 4) ──────────────────────
-  // Computed here (before pattern assembly) so generateBecause can use it.
-  const ontologyRefs = resolveOntologyFromIntent(intent_description, domain, kb);
-  const ontologyGaps = detectOntologyGaps(intent_description, kb);
-
-  // ── Pattern results ─────────────────────────────────────────────────────────
-  // Change 7 — usage_signal is always present (empty shape when no telemetry data)
-  // Fix 5 — because is signal-based (null if not meaningful, never "")
-  const EMPTY_USAGE_SIGNAL = { renders_total: 0, products: [], override_rate: 0.0 };
-
-  const kbPatternById = new Map((kb.patterns || []).map(p => [p.id, p]));
-
-  const patterns = boostedResults.map(r => {
-    const usageSignal = r.metadata?.usage_signal;
-    const hasUsageData = usageSignal && usageSignal.renders_total > 0;
-    return {
-      id:                r.id,
-      level:             r.metadata?.level || null,
-      family_invariants: r.metadata?.family_invariants || [],
-      relevance_score:   parseFloat(r.score.toFixed(4)),
-      structural_family: r.metadata?.structural_family || null,
-      component_type:    r.metadata?.component_type || null,
-      summary:           r.metadata?.summary || '',
-      when:              formatWhen(r.metadata?.when),
-      not_when:          formatNotWhen(r.metadata?.not_when),
-      because:           generateBecause(r, intent_description, ontologyRefs, domain, component_type),
-      confidence:        r.metadata?.confidence || 0.9,
-      usage_signal:      hasUsageData ? usageSignal : EMPTY_USAGE_SIGNAL,
-      component_src:     kbPatternById.get(r.id)?._componentSrc || null,
-    };
-  });
-
-  // ── Fix 1: Structural inclusions (page/panel only) ───────────────────────────
-  // Secondary pass: finds actionable-list-row, section-divider, page-navigation,
-  // section-organiser blocks that scored too low to appear in primary top-5.
-  // Appended after primary results. structural_inclusion: true marks them.
-  const structuralInclusions = buildStructuralInclusions(
-    boostedResults, _rawBoosted, kb, component_type, intent_description, domain
-  );
-  // Combined pattern list used in the response
-  const allPatterns = [...patterns, ...structuralInclusions];
-
-  // ── canonical_block_set — stable, sorted block list for cross-thread consistency ──
-  // Blocks above the relevance threshold + structural inclusions, sorted
-  // alphabetically by id so the same intent always yields the same ordered set
-  // regardless of floating-point tie-breaking differences across runs/threads.
-  const CANONICAL_THRESHOLD = 0.28;
-  const canonical_block_set = allPatterns
-    .filter(p => p.relevance_score >= CANONICAL_THRESHOLD || p.structural_inclusion)
-    .map(p => p.id)
-    .sort();
-
-  // ── primitive_guard — only primitives in the selected result set ─────────────
-  const selectedIds = new Set(allPatterns.map(p => p.id));
-  const activePrimitives = (kb.patterns || [])
-    .filter(p => p.level === 'primitive' && p.status === 'active' && selectedIds.has(p.id))
-    .sort((a, b) => a.id.localeCompare(b.id));
-
-  const primitive_guard = activePrimitives.length > 0 ? {
-    rule_refs: ['safety/hard-constraints.md#22', 'safety/hard-constraints.md#25'],
-    instruction: [
-      'All primitive blocks must be imported from @innovaccer/ui-assets and used as-is (hard-constraint #25).',
-      'Never redefine or reimplement a primitive inline.',
-      'Only additive className classes are permitted on primitives: positioning, sizing, spacing, and layout (hard-constraint #22).',
-      'Never pass className values that conflict with a primitive\'s family_invariants.',
-      'To change an invariant, raise a design-leadership request — never inline.',
-    ].join(' '),
-    primitives: activePrimitives.map(p => ({
-      id:                p.id,
-      npm_path:          p.npm_path || '',
-      import_instruction: p.npm_path ? `import { ${p.id} } from '${p.npm_path}'` : '',
-      family_invariants: p.family_invariants || [],
-    })),
-  } : null;
-
-  // ── Structural guidance — dominant family + invariants ──────────────────────
-  // When multiple top patterns share a structural family, surface the invariants
-  // so the LLM knows exactly which tokens are non-negotiable.
-  const familyCounts = {};
-  for (const r of boostedResults) {
-    const fam = r.metadata?.structural_family;
-    if (fam && r.structurally_matched) {
-      familyCounts[fam] = (familyCounts[fam] || []);
-      familyCounts[fam].push(r);
+  // 3. Check local reimplementation (const/function definitions)
+  const importedFromPackage = new Set();
+  for (const imp of imports) {
+    if (imp.source === 'npm') {
+      for (const n of imp.names) importedFromPackage.add(n.replace(/\s+as\s+\w+/, '').trim());
     }
   }
-  const dominantFamilyEntry = Object.entries(familyCounts)
-    .sort((a, b) => b[1].length - a[1].length)[0];
 
-  let structuralGuidance = null;
-  if (dominantFamilyEntry) {
-    const [familyName, familyPatterns] = dominantFamilyEntry;
-    // Collect unique invariants from all patterns in this family
-    const allInvariants = familyPatterns
-      .flatMap(r => r.metadata?.family_invariants || [])
-      .filter((v, i, a) => a.indexOf(v) === i);
-    structuralGuidance = {
-      family: familyName,
-      invariants: allInvariants,
-      examples: familyPatterns.map(r => r.id),
-    };
+  const defRe = /(?:const|let|var|function)\s+([A-Z]\w+)\s*(?:=\s*(?:styled|forwardRef|React\.forwardRef|memo|React\.memo)\s*\(|[=(])/g;
+  while ((m = defRe.exec(code)) !== null) {
+    const name = m[1];
+    if (genomeBlockIds.has(name) && !importedFromPackage.has(name)) {
+      if (isInComment(code, m[0])) continue;
+      const entry = genome.blocks.get(name);
+      const level = entry?.meta?.level || 'composite';
+      const tier = level === 'primitive' ? 'block-primitives' : 'block-composites';
+      violations.push({
+        violation_type: 'local-reimplementation',
+        found_text: m[0].trim(),
+        correction: `import { ${name} } from '@innovaccer/ui-assets/${tier}/${name}'`,
+        severity: 'blocker',
+        rule_ref: 'safety/hard-constraints.md rule 25',
+      });
+    }
   }
 
-  // Change 5 — intent-specific applies_because for rules
-  function ruleAppliesBecause(ruleId, intentDesc, compType, dom) {
-    const ct  = compType || 'component';
-    const d   = dom      || 'this domain';
-    const i   = intentDesc ? intentDesc.trim().substring(0, 120) : '';
-    switch (ruleId) {
-      case 'styling-tokens':
-        return `Applies because all color, spacing, and typography values on this ${ct} must resolve to design tokens — not hardcoded hex or px values.`;
-      case 'copy-voice':
-        return `Applies because all labels, empty states, error messages, and CTAs on this ${ct} must follow clinical copy standards — imperative labels, no first-person, specific empty states.`;
-      case 'accessibility':
-        if (['page', 'form', 'modal'].includes(ct)) {
-          return `Applies because ${ct}-level components must establish correct focus management, tab order, and ARIA landmark structure for all sub-components built within them.`;
+  // 4. Check <style> block reimplementation
+  const styleMatch = code.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+  if (styleMatch) {
+    const styleContent = styleMatch[1];
+    for (const blockId of genomeBlockIds) {
+      const lower = blockId.toLowerCase();
+      const abbrev = lower.slice(0, 3);
+      const cssRe = new RegExp(`\\.(?:${lower}|${abbrev})[^{]*\\{`, 'i');
+      if (cssRe.test(styleContent)) {
+        violations.push({
+          violation_type: 'style-reimplementation',
+          found_text: `<style> contains CSS for ${blockId}`,
+          correction: `Import ${blockId} from @innovaccer/ui-assets instead of reimplementing in CSS`,
+          severity: 'blocker',
+          rule_ref: 'safety/hard-constraints.md rule 25',
+        });
+      }
+    }
+  }
+
+  // 5. Check className override conflicts with family_invariants
+  for (const blockId of importedFromPackage) {
+    const entry = genome.blocks.get(blockId);
+    if (!entry || entry.meta.level !== 'primitive') continue;
+    // Match <BlockId className="..." or <BlockId className={cn("..."
+    const clsRe = new RegExp(`<${blockId}[^>]*className=(?:{[^}]*(?:cn|clsx|cva)\\s*\\(\\s*)?["']([^"']+)["']`, 'g');
+    let cm;
+    while ((cm = clsRe.exec(code)) !== null) {
+      if (classHasInvariantConflict(cm[1])) {
+        violations.push({
+          violation_type: 'invariant-override',
+          found_text: `<${blockId} className="${cm[1]}">`,
+          correction: `Only additive classes (positioning, sizing, spacing, layout) are allowed. Remove classes that conflict with ${blockId}'s family_invariants.`,
+          severity: 'blocker',
+          rule_ref: 'safety/hard-constraints.md rule 22',
+        });
+      }
+    }
+  }
+
+  return violations;
+}
+
+/**
+ * Validates that the generated code aligns with the consult_before_build response.
+ * Checks: surface import, layout region ordering, never constraints, workflow completeness, block coverage.
+ */
+function validateConsultationAlignment(code, contextUsed) {
+  if (!contextUsed) return [];
+  const violations = [];
+
+  // Resolve which block IDs appear in the code (imported or used as JSX)
+  const usedBlockIds = new Set();
+  // Check imports
+  const importRe = /import\s+\{([^}]+)\}\s+from\s+['"][^'"]+['"]/g;
+  let m;
+  while ((m = importRe.exec(code)) !== null) {
+    const names = m[1].split(',').map(s => s.trim().replace(/\s+as\s+\w+/, '')).filter(s => /^[A-Z]/.test(s));
+    for (const n of names) usedBlockIds.add(n);
+  }
+  // Check JSX usage
+  const jsxRe = /<([A-Z]\w+)[\s/>]/g;
+  while ((m = jsxRe.exec(code)) !== null) {
+    usedBlockIds.add(m[1]);
+  }
+
+  // 1. Surface validation
+  const surface = contextUsed.surface;
+  if (surface && surface.matched && surface.surface_id) {
+    if (!usedBlockIds.has(surface.surface_id)) {
+      const importInstr = surface.import_instruction || `import from @innovaccer/ui-assets/surfaces/${surface.surface_id}`;
+      // Also check if there's an explicit import statement for the surface
+      const surfaceImported = code.includes(`@innovaccer/ui-assets/surfaces/`);
+      if (!surfaceImported) {
+        violations.push({
+          violation_type: 'surface-not-imported',
+          found_text: `Surface ${surface.surface_id} was matched but not imported`,
+          correction: importInstr,
+          severity: 'blocker',
+          rule_ref: 'consult_before_build surface recommendation',
+        });
+      }
+    }
+  }
+
+  // 2. Layout region ordering + never constraints
+  const regions = contextUsed.layout?.regions || [];
+  if (regions.length > 1) {
+    // Check ordering: first occurrence of any block from region N should be before region N+1
+    const regionPositions = regions.map(region => {
+      const blocks = region.blocks || [];
+      let earliest = Infinity;
+      for (const blockId of blocks) {
+        const idx = code.indexOf(`<${blockId}`);
+        if (idx !== -1 && idx < earliest) earliest = idx;
+      }
+      return { id: region.id, order: region.order, earliest };
+    }).filter(r => r.earliest < Infinity);
+
+    for (let i = 0; i < regionPositions.length - 1; i++) {
+      for (let j = i + 1; j < regionPositions.length; j++) {
+        if (regionPositions[i].order < regionPositions[j].order &&
+            regionPositions[i].earliest > regionPositions[j].earliest) {
+          violations.push({
+            violation_type: 'layout-ordering-mismatch',
+            found_text: `Region "${regionPositions[j].id}" appears before "${regionPositions[i].id}" in code`,
+            correction: `Region "${regionPositions[i].id}" (order ${regionPositions[i].order}) should appear before "${regionPositions[j].id}" (order ${regionPositions[j].order})`,
+            severity: 'warning',
+            rule_ref: 'consult_before_build layout.regions ordering',
+          });
         }
-        return `Applies because every interactive element on this ${ct} must meet WCAG 2.1 AA requirements — color is never the sole differentiator, focus rings are never suppressed, and touch targets meet the 44×44px minimum.`;
-      case 'data-density':
-        return `Applies because a ${d} ${ct} likely displays lists or tables of records where table layout, progressive disclosure, and zero-results handling decisions are required.`;
-      case 'destructive-actions':
-        return `Applies because any destructive or bulk action within this ${ct} requires an explicit confirmation step with a consequence statement — not "Are you sure?".`;
-      case 'interface-guidelines':
-        return `Applies because ${ct}-level components must follow surface composition rules — header hierarchy, section spacing, and navigation placement.`;
-      default: {
-        // Generic: mention at least one aspect of the current intent
-        const intentHint = i.length > 10 ? ` for "${i.substring(0, 60)}..."` : '';
-        return `Applies to this ${ct} in ${d}${intentHint} — verify compliance before generating.`;
+      }
+    }
+
+    // Check never constraints
+    for (const region of regions) {
+      const neverBlocks = region.never || [];
+      for (const forbidden of neverBlocks) {
+        if (usedBlockIds.has(forbidden)) {
+          // Check if the forbidden block appears near the region's blocks
+          violations.push({
+            violation_type: 'never-constraint-violation',
+            found_text: `${forbidden} is used but forbidden in region "${region.id}"`,
+            correction: `Remove ${forbidden} from the "${region.id}" region — it is in the 'never' list`,
+            severity: 'blocker',
+            rule_ref: 'consult_before_build layout.regions.never',
+          });
+        }
       }
     }
   }
 
-  // ── Rule results ────────────────────────────────────────────────────────────
-  const rules = ruleResults.map(r => {
-    let content;
-    if (r.id === 'copy-voice') {
-      // Summary + pointer — no full content needed
-      content = {
-        summary:
-          "Clinical and direct. No 'we'/'our'/'I'. No 'Something went wrong'. " +
-          "Error messages state what happened + what to do. Labels are imperative " +
-          "present tense. Empty states are honest and specific. " +
-          "Confirmation dialogs state the consequence, never 'Are you sure?'.",
-        ref: 'genome/rules/copy-voice.rule.md',
-      };
-    } else {
-      const hasStructured = !!(r.metadata.when && r.metadata.use);
-      content = { summary: hasStructured
-        ? [r.metadata.when, r.metadata.use].join(' | ').substring(0, 300)
-        : (r.metadata.summary || r.id) };
-    }
-    return {
-      rule_id: r.id,
-      ...content,
-      applies_because: ruleAppliesBecause(r.id, intent_description, component_type, domain),
-      confidence: r.metadata.confidence || 0.9,
-    };
-  });
-
-  // ── Safety constraints (always all of them) ─────────────────────────────────
-  const safetyConstraints = getSafetyConstraintsInScope(
-    intent_description, component_type, domain, kb
-  );
-
-  // safety_violations (now pre_build_constraints): constraints structurally in scope → causes build_gate: true
-  // coverage_gap: confidence < 0.6 → warning only, never blocks
-  const safetyViolations = detectSafetyViolations(
-    intent_description, component_type, domain, kb
-  );
-
-  // ── Confidence score ────────────────────────────────────────────────────────
-  // TF-IDF Jaccard naturally tops out ~0.5–0.6; boosted scores may reach ~0.9
-  const topPatternScore = boostedResults[0]?.score || 0;
-  // Keyword scores naturally top out ~0.5–0.6; scale by /0.55 so ~0.5 maps to ~0.9
-  const confidence = parseFloat(Math.min(topPatternScore / 0.55, 1.0).toFixed(4));
-
-  const coverageGap = confidence < 0.6;
-
-  // Change 9 — confidence_basis: decompose what the confidence score means in context
-  let confidenceBasis;
-  if (confidence >= 0.7 && intentQuality.score >= 0.5) {
-    confidenceBasis = 'reliable';
-  } else if (confidence >= 0.7 && intentQuality.score < 0.5) {
-    // Gated cases never reach here (early return above), so this is borderline 0.4–0.5
-    confidenceBasis = 'unreliable_match';
-  } else if (intentQuality.score >= 0.4 && intentQuality.score < 0.5) {
-    // Borderline intent quality that was not gated (score 0.4–0.5)
-    confidenceBasis = 'low_intent_quality';
-  } else {
-    // Intent was acceptable but genome returned low-relevance matches
-    confidenceBasis = 'low_coverage';
-  }
-
-  // ── Gap detection — pattern coverage + ontology gaps ───────────────────────
-  // ontologyGaps (Fix 4) are prepended: unmatched actions before near-matches.
-  const lowThreshold = 0.25;
-  const gaps = [...ontologyGaps];
-  if (boostedResults.length === 0) {
-    gaps.push('No pattern matches found. This is likely a novel UI element — flag with DESIGN MIND comment.');
-  } else if (topPatternScore < lowThreshold) {
-    gaps.push(
-      `Low pattern coverage for this intent (best match score: ${topPatternScore.toFixed(2)}). ` +
-      `The genome may not have a pattern for "${component_type}" in domain "${domain}". ` +
-      `Consider calling report_pattern after building.`
-    );
-  }
-
-  // ── Surface match — which governed surface is this being built inside? ───────
-  const surfaceMatch = querySurfaces(searchText, surfaces || kb.surfaces || []);
-  const surface = surfaceMatch ? {
-    id:                surfaceMatch.surface.id,
-    intent:            surfaceMatch.surface.intent || '',
-    what_it_omits:     (surfaceMatch.surface.what_it_omits || []).map(entry =>
-      typeof entry === 'string'
-        ? { item: entry, reason: null }
-        : { item: entry.item, reason: entry.reason || null }
-    ),
-    empty_state_meaning: surfaceMatch.surface.empty_state_meaning || '',
-    ordering:          surfaceMatch.surface.ordering || '',
-    actions:           surfaceMatch.surface.actions || [],
-    never:             surfaceMatch.surface.never || [],
-    match_score:       parseFloat(surfaceMatch.score.toFixed(3)),
-  } : null;
-
-  // ── Episodic memory — similar past builds ───────────────────────────────────
-  const similarBuilds = loadSimilarBuilds(kb.basePath, searchText);
-
-  // Design Mind improvement: Change 6 — _debug field (only when DEBUG_CONTEXT=true)
-  // Captures ranking internals, rule inclusion/exclusion, surface match, episodic query.
-  // Never emitted in production (empty object when env var is not set).
-  const allRuleIds = (kb.rules || []).map(r => r.id);
-  const includedRuleIds = ruleResults.map(r => r.id);
-  const excludedRuleIds = allRuleIds.filter(id => !includedRuleIds.includes(id));
-
-  const debugField = process.env.DEBUG_CONTEXT === 'true' ? {
-    patterns_retrieved: boostedResults.map(r => ({
-      id: r.id,
-      raw_score: parseFloat((r.raw_score || 0).toFixed(4)),
-      adjusted_score: parseFloat((r.adjusted_score || r.score).toFixed(4)),
-      family_match: r.family_match || false,
-    })),
-    rules_included: includedRuleIds,
-    rules_excluded: excludedRuleIds,
-    rules_excluded_reason: excludedRuleIds.map(id => `${id}: not in top-3 for this query and not force-included`),
-    surface_matched: surfaceMatch ? surfaceMatch.surface.id : null,
-    episodic_query: searchText.substring(0, 80),
-    episodic_hits: similarBuilds.length,
-  } : {};
-
-  // ── Change 2: composition hints ──────────────────────────────────────────────
-  const compositions = buildCompositionHints(boostedResults);
-
-  // ── Change 3: structure-vs-content gap probe ─────────────────────────────────
-  const gap_probe = buildGapProbe(patterns[0] || null);
-
-  // ── Change 3 (surface hierarchy): build_mode ─────────────────────────────────
-  // Surface match ≥ 0.7 → surface-first. Agent anchors to surface spec.
-  // No match ≥ 0.7 → block-composition. Agent composes from blocks directly.
-  const SURFACE_FIRST_THRESHOLD = 0.7;
-  let build_mode;
-  if (surfaceMatch && surfaceMatch.score >= SURFACE_FIRST_THRESHOLD) {
-    const baseInstruction =
-      `Build to the ${surfaceMatch.surface.id} surface spec. The surface defines ` +
-      `what goes in, what's forbidden, and what ordering is required. Select blocks ` +
-      `to fulfil its sections. Surface never-rules override block defaults.`;
-    const mismatchNote = component_type !== 'page'
-      ? ` Note: your component_type was '${component_type}' but this intent matches ` +
-        `the ${surfaceMatch.surface.id} surface. If you are building a section within ` +
-        `${surfaceMatch.surface.id}, anchor to the surface spec. If you are building a ` +
-        `standalone component, ignore the surface match.`
-      : '';
-    build_mode = {
-      mode: 'surface-first',
-      anchor: {
-        surface_id:       surfaceMatch.surface.id,
-        relevance_score:  parseFloat(surfaceMatch.score.toFixed(3)),
-        instruction:      baseInstruction + mismatchNote,
-      },
-    };
-  } else {
-    build_mode = {
-      mode: 'block-composition',
-      anchor: null,
-      instruction: 'No surface match — compose directly from blocks. Do NOT start building yet. Return to the Block Consultation Protocol: identify every block needed across all levels, then call consult_before_build once per block in strict level order (primitives first, composites second, surfaces last). This response covers only the component you just described — it is not a clearance to build the full UI.',
-    };
-  }
-
-  // ── Assemble response ────────────────────────────────────────────────────────
-  const blockCompositionNextStep = build_mode.mode === 'block-composition'
-    ? {
-        action: 'consult_each_block',
-        instruction: 'List every block this UI needs. Call consult_before_build once per block in level order: all primitives first, then composites, then surfaces. Do not write any code until all required blocks have been individually consulted.',
-        level_order: ['primitive', 'composite / domain', 'surface'],
-      }
-    : null;
-
-  const response = {
-    build_mode,
-    ...(blockCompositionNextStep       ? { next_step: blockCompositionNextStep }   : {}),
-    ...(surface                        ? { surface }                               : {}),
-    ...(structuralGuidance             ? { structural_guidance: structuralGuidance } : {}),
-    intent_quality: { score: intentQuality.score, missing: intentQuality.missing },
-    patterns: allPatterns,
-    canonical_block_set,
-    ...(primitive_guard                ? { primitive_guard }                       : {}),
-    ...(compositions.length > 0        ? { compositions }                          : {}),
-    ...(gap_probe                      ? { gap_probe }                             : {}),
-    rules,
-    ontology_refs:      ontologyRefs,
-    safety_constraints: safetyConstraints,
-    similar_builds:     similarBuilds,
-    confidence,
-    confidence_basis:   confidenceBasis,
-    coverage_gap: coverageGap,
-    ...(gaps.length > 0                ? { gaps }                                  : {}),
-    ...(Object.keys(debugField).length ? { _debug: debugField }                    : {}),
-  };
-
-  // build_gate fires on direct + carry_forward constraints in scope.
-  // Governance constraints (C22–C24) are always present in safety_constraints
-  // with scope='governance' but never contribute to the gate count —
-  // they apply at commit time, not design time.
-  if (safetyViolations.length > 0) {
-    const directCount       = safetyConstraints.filter(c =>
-      safetyViolations.includes(c.constraint_id) && c.scope === 'direct'
-    ).length;
-    const carryForwardCount = safetyConstraints.filter(c =>
-      safetyViolations.includes(c.constraint_id) && c.scope === 'carry_forward'
-    ).length;
-    const governanceCount   = safetyConstraints.filter(c => c.scope === 'governance').length;
-
-    response.build_gate = true;
-    response.build_gate_reason =
-      `${directCount} direct and ${carryForwardCount} carry-forward constraints require pre-build verification ` +
-      `for component_type='${component_type}' in domain='${domain}'.` +
-      (governanceCount > 0
-        ? ` Additionally ${governanceCount} governance constraints apply at commit time — ` +
-          `see safety_constraints where scope='governance'.`
-        : '') +
-      ` Review direct and carry-forward constraints before writing code.`;
-    response.build_gate_resolution =
-      "Review each constraint in safety_constraints (scope='direct' and scope='carry_forward') before writing any code. " +
-      "For scope='direct' constraints, verify your planned component architecture satisfies them. " +
-      "For scope='carry_forward' constraints, note them and apply when building sub-components. " +
-      "scope='governance' constraints apply at commit time — review before committing. " +
-      "Self-certification is sufficient — no separate tool call required. " +
-      "Proceed once all direct and carry-forward constraints have been reviewed.";
-  }
-
-  if (coverageGap) {
-    response.coverage_warning =
-      'Genome has low coverage for this component type. Proceed carefully and call report_pattern if you invent new structure.';
-  }
-
-  // Change 10 — auto-log gap observations when intent was well-described but genome had no good matches
-  if (confidence < 0.4 && intentQuality.score >= 0.5) {
-    const gapLogPath = join(kb.basePath, 'memory', 'gap-observations.jsonl');
-    try {
-      if (!existsSync(join(kb.basePath, 'memory'))) {
-        mkdirSync(join(kb.basePath, 'memory'), { recursive: true });
-      }
-      const observation = {
-        timestamp:        new Date().toISOString(),
-        intent_description,
-        component_type,
-        domain,
-        confidence,
-        top_pattern_score: parseFloat((topPatternScore).toFixed(4)),
-        observation_type:  'auto_gap_log',
-      };
-      writeFileSync(gapLogPath, JSON.stringify(observation) + '\n', { flag: 'a', encoding: 'utf-8' });
-    } catch {
-      // Non-fatal: gap logging failure must never interrupt the tool response
+  // 3. Workflow completeness
+  const workflows = contextUsed.workflows || [];
+  for (const wf of workflows) {
+    const wfBlocks = (wf.blocks || []).map(b => b.id);
+    const hasRepresentation = wfBlocks.some(id => usedBlockIds.has(id));
+    if (wfBlocks.length > 0 && !hasRepresentation) {
+      violations.push({
+        violation_type: 'workflow-not-represented',
+        found_text: `Workflow "${wf.id}" (${wf.intent}) has no blocks in the generated code`,
+        correction: `Import and use at least one of: ${wfBlocks.join(', ')}`,
+        severity: 'warning',
+        rule_ref: 'consult_before_build workflow recommendation',
+      });
     }
   }
 
-  return response;
+  // 4. Block coverage
+  const allRecommended = contextUsed.blocks || [];
+  for (const block of allRecommended) {
+    if (!usedBlockIds.has(block.id)) {
+      violations.push({
+        violation_type: 'recommended-block-unused',
+        found_text: `Recommended block ${block.id} not found in generated code`,
+        correction: block.import_instruction || `Import ${block.id} from @innovaccer/ui-assets`,
+        severity: 'warning',
+        rule_ref: 'consult_before_build block recommendation',
+      });
+    }
+  }
+
+  return violations;
+}
+
+/**
+ * Validates that all color/spacing/typography values use semantic tokens.
+ * Uses the installed @innovaccer/ui-assets tokens as the primary allowlist,
+ * falls back to styling-tokens.rule.md.
+ */
+function validateTokenUsage(code, genome) {
+  const violations = [];
+  const { semanticTokens, familyInvariantClasses } = loadTokenAllowlist(genome);
+  const allowedClasses = new Set([...semanticTokens, ...familyInvariantClasses]);
+
+  // Strip comments to avoid false positives
+  const stripped = code
+    .replace(/\/\/.*$/gm, '')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(['"`])(?:(?!\1).)*\1/g, '""'); // strip string contents but keep structure
+
+  // 1. Hardcoded hex colors
+  const hexRe = /#[0-9A-Fa-f]{3,8}\b/g;
+  let m;
+  while ((m = hexRe.exec(stripped)) !== null) {
+    if (isInComment(code, m[0])) continue;
+    violations.push({
+      violation_type: 'hardcoded-hex',
+      found_text: m[0],
+      correction: 'Use a semantic color token from @innovaccer/ui-assets/tokens',
+      severity: 'blocker',
+      rule_ref: 'styling-tokens.rule.md',
+    });
+  }
+
+  // 2. CSS color functions in inline styles
+  const cssFnRe = /(?:rgba?|hsla?|oklch)\s*\([^)]+\)/g;
+  while ((m = cssFnRe.exec(stripped)) !== null) {
+    if (isInComment(code, m[0])) continue;
+    violations.push({
+      violation_type: 'hardcoded-color-function',
+      found_text: m[0],
+      correction: 'Use a semantic color token instead of CSS color functions',
+      severity: 'blocker',
+      rule_ref: 'styling-tokens.rule.md',
+    });
+  }
+
+  // 3. Non-semantic Tailwind color classes
+  // Match: bg-{color}-{shade}, text-{color}-{shade}, border-{color}-{shade}, etc.
+  const twColorRe = /\b((?:bg|text|border|ring|shadow|fill|stroke|accent|divide|placeholder)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|black|white)-\d{2,4})\b/g;
+  while ((m = twColorRe.exec(stripped)) !== null) {
+    if (allowedClasses.has(m[1])) continue; // in allowlist
+    if (isInComment(code, m[1])) continue;
+    violations.push({
+      violation_type: 'non-semantic-tailwind-color',
+      found_text: m[1],
+      correction: 'Use a semantic token class (e.g., bg-muted, text-foreground, border-subtle)',
+      severity: 'blocker',
+      rule_ref: 'styling-tokens.rule.md',
+    });
+  }
+
+  // 4. !important on token-controlled properties
+  const importantRe = /!(bg|text|border|ring|shadow|font|rounded|gap|p|m)-[\w-]+/g;
+  while ((m = importantRe.exec(stripped)) !== null) {
+    violations.push({
+      violation_type: 'important-override',
+      found_text: m[0],
+      correction: 'Remove !important — use the correct semantic token instead of forcing overrides',
+      severity: 'warning',
+      rule_ref: 'styling-tokens.rule.md',
+    });
+  }
+
+  // 5. Arbitrary Tailwind values for spacing
+  const arbitraryRe = /\b((?:gap|p|px|py|pt|pb|pl|pr|m|mx|my|mt|mb|ml|mr|w|h)-\[\d+px\])/g;
+  while ((m = arbitraryRe.exec(stripped)) !== null) {
+    if (isInComment(code, m[1])) continue;
+    violations.push({
+      violation_type: 'arbitrary-spacing',
+      found_text: m[1],
+      correction: 'Use spacing tokens (multiples of 4px: gap-1, gap-2, gap-3, gap-4, etc.)',
+      severity: 'warning',
+      rule_ref: 'styling-tokens.rule.md',
+    });
+  }
+
+  return violations;
 }
 
 // ── Primitive block protection checks (rules 22 & 25) ────────────────────────
@@ -1547,367 +549,6 @@ function classHasInvariantConflict(className) {
   });
 }
 
-/**
- * Scans the generated code for three categories of primitive violations:
- *   1. className overrides that conflict with family_invariants (rule 22)
- *   2. Primitive blocks defined locally instead of imported (rule 25, TSX)
- *   3. Primitive re-implemented as a CSS class in a <style> block (rule 25, HTML)
- *
- * Check 3 runs unconditionally — it does not require JSX presence, so it fires
- * for HTML prototypes where <Button> never appears but .btn-primary does.
- *
- * @param {string}   code            - The generated code (TSX, JSX, or HTML)
- * @param {object[]} primitiveBlocks - Active primitive blocks from kb.patterns
- * @returns {object[]} Array of fix-shaped violation objects with safety_block: true
- */
-function checkPrimitiveViolations(code, primitiveBlocks) {
-  const violations = [];
-
-  // Pre-extract all <style>...</style> content once — used in Check 3 for every block.
-  const styleBlockContent = [...code.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)]
-    .map(m => m[1]).join('\n');
-  // Collect all CSS class selectors defined in style blocks: `.foo {`, `.foo,`
-  const styleClassNames = styleBlockContent
-    ? [...styleBlockContent.matchAll(/\.([a-zA-Z][\w-]*)\s*[{,]/g)].map(m => m[1])
-    : [];
-
-  for (const block of primitiveBlocks) {
-    const id = block.id;
-    if (!block.family_invariants || block.family_invariants.length === 0) continue;
-
-    // ── Check 3: primitive re-implemented via <style> block CSS class (rule 25) ──
-    // Runs before the JSX-presence guard so it fires for HTML prototypes.
-    // Matches: full lowercase id ("button", "badge") and 3-char abbreviation ("btn", "bdg").
-    if (styleClassNames.length > 0) {
-      const idLower  = id.toLowerCase();
-      const idAbbrev = idLower.slice(0, 3);
-      const prefixes = [...new Set([idLower, idAbbrev])];
-      const shadowClass = styleClassNames.find(cls =>
-        prefixes.some(pfx => cls === pfx || cls.startsWith(pfx + '-'))
-      );
-      if (shadowClass) {
-        violations.push({
-          problem: `Primitive '${id}' re-implemented as CSS class '.${shadowClass}' in a <style> block instead of applying family_invariants inline`,
-          rule_violated: 'safety/hard-constraints.md rule 25',
-          correction:
-            `Remove '.${shadowClass}' from the <style> block. ` +
-            `Apply ${id}'s family_invariants as inline Tailwind classes directly on the element: ` +
-            `${(block.family_invariants || []).join(' | ')}. ` +
-            `A custom CSS class is a re-implementation — it bypasses the block contract and breaks the invariant audit trail.`,
-          safety_block: true,
-        });
-        continue; // style re-implementation supersedes JSX checks for this block
-      }
-    }
-
-    // ── JSX-only checks — skip if primitive not referenced as a JSX element ──
-    if (!new RegExp(`<${id}[\\s/>]`).test(code)) continue;
-
-    // ── Check 1: conflicting className override (rule 22) ───────────────────
-    // Match both literal className="..." and expression className={cn("...")}
-    const literalRe = new RegExp(`<${id}[^>]{0,400}className\\s*=\\s*["'\`]([^"'\`]*)["'\`]`, 's');
-    const exprRe    = new RegExp(`<${id}[^>]{0,400}className\\s*=\\s*\\{[^}]*["'\`]([^"'\`]*)["'\`]`, 's');
-
-    for (const re of [literalRe, exprRe]) {
-      const m = code.match(re);
-      if (m && classHasInvariantConflict(m[1])) {
-        const invariantSample = (block.family_invariants || []).slice(0, 3).join('; ');
-        violations.push({
-          problem: `className override on primitive '${id}' conflicts with its family_invariants`,
-          rule_violated: 'safety/hard-constraints.md rule 22',
-          correction:
-            `Only additive classes (positioning, sizing, spacing, layout) may be passed to '${id}'. ` +
-            `Invariants in force: ${invariantSample}. ` +
-            `To change an invariant, update blocks/${id}/meta.yaml and blocks/${id}/${id}.tsx with ` +
-            `design-leadership justification — never override inline.`,
-          safety_block: true,
-        });
-        break; // one violation per block is enough
-      }
-    }
-
-    // ── Check 2: primitive reimplemented inline (rule 25, TSX) ─────────────
-    // Detect: `const Button = ...` or `function Button(` without a corresponding
-    // import from the blocks directory, which signals the block was rebuilt locally.
-    const redefineRe = new RegExp(`(?:^|\\n)(?:const|function|let|var)\\s+${id}\\s*[=(]`, 'i');
-    const importRe   = new RegExp(`import[^;]*\\b${id}\\b[^;]*from[^;]*['"][^'"]*@innovaccer/ui-assets`, 'i');
-    if (redefineRe.test(code) && !importRe.test(code)) {
-      violations.push({
-        problem: `Primitive block '${id}' appears to be redefined locally rather than imported`,
-        rule_violated: 'safety/hard-constraints.md rule 25',
-        correction:
-          `Import ${id} from '@innovaccer/ui-assets' (see import_instruction in consult_before_build response) and use it as-is. ` +
-          `Never reimplement a primitive block inline. ` +
-          `If structural changes are required, register a candidate via report_pattern.`,
-        safety_block: true,
-      });
-    }
-  }
-
-  return violations;
-}
-
-/**
- * Resolves block IDs actually present in the generated code by scanning
- * multiple import path conventions used across real TSX codebases and the
- * design-mind canonical format.
- *
- * Recognised patterns:
- *   1. NPM canonical          — @innovaccer/ui-assets/block-primitives/<Id> or /block-composites/<Id>
- *   2. shadcn/ui              — @/components/ui/<name>  (named exports, PascalCase)
- *   3. Generic component dir  — @/components/<Name>     (named exports, PascalCase)
- *
- * @param {string} code - The generated code
- * @returns {Set<string>} Set of PascalCase block IDs found via imports
- */
-function resolveImportedBlockIds(code) {
-  const ids = new Set();
-
-  // 1. NPM canonical: @innovaccer/ui-assets/block-primitives/Button → id = "Button"
-  for (const m of code.matchAll(
-    /import\s+(?:\{[^}]*\}|\w+)\s+from\s+['"]@innovaccer\/ui-assets\/block-(?:primitives|composites)\/(\w+)['"]/g
-  )) ids.add(m[1]);
-  // Also match surfaces: @innovaccer/ui-assets/surfaces/Worklist → id = "Worklist"
-  for (const m of code.matchAll(
-    /import\s+(?:\{[^}]*\}|\w+)\s+from\s+['"]@innovaccer\/ui-assets\/surfaces\/(\w+)['"]/g
-  )) ids.add(m[1]);
-
-  // 2. shadcn: import { Button, ButtonProps } from '@/components/ui/button'
-  //    Extract each named export; keep only PascalCase identifiers (component names).
-  for (const m of code.matchAll(
-    /import\s+\{([^}]+)\}\s+from\s+['"]@\/components\/ui\/[\w-]+['"]/g
-  )) {
-    for (const raw of m[1].split(',')) {
-      const name = raw.trim().split(/\s+as\s+/)[0].trim();
-      if (/^[A-Z]/.test(name)) ids.add(name);
-    }
-  }
-
-  // 3. Generic: import { Button } from '@/components/Button'
-  for (const m of code.matchAll(
-    /import\s+\{([^}]+)\}\s+from\s+['"]@\/components\/[\w/-]+['"]/g
-  )) {
-    for (const raw of m[1].split(',')) {
-      const name = raw.trim().split(/\s+as\s+/)[0].trim();
-      if (/^[A-Z]/.test(name)) ids.add(name);
-    }
-  }
-
-  return ids;
-}
-
-/**
- * Compares the blocks actually imported in the generated code against the
- * blocks recommended by consult_before_build (from context_used.patterns).
- * Flags high-confidence recommended blocks that are absent, and validates
- * that variant props used on imported blocks match documented variants.
- *
- * @param {string}   code            - The generated code (TSX, JSX, or HTML)
- * @param {object}   contextUsed     - The full context returned by consult_before_build
- * @param {object[]} primitiveBlocks - Active primitive blocks (for variant validation)
- * @returns {object[]} Array of borderline-shaped observations
- */
-function checkBlockIdentity(code, contextUsed, primitiveBlocks = []) {
-  const issues = [];
-  if (!contextUsed?.patterns) return issues;
-
-  const usedBlockIds = resolveImportedBlockIds(code);
-
-  // ── High-confidence block usage check ──────────────────────────────────────
-  const highConfRecommended = (contextUsed.patterns || []).filter(
-    p => p.relevance_score >= 0.65 && !p.structural_inclusion
-  );
-
-  for (const rec of highConfRecommended) {
-    if (!usedBlockIds.has(rec.id)) {
-      issues.push({
-        observation: `High-confidence recommended block '${rec.id}' (score: ${rec.relevance_score}) was not imported in the generated output`,
-        tension: `consult_before_build identified this as a primary pattern match — unused blocks risk design-system drift and inconsistency`,
-        recommendation:
-          `Verify this omission was intentional. If a different block was chosen instead, confirm it satisfies the same design intent and genome rules. ` +
-          `If this block should have been used, import it from its npm_path in @innovaccer/ui-assets (see consult_before_build response).`,
-      });
-    }
-  }
-
-  // ── Variant prop validation (TSX only) ─────────────────────────────────────
-  // Check that variant="..." values on imported primitive JSX elements match
-  // the block's documented variants. Catches invented variants like "ghost"
-  // that have no canonical definition.
-  for (const blockId of usedBlockIds) {
-    const block = primitiveBlocks.find(b => b.id === blockId);
-    if (!block?.variants) continue;
-    const validVariants = Object.keys(block.variants);
-    const variantRe = new RegExp(
-      `<${blockId}[^>]{0,400}variant\\s*=\\s*["'\`]([^"'\`]+)["'\`]`, 'g'
-    );
-    for (const m of code.matchAll(variantRe)) {
-      const used = m[1].trim();
-      if (used && !validVariants.includes(used)) {
-        issues.push({
-          observation: `'${blockId}' used with variant="${used}" which is not a documented variant`,
-          tension: `Undocumented variants are not covered by the block contract and may produce unexpected styles or break across design-system updates. Valid variants: ${validVariants.join(', ')}.`,
-          recommendation: `Replace variant="${used}" with one of: ${validVariants.join(', ')}.`,
-        });
-      }
-    }
-  }
-
-  return issues;
-}
-
-/**
- * Produces a structured invariant audit for every primitive that is in scope
- * for the generated output. "In scope" means the primitive was:
- *   - imported or used as JSX,
- *   - re-implemented via a <style> block CSS class,
- *   - used as a raw HTML element with inline classes, OR
- *   - recommended with relevance_score ≥ 0.45 by consult_before_build.
- *
- * Each entry reports how the primitive was detected, which family_invariants
- * are satisfied, which are missing, and a machine-readable verdict:
- *   correct            — imported/used correctly, all invariants present
- *   partial            — imported but some invariants missing or className conflict
- *   variant_violation  — imported but an undocumented variant prop was used
- *   reimplemented      — found as a CSS class in a <style> block (rule 25)
- *   partial_inline     — found as a raw HTML element with some invariants inline
- *   absent             — in scope (recommended) but not found in the output
- *
- * @param {string}   code            - The generated code
- * @param {object[]} primitiveBlocks - Active primitive blocks from kb.patterns
- * @param {object}   contextUsed     - Context returned by consult_before_build (optional)
- * @returns {object[]} invariant_check array
- */
-function buildInvariantCheck(code, primitiveBlocks, contextUsed) {
-  const results = [];
-
-  // Primitives recommended with moderate confidence are "in scope" even if absent.
-  const highConfIds = new Set(
-    (contextUsed?.patterns || [])
-      .filter(p => p.level === 'primitive' && p.relevance_score >= 0.45)
-      .map(p => p.id)
-  );
-
-  // Pre-compute import set and style block classes once.
-  const importedIds = resolveImportedBlockIds(code);
-
-  const styleBlockContent = [...code.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)]
-    .map(m => m[1]).join('\n');
-  const styleClassNames = styleBlockContent
-    ? [...styleBlockContent.matchAll(/\.([a-zA-Z][\w-]*)\s*[{,]/g)].map(m => m[1])
-    : [];
-
-  /**
-   * Given a family_invariant string (e.g. "focus-visible:ring-2 focus-visible:ring-offset-1 (rule 20)")
-   * extract the Tailwind-like tokens within it so we can check their presence in code.
-   */
-  function tokensFromInvariant(inv) {
-    // Match tokens that contain at least one dash or colon — Tailwind class shape.
-    return (inv.match(/[\w:![\].-]+(?:[-:][\w:![\].-]+)+/g) || []).filter(t => t.length > 3);
-  }
-
-  function classifyInvariants(invariants, searchTarget) {
-    const present = [];
-    const missing = [];
-    for (const inv of invariants) {
-      const tokens = tokensFromInvariant(inv);
-      // An invariant is "present" if at least one of its key tokens appears in the target.
-      const satisfied = tokens.length === 0 || tokens.some(t => searchTarget.includes(t));
-      (satisfied ? present : missing).push(inv);
-    }
-    return { present, missing };
-  }
-
-  for (const block of primitiveBlocks) {
-    const id = block.id;
-    const invariants = block.family_invariants || [];
-    if (invariants.length === 0) continue;
-
-    const inImport  = importedIds.has(id);
-    const inJsx     = new RegExp(`<${id}[\\s/>]`).test(code);
-    const inHighConf = highConfIds.has(id);
-
-    // Style block shadow?
-    const idLower  = id.toLowerCase();
-    const idAbbrev = idLower.slice(0, 3);
-    const prefixes = [...new Set([idLower, idAbbrev])];
-    const shadowClass = styleClassNames.find(cls =>
-      prefixes.some(pfx => cls === pfx || cls.startsWith(pfx + '-'))
-    );
-
-    // Raw HTML element usage (for HTML prototypes — <button>, <input>, etc.)
-    const htmlTag = idLower; // Button→button, Badge→badge, Input→input
-    const htmlClassRe = new RegExp(
-      `<${htmlTag}[^>]{0,600}class(?:Name)?\\s*=\\s*["']([^"']*)["']`, 'gi'
-    );
-    const htmlClasses = [...code.matchAll(htmlClassRe)].flatMap(m => m[1].split(/\s+/));
-
-    // Skip entirely if not in scope.
-    if (!inImport && !inJsx && !inHighConf && !shadowClass && htmlClasses.length === 0) continue;
-
-    let detection_method, verdict;
-    let invariants_present = [];
-    let invariants_missing = [];
-
-    if (inImport || inJsx) {
-      // ── TSX / imported component path ──────────────────────────────────
-      detection_method = inImport ? 'import' : 'jsx_usage';
-
-      // Check for variant prop violations.
-      let hasVariantViolation = false;
-      if (block.variants) {
-        const validVariants = Object.keys(block.variants);
-        const variantRe = new RegExp(
-          `<${id}[^>]{0,400}variant\\s*=\\s*["'\`]([^"'\`]+)["'\`]`, 'g'
-        );
-        for (const m of code.matchAll(variantRe)) {
-          if (!validVariants.includes(m[1].trim())) { hasVariantViolation = true; break; }
-        }
-      }
-
-      // Check className for invariant-prefix conflicts.
-      const literalRe = new RegExp(`<${id}[^>]{0,400}className\\s*=\\s*["'\`]([^"'\`]*)["'\`]`, 's');
-      const exprRe    = new RegExp(`<${id}[^>]{0,400}className\\s*=\\s*\\{[^}]*["'\`]([^"'\`]*)["'\`]`, 's');
-      const classMatch = code.match(literalRe) || code.match(exprRe);
-      const hasConflict = classMatch ? classHasInvariantConflict(classMatch[1]) : false;
-
-      const { present, missing } = classifyInvariants(invariants, code);
-      invariants_present = present;
-      invariants_missing = missing;
-
-      if (hasVariantViolation)      verdict = 'variant_violation';
-      else if (hasConflict)         verdict = 'partial';
-      else if (missing.length === 0) verdict = 'correct';
-      else                           verdict = 'partial';
-
-    } else if (shadowClass) {
-      // ── CSS class re-implementation in <style> block ────────────────────
-      detection_method = 'style_reimplementation';
-      invariants_missing = [...invariants]; // all invariants hidden behind CSS class
-      verdict = 'reimplemented';
-
-    } else if (htmlClasses.length > 0) {
-      // ── Raw HTML element with inline classes (HTML prototype) ───────────
-      detection_method = 'inline_tailwind';
-      const { present, missing } = classifyInvariants(invariants, htmlClasses.join(' '));
-      invariants_present = present;
-      invariants_missing = missing;
-      verdict = missing.length === 0 ? 'correct'
-              : present.length > 0   ? 'partial_inline'
-              :                        'absent';
-
-    } else {
-      // ── Recommended but not found ───────────────────────────────────────
-      detection_method = 'not_found';
-      invariants_missing = [...invariants];
-      verdict = 'absent';
-    }
-
-    results.push({ block: id, detection_method, invariants_present, invariants_missing, verdict });
-  }
-
-  return results;
-}
 
 // ── TOOL 2: review_output ─────────────────────────────────────────────────────
 
@@ -2045,88 +686,6 @@ function checkCopyVoice(code) {
   return violations;
 }
 
-// Hard constraint violation detectors
-const HARD_CONSTRAINT_CHECKS = [
-  {
-    id: 'c5-critical-dismiss',
-    check: (code) => {
-      const lower = code.toLowerCase();
-      // Look for "dismiss" or "close" button near "critical"
-      const hasCritical = lower.includes('critical');
-      const hasDismiss = lower.includes('dismiss') || /\bclose\b/.test(lower);
-      if (hasCritical && hasDismiss) {
-        // More precise: check if they're close together (within 200 chars)
-        const critIdx = lower.indexOf('critical');
-        const dismissIdx = Math.max(lower.indexOf('dismiss'), lower.search(/\bclose\b/));
-        if (Math.abs(critIdx - dismissIdx) < 300) return true;
-      }
-      return false;
-    },
-    problem: 'Dismiss or Close control may be rendered for a Critical alert',
-    rule_violated: 'safety/hard-constraints.md rule 5',
-    correction: 'Remove Dismiss/Close from Critical alerts. Only Acknowledge and Escalate are permitted actions.',
-  },
-  {
-    id: 'c1-hardcoded-color',
-    check: (code) => /#[0-9A-Fa-f]{3,8}(?!\s*\/\/)/.test(code),
-    problem: 'Hardcoded hex color found in component code',
-    rule_violated: 'genome/rules/styling-tokens.rule.md',
-    correction: 'Replace all hex colors with design token classes (text-destructive, bg-[var(--alert-light)], etc.)',
-  },
-  {
-    id: 'c-tailwind-colors',
-    check: (code) => {
-      // Look for Tailwind default color classes like red-600, amber-100, blue-500, etc.
-      return /\b(red|blue|green|yellow|amber|orange|purple|pink|gray|slate|zinc|neutral|stone|lime|emerald|teal|cyan|indigo|violet|fuchsia|rose)-\d{2,3}\b/.test(code);
-    },
-    problem: 'Tailwind default color classes found (e.g. red-600, amber-100)',
-    rule_violated: 'genome/rules/styling-tokens.rule.md',
-    correction: 'Use semantic token classes only. See styling-tokens.rule.md for the full token map.',
-  },
-  {
-    id: 'c8-patient-name',
-    check: (code) => {
-      // Only flag rendering contexts — JSX text interpolation {firstName} or template literals `${firstName}`
-      // NOT prop passing (lastName={...} firstName={...}) which is correct pattern usage
-      // Look for firstName rendered directly without a lastName nearby in JSX output
-      const hasFirstNameRender = /\{[^}]*firstName[^}]*\}/.test(code) || /`[^`]*firstName[^`]*`/.test(code);
-      const hasLastNameNearby = /lastName/.test(code);
-      // Only flag if firstName is rendered but no lastName is present anywhere in the file
-      return hasFirstNameRender && !hasLastNameNearby;
-    },
-    problem: 'Patient first name rendered without last name anywhere in component',
-    rule_violated: 'safety/hard-constraints.md rule 8',
-    correction: 'Always display patient name as Last, First (formal) or First Last (conversational). Never first name only.',
-  },
-  {
-    id: 'c13-forbidden-terms',
-    check: (code) => {
-      const lower = code.toLowerCase();
-      return lower.includes('"normal"') || lower.includes("'normal'") ||
-             lower.includes('"fine"') || lower.includes("'fine'") ||
-             lower.includes("don't worry") || lower.includes('unfortunately');
-    },
-    problem: 'Forbidden clinical terminology found in copy',
-    rule_violated: 'safety/hard-constraints.md rule 13',
-    correction: 'Remove "Normal", "Fine", "don\'t worry", "unfortunately". Use clinical terminology per ontology/copy-voice.md.',
-  },
-  {
-    id: 'c15-first-person',
-    check: (code) => /\b(we |we'|our |i am |i've |i'll )/i.test(
-      code.replace(/\/\/[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '')
-    ),
-    problem: 'First-person construction ("we", "our", "I") found in user-facing copy',
-    rule_violated: 'safety/hard-constraints.md rule 15',
-    correction: 'All first-person constructions are prohibited. Rewrite in second person or state the fact directly.',
-  },
-  {
-    id: 'c17-cancel-not-close',
-    check: (code) => /"Cancel"|'Cancel'|>Cancel</.test(code),
-    problem: '"Cancel" found on a button — secondary actions on modals must use "Close"',
-    rule_violated: 'safety/hard-constraints.md rule 17',
-    correction: 'Replace "Cancel" with "Close" on modal, interstitial, and popover secondary buttons.',
-  },
-];
 
 // Check for non-canonical terminology
 function checkNonCanonicalTerms(code, kb) {
@@ -2168,7 +727,7 @@ function checkNonCanonicalTerms(code, kb) {
 }
 
 // Check for honored patterns/rules (positive signals)
-function checkHonored(code, patternResults, kb) {
+function checkHonored(code, contextUsed, kb) {
   const honored = [];
 
   // Token-based checks
@@ -2196,10 +755,11 @@ function checkHonored(code, patternResults, kb) {
       rule_or_pattern_ref: 'safety/hard-constraints.md rule 5',
     });
   }
-  if (patternResults.length > 0 && patternResults[0].score > 0.4) {
+  const blocks = contextUsed?.blocks || [];
+  if (blocks.length > 0 && blocks[0].score > 0.4) {
     honored.push({
-      observation: `Matches established pattern: ${patternResults[0].id} (similarity: ${patternResults[0].score.toFixed(2)})`,
-      rule_or_pattern_ref: `blocks/${patternResults[0].id}/meta.yaml`,
+      observation: `Matches established pattern: ${blocks[0].id} (similarity: ${blocks[0].score.toFixed(2)})`,
+      rule_or_pattern_ref: `blocks/${blocks[0].id}/meta.yaml`,
     });
   }
 
@@ -2223,109 +783,75 @@ function isInComment(code, needle) {
   return !withoutAllComments.includes(needle);
 }
 
-/**
- * Reviews generated UI code/description against the Design Mind genome.
- * Hybrid approach: step 1 runs fast regex auto-checks, step 2 sends everything
- * to the LLM Critic, step 3 merges and deduplicates the results.
- */
 export async function reviewOutput(params, kb, patternIndex) {
-  const { generated_output, original_intent, context_used } = params;
-  const code = generated_output || '';
+  const {
+    generated_output: code,
+    original_intent,
+    context_used: contextUsed,
+  } = params;
 
-  // ── STEP 1 — CODE AUTO-CHECKS ────────────────────────────────────────────────
-  const violations = [];
+  const genome = loadGenome();
 
-  // 1. Hardcoded hex colors
-  const hexMatches = code.match(/#[0-9a-fA-F]{3,6}\b/g) || [];
-  hexMatches.filter(h => !isInComment(code, h)).forEach(found => {
-    violations.push({ violation_type: 'hardcoded-hex', found_text: found, rule_ref: 'styling-tokens', severity: 'blocker' });
-  });
+  // ── Step 1: Deterministic auto-checks ──────────────────────────────────────
+  const blockViolations     = validateBlockSources(code, genome);
+  const alignmentViolations = validateConsultationAlignment(code, contextUsed);
+  const tokenViolations     = validateTokenUsage(code, genome);
+  const copyViolations      = checkCopyVoice(code);
+  const termViolations      = checkNonCanonicalTerms(code, kb);
+  const honored             = checkHonored(code, contextUsed, kb);
 
-  // 2. Tailwind default color classes
-  const twColorMatches = code.match(/\b(red|blue|green|yellow|purple|pink|indigo|orange|teal|cyan|rose|violet|fuchsia|lime|emerald|sky|amber|gray|slate|zinc|neutral|stone)-(50|100|200|300|400|500|600|700|800|900|950)\b/g) || [];
-  twColorMatches.forEach(found => {
-    violations.push({ violation_type: 'tailwind-default-color', found_text: found, rule_ref: 'styling-tokens', severity: 'blocker' });
-  });
-
-  // 3. Critical alert dismiss
-  if (/dismiss|close/i.test(code) && /critical|severity-critical/i.test(code)) {
-    violations.push({ violation_type: 'critical-alert-dismiss', found_text: 'dismiss/close near critical', rule_ref: 'hard-constraints rule 1', severity: 'blocker' });
-  }
-
-  // 4. Patient first-name-only
-  if (/patient\.firstName|patient\.first_name|\bfirstName\b/.test(code) && !/patient\.lastName|patient\.last_name|\blastName\b/.test(code)) {
-    violations.push({ violation_type: 'patient-first-name-only', found_text: 'firstName without lastName', rule_ref: 'hard-constraints rule 3', severity: 'blocker' });
-  }
-
-  // 5. Copy voice violations
-  const copyVoiceChecks = [
-    { pattern: /something went wrong/i, label: 'Something went wrong' },
-    { pattern: /are you sure\?/i, label: 'Are you sure?' },
-    { pattern: /\b(we|our|I)\b/i, label: 'first-person pronoun' },
-    { pattern: /<Button[^>]*>Cancel</i, label: 'Cancel button (use Close)' },
-    { pattern: /\bdenied\b|\bfailed\b|\bfailure\b/i, label: 'denied/failed/failure' },
+  const allAutoChecks = [
+    ...blockViolations,
+    ...alignmentViolations,
+    ...tokenViolations,
+    ...copyViolations.map(cv => ({
+      violation_type: 'copy-voice',
+      found_text: cv.found,
+      correction: cv.correction,
+      severity: 'warning',
+      rule_ref: cv.rule,
+    })),
+    ...termViolations.map(tv => ({
+      violation_type: 'non-canonical-term',
+      found_text: tv.problem,
+      correction: tv.correction,
+      severity: 'warning',
+      rule_ref: tv.rule_violated,
+    })),
   ];
-  copyVoiceChecks.forEach(({ pattern, label }) => {
-    if (pattern.test(code)) {
-      violations.push({ violation_type: 'copy-voice', found_text: label, rule_ref: 'copy-voice', severity: 'warning' });
-    }
-  });
 
-  // 6. Primitive reimplementation via <style> blocks
-  if (/<style[^>]*>/.test(code)) {
-    violations.push({ violation_type: 'primitive-reimplementation', found_text: '<style> block', rule_ref: 'hard-constraints', severity: 'warning' });
-  }
-
-  // 7. Import path check (rounded-full without @innovaccer/ui-assets import)
-  if (/className=["'][^"']*rounded-full[^"']*["']/.test(code) && !/@innovaccer\/ui-assets/.test(code)) {
-    violations.push({ violation_type: 'import-path', found_text: 'rounded-full without @innovaccer/ui-assets import', rule_ref: 'hard-constraints', severity: 'warning' });
-  }
-
-  // ── STEP 2 — LLM CRITIC ──────────────────────────────────────────────────────
+  // ── Step 2: LLM Critic ────────────────────────────────────────────────────
   let criticResult = {};
   try {
     criticResult = await callCritic({
       generatedCode: code,
       originalIntent: original_intent || '',
       genomeContext: getGenomeForLLM(),
-      autoCheckResults: violations,
+      autoCheckResults: allAutoChecks,
+      contextUsed: contextUsed || null,
     });
   } catch (err) {
-    process.stderr.write(`[reviewOutput] callCritic error: ${err.message}\n`);
-    criticResult = {};
+    process.stderr.write(`[reviewOutput] Critic call failed: ${err.message}\n`);
   }
 
-  // ── STEP 3 — MERGE AND DEDUPLICATE ──────────────────────────────────────────
-  // Remove auto-check violations that are already covered by LLM fix items
-  // (same violation_type or similar found_text).
-  const llmFix = criticResult.fix || [];
-  const llmFixTexts = llmFix.map(f => (f.problem || '').toLowerCase());
+  // ── Step 3: Merge and deduplicate ─────────────────────────────────────────
+  const llmFixes = criticResult.fix || [];
+  const autoFixTexts = new Set(allAutoChecks.map(v => v.found_text));
 
-  const deduplicatedViolations = violations.filter(v => {
-    const vText = (v.found_text || '').toLowerCase();
-    const vType = (v.violation_type || '').toLowerCase();
-    return !llmFixTexts.some(
-      ft => ft.includes(vType) || ft.includes(vText) || vText.length > 3 && ft.includes(vText)
-    );
+  // Remove LLM fixes that duplicate auto-check findings
+  const dedupedLlmFixes = llmFixes.filter(f => {
+    const problem = f.problem || '';
+    return !autoFixTexts.has(problem);
   });
 
   return {
-    auto_checks: violations,                                    // full step 1 results (unfiltered)
-    honored: criticResult.honored || [],
+    auto_checks: allAutoChecks,
+    honored: [...honored, ...(criticResult.honored || [])],
     borderline: criticResult.borderline || [],
     novel: criticResult.novel || [],
-    fix: [
-      ...deduplicatedViolations.map(v => ({
-        problem: `Auto-check: ${v.violation_type} — ${v.found_text}`,
-        rule_violated: v.rule_ref,
-        correction: `Remove or replace the offending ${v.violation_type} (found: "${v.found_text}")`,
-        safety_block: v.severity === 'blocker',
-      })),
-      ...llmFix,
-    ],
+    fix: [...allAutoChecks.filter(v => v.severity === 'blocker'), ...dedupedLlmFixes],
     candidate_patterns: criticResult.candidate_patterns || [],
-    copy_violations: criticResult.copy_violations || [],
-    invariant_check: criticResult.invariant_check || [],
+    copy_violations: copyViolations,
     confidence: criticResult.confidence || 0,
   };
 }
@@ -2832,36 +1358,4 @@ export async function reportPattern(params, basePath) {
   }
 }
 
-// ── Episodic memory reader ────────────────────────────────────────────────────
 
-function loadSimilarBuilds(basePath, searchText) {
-  const logPath = join(basePath, 'memory', 'episodic-log.jsonl');
-  if (!existsSync(logPath)) return [];
-
-  try {
-    const lines = readFileSync(logPath, 'utf-8').split('\n').filter(Boolean);
-    const entries = lines.map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
-
-    // Simple keyword match against intent field
-    const keywords = searchText.toLowerCase().split(/\s+/).filter(w => w.length > 3);
-    const scored = entries
-      .filter(e => e.intent)
-      .map(e => {
-        const intentLower = e.intent.toLowerCase();
-        const matchCount = keywords.filter(k => intentLower.includes(k)).length;
-        return { ...e, matchCount };
-      })
-      .filter(e => e.matchCount > 0)
-      .sort((a, b) => b.matchCount - a.matchCount)
-      .slice(0, 3);
-
-    return scored.map(e => ({
-      build_id: e.id || 'unknown',
-      intent: e.intent || '',
-      what_worked: e.what_worked || '',
-      what_to_watch: e.what_to_watch || '',
-    }));
-  } catch {
-    return [];
-  }
-}

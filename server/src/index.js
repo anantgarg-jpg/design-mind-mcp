@@ -103,32 +103,39 @@ const TOOLS = [
     name: 'consult_before_build',
     description:
       'REQUIRED before generating ANY UI — component, page, surface, or style change.\n' +
-      'Call once per distinct surface or component you\'re building. For complex requests\n' +
-      'with multiple surfaces, decompose first, then call this tool for each piece.\n\n' +
-      'Returns the design genome: layout blueprints, safety constraints, and copy rules\n' +
-      'for this platform. The response is a construction packet — use it as a blueprint,\n' +
-      'not as suggestions.\n\n' +
+      'Returns the design genome construction packet: surface matching, layout structure,\n' +
+      'per-workflow block assignments, safety constraints, and copy rules.\n' +
+      'The response is a blueprint, not a suggestion.\n\n' +
+      'PRE-FLIGHT:\n' +
+      'Ensure @innovaccer/ui-assets is in the project\'s package.json before calling.\n' +
+      'If missing: npm install @innovaccer/ui-assets\n' +
+      'Ensure import \'@innovaccer/ui-assets/tokens\' is in the project entry file.\n\n' +
       'HOW TO CALL:\n' +
-      '1. Describe WHAT you are building. Be specific — include who uses it, what data\n' +
-      '   it shows, what actions are available, and whether this is a new build or modification.\n' +
+      '1. Describe WHAT you are building — who uses it, what data it shows, what actions\n' +
+      '   are available, and whether this is a new build or modification.\n' +
       '2. Send a SCOPE HINT: "surface" (full page/panel), "block" (single component),\n' +
       '   "token" (styling/spacing question).\n' +
-      '3. Include domain and user_type if you can infer them from the codebase.\n\n' +
-      'The server matches your description against its knowledge base. If it finds a known\n' +
-      'page blueprint, it returns a full construction plan with layout regions, component\n' +
-      'assignments, ordering rules, and hard constraints. If not, it returns the best\n' +
-      'matching components with code templates for you to compose.\n\n' +
-      'WRITING A GOOD DESCRIPTION:\n' +
-      '  Good: "Coordinator-facing page showing prioritised patients with open care gaps.\n' +
-      '        Each row: patient name, risk tier, gap status, due date. Actions: Close Gap."\n' +
-      '  Bad: "a worklist"\n\n' +
+      '3. Include domain and user_type if you can infer them from the codebase.\n' +
+      '4. DECOMPOSE the intent into WORKFLOWS — an array of { id, intent, region? }\n' +
+      '   objects representing bounded UI sections. Example:\n' +
+      '   Intent: "Care gap worklist for coordinators with filters and bulk actions"\n' +
+      '   Workflows: [\n' +
+      '     { id: "filter-bar", intent: "Filter patients by status, risk, and care team" },\n' +
+      '     { id: "patient-list", intent: "Show prioritized patient rows with risk tier and gap count" },\n' +
+      '     { id: "bulk-actions", intent: "Select multiple patients and assign care coordinator" }\n' +
+      '   ]\n' +
+      '   When workflows are omitted, the tool treats the entire intent as a single workflow.\n\n' +
+      'WRITING GOOD WORKFLOWS:\n' +
+      '  Good: { id: "filter-bar", intent: "Filter patients by status, risk tier, and assigned care team" }\n' +
+      '  Bad:  { id: "filters", intent: "add filters" }\n\n' +
       'HOW TO USE THE RESPONSE:\n' +
-      'Read build_mode FIRST. "surface-first" means follow the blueprint exactly.\n' +
-      '"block-composition" means compose from the returned blocks.\n' +
-      'Each block in the response includes an npm_path and import_instruction — use\n' +
-      'these EXACTLY to import the component from @innovaccer/ui-assets. Do NOT\n' +
-      'reimplement blocks inline. family_invariants are the CSS classes that must\n' +
-      'never be changed. safety_constraints are non-negotiable.',
+      '1. Read surface.matched first. If true, the layout is authoritative (from a surface spec).\n' +
+      '   If false, layout is an LLM-generated skeleton — treat as strong recommendation.\n' +
+      '2. For each workflow in the response, import blocks using the exact import_instruction.\n' +
+      '   Do NOT reimplement blocks inline.\n' +
+      '3. family_invariants are CSS classes that must never be changed.\n' +
+      '4. safety_applied constraints are non-negotiable.\n' +
+      '5. After generating code, call review_output with the generated code and original intent.',
     inputSchema: {
       type: 'object',
       required: ['intent_description', 'scope'],
@@ -161,6 +168,31 @@ const TOOLS = [
           description:
             'Absolute path to the consuming project root (where its package.json lives). ' +
             'If omitted, the server walks up from its working directory to find it.',
+        },
+        workflows: {
+          type: 'array',
+          description:
+            'Optional workflow decompositions. Each represents a bounded UI section with ' +
+            'a specific intent. When provided, the response maps blocks to each workflow ' +
+            'individually. When omitted, the entire intent is treated as a single workflow.',
+          items: {
+            type: 'object',
+            required: ['id', 'intent'],
+            properties: {
+              id: {
+                type: 'string',
+                description: 'Unique workflow identifier (e.g. "filter-header", "patient-list")',
+              },
+              intent: {
+                type: 'string',
+                description: 'What this workflow section does — be specific about data and actions',
+              },
+              region: {
+                type: 'string',
+                description: 'Optional: which layout region this workflow belongs to',
+              },
+            },
+          },
         },
       },
     },

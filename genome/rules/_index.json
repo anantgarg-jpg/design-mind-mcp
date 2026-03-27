@@ -103,7 +103,7 @@
     },
     "ChatQuickActionChip": {
       "file": "blocks/ChatQuickActionChip/meta.yaml",
-      "level": "domain",
+      "level": "composite",
       "confidence": 0.85,
       "status": "active",
       "renders_total": 0,
@@ -111,7 +111,7 @@
     },
     "InlineEntityCard": {
       "file": "blocks/InlineEntityCard/meta.yaml",
-      "level": "domain",
+      "level": "composite",
       "confidence": 0.85,
       "status": "active",
       "renders_total": 0,
@@ -119,7 +119,7 @@
     },
     "ActivityLogRow": {
       "file": "blocks/ActivityLogRow/meta.yaml",
-      "level": "domain",
+      "level": "composite",
       "confidence": 0.85,
       "status": "active",
       "renders_total": 0,
@@ -127,7 +127,7 @@
     },
     "AssessmentTab": {
       "file": "blocks/AssessmentTab/meta.yaml",
-      "level": "domain",
+      "level": "composite",
       "confidence": 0.85,
       "status": "active",
       "renders_total": 0,
