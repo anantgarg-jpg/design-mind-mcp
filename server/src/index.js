@@ -45,6 +45,7 @@ import {
 
 import { loadKnowledge }                                         from './knowledge.js';
 import { consultBeforeBuild, reviewOutput, reportPattern }      from './contextAssembler.js';
+import { check as checkPackage }                                from './packageChecker.js';
 
 // ── Paths ─────────────────────────────────────────────────────────────────────
 
@@ -122,12 +123,10 @@ const TOOLS = [
       'HOW TO USE THE RESPONSE:\n' +
       'Read build_mode FIRST. "surface-first" means follow the blueprint exactly.\n' +
       '"block-composition" means compose from the returned blocks.\n' +
-      'component_tsx in each block is the EXACT source code of that block — paste it\n' +
-      'directly into the project as a new file, then import from that file.\n' +
-      'Do NOT rewrite it with inline Tailwind. Do NOT skip it because @/blocks/ does\n' +
-      'not exist yet — CREATE the file from the component_tsx content.\n' +
-      'family_invariants are the CSS classes that must never be changed.\n' +
-      'safety_constraints are non-negotiable.',
+      'Each block in the response includes an npm_path and import_instruction — use\n' +
+      'these EXACTLY to import the component from @innovaccer/ui-assets. Do NOT\n' +
+      'reimplement blocks inline. family_invariants are the CSS classes that must\n' +
+      'never be changed. safety_constraints are non-negotiable.',
     inputSchema: {
       type: 'object',
       required: ['intent_description', 'scope'],
@@ -154,6 +153,12 @@ const TOOLS = [
             enum: ['clinician', 'coordinator', 'patient', 'admin', 'data-engineer'],
           },
           description: 'User type(s) this component serves (optional)',
+        },
+        project_root: {
+          type: 'string',
+          description:
+            'Absolute path to the consuming project root (where its package.json lives). ' +
+            'If omitted, the server walks up from its working directory to find it.',
         },
       },
     },
@@ -236,11 +241,10 @@ const TOOLS = [
           type: 'string',
           description:
             'Optional but strongly encouraged: a self-contained React component that visually ' +
-            'previews this pattern in the design-mind showcase. Must be a complete TypeScript/TSX ' +
-            'file with a default export (React.FC). Allowed imports: react, lucide-react, ' +
-            '@/components/ui/* (shadcn primitives), and Tailwind classes. No imports from the ' +
-            'client project. Write a faithful visual approximation of the pattern using realistic ' +
-            'placeholder data — the same fidelity as the existing showcase previews.',
+            'previews this pattern. Must be a complete TypeScript/TSX file with a default export ' +
+            '(React.FC). Allowed imports: react, lucide-react, and Tailwind classes only. No imports ' +
+            'from the client project or @innovaccer/ui-assets. Write a faithful visual approximation ' +
+            'of the pattern using realistic placeholder data.',
         },
       },
     },
@@ -370,9 +374,11 @@ async function handleToolCall(toolName, toolArgs) {
   }
   switch (toolName) {
     case 'consult_before_build': {
+      const pkgWarnings = await checkPackage(toolArgs.project_root);
       const result = await consultBeforeBuild(toolArgs, kb, patternIndex, ruleIndex, kb.surfaces);
       // Change 11 — ensure commit is a valid, closed JSON string (never raw-concatenated)
       result._server = { commit: String(BUILD_INFO.commit ?? 'unknown') };
+      if (pkgWarnings.length > 0) result._package_warnings = pkgWarnings;
       return result;
     }
     case 'review_output':

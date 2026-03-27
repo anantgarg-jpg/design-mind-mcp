@@ -2,6 +2,7 @@ id: Drawer
 status: active
 component_type: overlay
 level: primitive
+npm_path: @innovaccer/ui-assets/block-primitives/Drawer
 structural_family: slide-panel
 family_invariants:
   - "Container: rounded-t-lg bg-card z-40"

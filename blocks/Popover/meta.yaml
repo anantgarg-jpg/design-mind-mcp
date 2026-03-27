@@ -2,6 +2,7 @@ id: Popover
 status: active
 component_type: overlay
 level: primitive
+npm_path: @innovaccer/ui-assets/block-primitives/Popover
 structural_family: overlay-panel
 family_invariants:
   - "Container: rounded-md shadow-md z-20 bg-popover border border-border p-4"

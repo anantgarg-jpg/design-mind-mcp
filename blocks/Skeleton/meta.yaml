@@ -2,6 +2,7 @@ id: Skeleton
 status: active
 component_type: layout
 level: primitive
+npm_path: @innovaccer/ui-assets/block-primitives/Skeleton
 structural_family: loading-placeholder
 family_invariants:
   - "bg-muted rounded-md animate-pulse"

@@ -2,6 +2,7 @@ id: Breadcrumb
 status: active
 component_type: navigation
 level: primitive
+npm_path: @innovaccer/ui-assets/block-primitives/Breadcrumb
 structural_family: wayfinding
 family_invariants:
   - "text-sm text-muted-foreground for inactive items"

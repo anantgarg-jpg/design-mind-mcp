@@ -1,5 +1,6 @@
 id: OutreachLog
 type: surface
+npm_path: @innovaccer/ui-assets/surfaces/OutreachLog
 user_type: [coordinator]
 
 intent: >

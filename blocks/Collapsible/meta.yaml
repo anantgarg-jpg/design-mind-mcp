@@ -2,6 +2,7 @@ id: Collapsible
 status: active
 component_type: layout
 level: primitive
+npm_path: @innovaccer/ui-assets/block-primitives/Collapsible
 structural_family: disclosure
 family_invariants:
   - "No visual border by default"

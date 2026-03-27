@@ -2,6 +2,7 @@ id: Chart
 status: active
 component_type: data-display
 level: composite
+npm_path: @innovaccer/ui-assets/block-composites/Chart
 structural_family: chart-visualization
 family_invariants:
   - "Container: rounded-lg border border-border/40 bg-card p-4 shadow-sm"

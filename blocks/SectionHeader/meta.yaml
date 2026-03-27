@@ -2,6 +2,7 @@ id: SectionHeader
 status: active
 component_type: other
 level: primitive
+npm_path: @innovaccer/ui-assets/block-primitives/SectionHeader
 structural_family: section-divider
 structural_role: "section-divider"
 family_invariants:

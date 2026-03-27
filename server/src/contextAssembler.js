@@ -10,7 +10,7 @@
 
 import { writeFileSync, readFileSync, readdirSync, existsSync, mkdirSync, appendFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { loadGenome, getGenomeForLLM, resolveTsx } from './genomeLoader.js';
+import { loadGenome, getGenomeForLLM } from './genomeLoader.js';
 import { callDesignMind, callCritic } from './llmClient.js';
 
 // ── Episodic memory writer ────────────────────────────────────────────────────
@@ -951,26 +951,22 @@ export async function consultBeforeBuild(params, _kb, _patternIndex, _ruleIndex,
     userType: user_type,
   });
 
-  // 3. Resolve .tsx files for selected blocks
+  // 3. Build blocks array
   const selectedIds = llmResult.selected_blocks || [];
-  const tsxMap = resolveTsx(selectedIds);
-
-  // 4. Build blocks array
   const blocks = selectedIds.map(id => {
     const entry = genome.blocks.get(id);
     if (!entry) return null;
+    const npmPath = entry.meta.npm_path || '';
     return {
       id,
       level: entry.meta.level || 'composite',
       family_invariants: entry.meta.family_invariants || [],
-      import_path: `@/blocks/${id}/component`,
+      npm_path: npmPath,
+      import_instruction: npmPath ? `import { ${id} } from '${npmPath}'` : '',
       when: Array.isArray(entry.meta.when) ? entry.meta.when.join('; ') : (entry.meta.when || ''),
       not_when: Array.isArray(entry.meta.not_when) ? entry.meta.not_when.join('; ') : (entry.meta.not_when || ''),
     };
   }).filter(Boolean);
-
-  // Detect blocks the genome knows about but has no tsx source for
-  const blocks_missing_source = selectedIds.filter(id => genome.blocks.has(id) && !tsxMap.has(id));
 
   // 5. primitive_guard — only primitives already in the selected blocks set
 
@@ -1010,7 +1006,6 @@ export async function consultBeforeBuild(params, _kb, _patternIndex, _ruleIndex,
     build_mode: llmResult.build_mode || { mode: 'block-composition', anchor: null },
     surface: surfaceData,
     blocks,
-    blocks_missing_source,
     primitive_guard: {
       instruction: 'Import these from their declared paths. Do not override family_invariants.',
       primitives: blocks.filter(b => b.level === 'primitive'),
@@ -1189,15 +1184,16 @@ async function consultBeforeBuildLegacy(params, kb, patternIndex, ruleIndex, sur
   const primitive_guard = activePrimitives.length > 0 ? {
     rule_refs: ['safety/hard-constraints.md#22', 'safety/hard-constraints.md#25'],
     instruction: [
-      'All primitive blocks must be imported from @/blocks/<BlockId>/<BlockId> and used as-is (hard-constraint #25).',
+      'All primitive blocks must be imported from @innovaccer/ui-assets and used as-is (hard-constraint #25).',
       'Never redefine or reimplement a primitive inline.',
       'Only additive className classes are permitted on primitives: positioning, sizing, spacing, and layout (hard-constraint #22).',
       'Never pass className values that conflict with a primitive\'s family_invariants.',
-      'To change an invariant, update the source block\'s meta.yaml and .tsx with design-leadership justification — never inline.',
+      'To change an invariant, raise a design-leadership request — never inline.',
     ].join(' '),
     primitives: activePrimitives.map(p => ({
       id:                p.id,
-      import_path:       `@/blocks/${p.id}/component`,
+      npm_path:          p.npm_path || '',
+      import_instruction: p.npm_path ? `import { ${p.id} } from '${p.npm_path}'` : '',
       family_invariants: p.family_invariants || [],
     })),
   } : null;
@@ -1634,13 +1630,13 @@ function checkPrimitiveViolations(code, primitiveBlocks) {
     // Detect: `const Button = ...` or `function Button(` without a corresponding
     // import from the blocks directory, which signals the block was rebuilt locally.
     const redefineRe = new RegExp(`(?:^|\\n)(?:const|function|let|var)\\s+${id}\\s*[=(]`, 'i');
-    const importRe   = new RegExp(`import[^;]*\\b${id}\\b[^;]*from[^;]*['"][^'"]*blocks`, 'i');
+    const importRe   = new RegExp(`import[^;]*\\b${id}\\b[^;]*from[^;]*['"][^'"]*@innovaccer/ui-assets`, 'i');
     if (redefineRe.test(code) && !importRe.test(code)) {
       violations.push({
         problem: `Primitive block '${id}' appears to be redefined locally rather than imported`,
         rule_violated: 'safety/hard-constraints.md rule 25',
         correction:
-          `Import ${id} directly from '@/blocks/${id}/${id}' and use it as-is. ` +
+          `Import ${id} from '@innovaccer/ui-assets' (see import_instruction in consult_before_build response) and use it as-is. ` +
           `Never reimplement a primitive block inline. ` +
           `If structural changes are required, register a candidate via report_pattern.`,
         safety_block: true,
@@ -1657,7 +1653,7 @@ function checkPrimitiveViolations(code, primitiveBlocks) {
  * design-mind canonical format.
  *
  * Recognised patterns:
- *   1. Design-mind canonical  — @/blocks/<Id>/<Id>
+ *   1. NPM canonical          — @innovaccer/ui-assets/block-primitives/<Id> or /block-composites/<Id>
  *   2. shadcn/ui              — @/components/ui/<name>  (named exports, PascalCase)
  *   3. Generic component dir  — @/components/<Name>     (named exports, PascalCase)
  *
@@ -1667,9 +1663,13 @@ function checkPrimitiveViolations(code, primitiveBlocks) {
 function resolveImportedBlockIds(code) {
   const ids = new Set();
 
-  // 1. Design-mind: @/blocks/Button/Button → id = "Button"
+  // 1. NPM canonical: @innovaccer/ui-assets/block-primitives/Button → id = "Button"
   for (const m of code.matchAll(
-    /import\s+(?:\{[^}]*\}|\w+)\s+from\s+['"]@\/blocks\/(\w+)\/\w+['"]/g
+    /import\s+(?:\{[^}]*\}|\w+)\s+from\s+['"]@innovaccer\/ui-assets\/block-(?:primitives|composites)\/(\w+)['"]/g
+  )) ids.add(m[1]);
+  // Also match surfaces: @innovaccer/ui-assets/surfaces/Worklist → id = "Worklist"
+  for (const m of code.matchAll(
+    /import\s+(?:\{[^}]*\}|\w+)\s+from\s+['"]@innovaccer\/ui-assets\/surfaces\/(\w+)['"]/g
   )) ids.add(m[1]);
 
   // 2. shadcn: import { Button, ButtonProps } from '@/components/ui/button'
@@ -1725,7 +1725,7 @@ function checkBlockIdentity(code, contextUsed, primitiveBlocks = []) {
         tension: `consult_before_build identified this as a primary pattern match — unused blocks risk design-system drift and inconsistency`,
         recommendation:
           `Verify this omission was intentional. If a different block was chosen instead, confirm it satisfies the same design intent and genome rules. ` +
-          `If this block should have been used, import it from '@/blocks/${rec.id}/${rec.id}'.`,
+          `If this block should have been used, import it from its npm_path in @innovaccer/ui-assets (see consult_before_build response).`,
       });
     }
   }
@@ -2276,9 +2276,9 @@ export async function reviewOutput(params, kb, patternIndex) {
     violations.push({ violation_type: 'primitive-reimplementation', found_text: '<style> block', rule_ref: 'hard-constraints', severity: 'warning' });
   }
 
-  // 7. Import path check (rounded-full without @/blocks/ import)
-  if (/className=["'][^"']*rounded-full[^"']*["']/.test(code) && !/@\/blocks\//.test(code)) {
-    violations.push({ violation_type: 'import-path', found_text: 'rounded-full without @/blocks/ import', rule_ref: 'hard-constraints', severity: 'warning' });
+  // 7. Import path check (rounded-full without @innovaccer/ui-assets import)
+  if (/className=["'][^"']*rounded-full[^"']*["']/.test(code) && !/@innovaccer\/ui-assets/.test(code)) {
+    violations.push({ violation_type: 'import-path', found_text: 'rounded-full without @innovaccer/ui-assets import', rule_ref: 'hard-constraints', severity: 'warning' });
   }
 
   // ── STEP 2 — LLM CRITIC ──────────────────────────────────────────────────────
@@ -2774,7 +2774,7 @@ function localFallback(params, basePath, reason) {
     `# Instructions for human ratification:`,
     `# 1. Review the description and intent`,
     `# 2. Check similar_candidates — merge if duplicate`,
-    `# 3. If valid: create blocks/${pattern_name}/ with meta.yaml and component.tsx`,
+    `# 3. If valid: create blocks/${pattern_name}/ with meta.yaml (npm_path required); source lives in @innovaccer/ui-assets`,
     `# 4. Run: node server/src/seed.js to re-index`,
   ].filter(line => line !== null).join('\n');
 

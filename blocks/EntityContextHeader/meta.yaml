@@ -2,6 +2,7 @@ id: EntityContextHeader
 status: active
 component_type: header
 level: composite
+npm_path: @innovaccer/ui-assets/block-composites/EntityContextHeader
 structural_family: entity-context-header
 family_invariants:
   - "Layout: flex items-center justify-between gap-4 px-6 py-4 bg-card border-b border-border"

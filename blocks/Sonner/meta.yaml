@@ -2,6 +2,7 @@ id: Sonner
 status: active
 component_type: feedback
 level: primitive
+npm_path: @innovaccer/ui-assets/block-primitives/Sonner
 structural_family: toast-notification
 family_invariants:
   - "Container: rounded-lg shadow-lg z-50 bg-card border p-4"

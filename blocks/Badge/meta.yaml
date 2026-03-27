@@ -2,6 +2,7 @@ id: Badge
 status: active
 component_type: data-display
 level: primitive
+npm_path: @innovaccer/ui-assets/block-primitives/Badge
 structural_family: status-label
 family_invariants:
   - "rounded-full pill shape"

@@ -2,6 +2,7 @@ id: Dialog
 status: active
 component_type: overlay
 level: primitive
+npm_path: @innovaccer/ui-assets/block-primitives/Dialog
 structural_family: modal-dialog
 family_invariants:
   - "Container: rounded-lg shadow-lg z-40 bg-card max-w-lg"

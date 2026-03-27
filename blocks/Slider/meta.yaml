@@ -2,6 +2,7 @@ id: Slider
 status: active
 component_type: input
 level: primitive
+npm_path: @innovaccer/ui-assets/block-primitives/Slider
 structural_family: form-input
 family_invariants:
   - "Track: h-1.5 rounded-full bg-muted"

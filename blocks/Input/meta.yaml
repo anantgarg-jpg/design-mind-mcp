@@ -2,6 +2,7 @@ id: Input
 status: active
 component_type: input
 level: primitive
+npm_path: @innovaccer/ui-assets/block-primitives/Input
 structural_family: form-input
 family_invariants:
   - "Container: h-9 rounded-md border border-subtle bg-card px-3 text-base"

@@ -1,7 +1,7 @@
 /**
  * genomeLoader.js
  * Loads the entire Design Mind genome into a structured, cached object.
- * Provides serialization helpers for LLM context and lazy TSX resolution.
+ * Provides serialization helpers for LLM context.
  *
  * Uses the same Python PyYAML spawnSync approach as knowledge.js.
  */
@@ -48,7 +48,7 @@ let _genome = null;
  * module-level `_genome`. Subsequent calls return the cached value.
  *
  * @returns {{
- *   blocks: Map<string, { meta: object, tsxPath: string }>,
+ *   blocks: Map<string, { meta: object }>,
  *   surfaces: Map<string, object>,
  *   rules: Map<string, { fullContent: string }>,
  *   safety: string,
@@ -79,7 +79,6 @@ export function loadGenome() {
       if (blockName.startsWith('_')) continue; // skip _candidates etc.
 
       const metaPath = join(blocksDir, blockName, 'meta.yaml');
-      const tsxPath  = join(blocksDir, blockName, 'component.tsx');
       if (!existsSync(metaPath)) continue;
 
       try {
@@ -94,7 +93,7 @@ export function loadGenome() {
         meta._patternName = blockName;
 
         const blockId = meta.id || blockName;
-        genome.blocks.set(blockId, { meta, tsxPath });
+        genome.blocks.set(blockId, { meta });
       } catch (e) {
         process.stderr.write(`[genome] WARN: could not parse ${blockName}/meta.yaml: ${e.message}\n`);
       }
@@ -274,36 +273,3 @@ export function getGenomeForLLM() {
   return parts.join('\n');
 }
 
-// ── resolveTsx ────────────────────────────────────────────────────────────────
-
-/**
- * Reads the component.tsx for each requested block ID.
- * Skips blocks where the tsx file does not exist.
- *
- * @param {string[]} blockIds
- * @returns {Map<string, string>} Map of blockId → full tsx content
- */
-export function resolveTsx(blockIds) {
-  const g      = loadGenome();
-  const result = new Map();
-
-  for (const blockId of blockIds) {
-    const entry = g.blocks.get(blockId);
-    if (!entry) {
-      process.stderr.write(`[genome] WARN: resolveTsx — unknown block "${blockId}"\n`);
-      continue;
-    }
-    const { tsxPath } = entry;
-    if (!existsSync(tsxPath)) {
-      process.stderr.write(`[genome] WARN: resolveTsx — no tsx at ${tsxPath}\n`);
-      continue;
-    }
-    try {
-      result.set(blockId, readFileSync(tsxPath, 'utf-8'));
-    } catch (e) {
-      process.stderr.write(`[genome] WARN: resolveTsx — could not read ${tsxPath}: ${e.message}\n`);
-    }
-  }
-
-  return result;
-}

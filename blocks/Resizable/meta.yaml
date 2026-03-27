@@ -2,6 +2,7 @@ id: Resizable
 status: active
 component_type: layout
 level: primitive
+npm_path: @innovaccer/ui-assets/block-primitives/Resizable
 structural_family: resizable-layout
 family_invariants:
   - "Layout: flex h-full"

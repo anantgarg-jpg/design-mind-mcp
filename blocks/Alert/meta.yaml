@@ -2,6 +2,7 @@ id: Alert
 status: active
 component_type: feedback
 level: primitive
+npm_path: @innovaccer/ui-assets/block-primitives/Alert
 structural_family: feedback-banner
 family_invariants:
   - "rounded-lg border"

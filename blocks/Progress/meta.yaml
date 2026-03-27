@@ -2,6 +2,7 @@ id: Progress
 status: active
 component_type: feedback
 level: primitive
+npm_path: @innovaccer/ui-assets/block-primitives/Progress
 structural_family: progress-indicator
 family_invariants:
   - "Track: h-2 rounded-full bg-muted"

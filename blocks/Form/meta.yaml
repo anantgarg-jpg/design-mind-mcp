@@ -2,6 +2,7 @@ id: Form
 status: active
 component_type: form-control
 level: composite
+npm_path: @innovaccer/ui-assets/block-composites/Form
 structural_family: form-layout
 family_invariants:
   - "Container: flex flex-col gap-4"

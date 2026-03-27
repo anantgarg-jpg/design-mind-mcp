@@ -177,7 +177,6 @@ export function loadKnowledge(basePath) {
       if (patternName.startsWith('_')) continue; // skip _candidates
 
       const metaPath = join(patternsDir, patternName, 'meta.yaml');
-      const componentPath = join(patternsDir, patternName, 'component.tsx');
       if (!existsSync(metaPath)) continue;
 
       try {
@@ -193,10 +192,8 @@ export function loadKnowledge(basePath) {
         meta._patternName = patternName;
         meta._metaRaw = metaContent;
 
-        // Component source (first 2000 chars for review checks)
-        meta._componentSrc = existsSync(componentPath)
-          ? readFileSync(componentPath, 'utf-8')
-          : '';
+        // Component source lives in @innovaccer/ui-assets (not local tsx files)
+        meta._componentSrc = '';
 
         // Build embedding input string
         const whenStr = Array.isArray(meta.when)

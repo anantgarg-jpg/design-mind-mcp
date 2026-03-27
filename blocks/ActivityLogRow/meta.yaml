@@ -1,7 +1,8 @@
 id: ActivityLogRow
 status: active
 component_type: row
-level: domain
+level: composite
+npm_path: @innovaccer/ui-assets/block-composites/ActivityLogRow
 structural_family: readonly-list-row
 family_invariants:
   - "Layout: flex items-center gap-3 px-4 py-3 border-b border-border/40"

@@ -1,5 +1,6 @@
 id: Worklist
 type: surface
+npm_path: @innovaccer/ui-assets/surfaces/Worklist
 user_type: [coordinator]
 
 intent: >

@@ -1,5 +1,6 @@
 id: PatientDetail
 type: surface
+npm_path: @innovaccer/ui-assets/surfaces/PatientDetail
 user_type: [coordinator, clinician]
 
 intent: >

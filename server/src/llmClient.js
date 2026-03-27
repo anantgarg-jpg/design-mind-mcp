@@ -12,6 +12,20 @@ import { dirname, join } from 'path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(__dirname, '..', '..'); // server/src -> server -> repo root
 
+// Load .env from repo root if present — env vars take priority over file values
+try {
+  const envLines = readFileSync(join(repoRoot, '.env'), 'utf8').split('\n');
+  for (const raw of envLines) {
+    const line = raw.trim();
+    if (!line || line.startsWith('#')) continue;
+    const eq = line.indexOf('=');
+    if (eq === -1) continue;
+    const key = line.slice(0, eq).trim();
+    const val = line.slice(eq + 1).trim().replace(/^(['"])(.*)\1$/, '$2');
+    if (key && !(key in process.env)) process.env[key] = val;
+  }
+} catch (_) { /* .env absent — fine */ }
+
 const DESIGN_MIND_SYSTEM_PROMPT = readFileSync(
   join(repoRoot, 'agents', 'mind', 'system-prompt.md'),
   'utf8'

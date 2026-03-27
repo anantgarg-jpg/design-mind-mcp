@@ -1,5 +1,6 @@
 id: Today
 type: surface
+npm_path: @innovaccer/ui-assets/surfaces/Today
 user_type: [coordinator]
 
 intent: >

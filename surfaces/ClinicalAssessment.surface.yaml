@@ -1,5 +1,6 @@
 id: ClinicalAssessment
 type: surface
+npm_path: @innovaccer/ui-assets/surfaces/ClinicalAssessment
 user_type: [coordinator, clinician]
 
 intent: >

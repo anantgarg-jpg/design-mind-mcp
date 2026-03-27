@@ -2,6 +2,7 @@ id: Pagination
 status: active
 component_type: navigation
 level: composite
+npm_path: @innovaccer/ui-assets/block-composites/Pagination
 structural_family: page-navigation
 structural_role: "page-navigation"
 family_invariants:

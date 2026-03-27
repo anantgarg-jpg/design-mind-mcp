@@ -2,6 +2,7 @@ id: InputOTP
 status: active
 component_type: input
 level: primitive
+npm_path: @innovaccer/ui-assets/block-primitives/InputOTP
 structural_family: form-input
 family_invariants:
   - "Slots: gap-2 between slots"

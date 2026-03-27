@@ -1,5 +1,6 @@
 id: IntakeForm
 type: surface
+npm_path: @innovaccer/ui-assets/surfaces/IntakeForm
 user_type: [coordinator]
 
 intent: >

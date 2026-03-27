@@ -2,6 +2,7 @@ id: ContextMenu
 status: active
 component_type: overlay
 level: primitive
+npm_path: @innovaccer/ui-assets/block-primitives/ContextMenu
 structural_family: context-menu
 family_invariants:
   - "rounded-md shadow-md z-20"

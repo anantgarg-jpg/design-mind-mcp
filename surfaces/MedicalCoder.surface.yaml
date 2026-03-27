@@ -1,5 +1,6 @@
 id: MedicalCoder
 type: surface
+npm_path: @innovaccer/ui-assets/surfaces/MedicalCoder
 user_type: [coordinator]
 
 intent: >

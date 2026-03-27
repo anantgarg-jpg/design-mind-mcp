@@ -2,6 +2,7 @@ id: Avatar
 status: active
 component_type: data-display
 level: primitive
+npm_path: @innovaccer/ui-assets/block-primitives/Avatar
 structural_family: identity-indicator
 family_invariants:
   - "rounded-full always"
