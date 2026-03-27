@@ -103,9 +103,11 @@ const TOOLS = [
     name: 'consult_before_build',
     description:
       'REQUIRED before generating ANY UI — component, page, surface, or style change.\n' +
-      'Returns the design genome: component code templates, layout blueprints, safety\n' +
-      'constraints, and copy rules for this platform. The response is a construction\n' +
-      'packet — use it as a blueprint, not as suggestions.\n\n' +
+      'Call once per distinct surface or component you\'re building. For complex requests\n' +
+      'with multiple surfaces, decompose first, then call this tool for each piece.\n\n' +
+      'Returns the design genome: layout blueprints, safety constraints, and copy rules\n' +
+      'for this platform. The response is a construction packet — use it as a blueprint,\n' +
+      'not as suggestions.\n\n' +
       'HOW TO CALL:\n' +
       '1. Describe WHAT you are building. Be specific — include who uses it, what data\n' +
       '   it shows, what actions are available, and whether this is a new build or modification.\n' +
