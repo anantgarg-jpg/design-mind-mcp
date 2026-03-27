@@ -305,6 +305,40 @@ async function initialize() {
   kb = loadKnowledge(BASE_PATH);
   patternIndex = kb.patterns;
   ruleIndex    = kb.rules;
+
+  // ── Env / API-key check ──────────────────────────────────────────────────────
+  const envPath = join(BASE_PATH, '.env');
+  const hasEnv  = existsSync(envPath);
+  const hasKey  = !!(
+    process.env.ANTHROPIC_API_KEY ||
+    (process.env.OPENAI_API_KEY && process.env.OPENAI_BASE_URL) ||
+    process.env.OPENROUTER_API_KEY ||
+    process.env.GEMINI_API_KEY
+  );
+
+  if (!hasEnv) {
+    logErr('\n' +
+      '╔══════════════════════════════════════════════════════════════╗\n' +
+      '║  ⚠  .env file not found                                    ║\n' +
+      '║                                                             ║\n' +
+      '║  LLM reasoning is DISABLED — tools will return              ║\n' +
+      '║  retrieval-only results without layout generation.          ║\n' +
+      '║                                                             ║\n' +
+      '║  To fix:  cp .env.example .env                              ║\n' +
+      '║           Then add your API key (see .env.example)          ║\n' +
+      '╚══════════════════════════════════════════════════════════════╝\n\n');
+  } else if (!hasKey) {
+    logErr('\n' +
+      '╔══════════════════════════════════════════════════════════════╗\n' +
+      '║  ⚠  No LLM API key found in .env                           ║\n' +
+      '║                                                             ║\n' +
+      '║  LLM reasoning is DISABLED — tools will return              ║\n' +
+      '║  retrieval-only results without layout generation.          ║\n' +
+      '║                                                             ║\n' +
+      '║  Add one of: ANTHROPIC_API_KEY, OPENAI_API_KEY +            ║\n' +
+      '║  OPENAI_BASE_URL, OPENROUTER_API_KEY, or GEMINI_API_KEY    ║\n' +
+      '╚══════════════════════════════════════════════════════════════╝\n\n');
+  }
 }
 
 // ── Hot-reload (local dev only — disabled in production) ──────────────────────
