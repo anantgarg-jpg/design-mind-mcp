@@ -113,11 +113,6 @@
 
 ## Accessibility constraints
 
-19. Color is never the sole differentiator for severity, status,
-    or any meaningful state. Shape, icon, or text must also
-    carry the meaning. No agent may generate a component where
-    color is the only signal.
-
 20. focus-visible must never be suppressed with outline:none or
     ring-0 without an explicit visible replacement. The --ring
     token exists for this purpose.
