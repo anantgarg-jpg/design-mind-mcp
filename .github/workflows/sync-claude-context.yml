@@ -2,7 +2,7 @@ name: Sync Claude Project Context
 
 on:
   push:
-    branches: [main]
+    branches: [main, transformation]
     paths:
       # Trigger only when design content changes — not on every commit
       - 'genome/**'
