@@ -1,0 +1,43 @@
+id: Sonner
+status: active
+component_type: feedback
+level: primitive
+npm_path: "@innovaccer/ui-assets/block-primitives/Sonner"
+structural_family: toast-notification
+family_invariants:
+  - "Container: rounded-lg shadow-lg z-50 bg-card border p-4"
+  - "Position: bottom-right"
+  - "Auto-dismiss: 5s default"
+confidence: 0.85
+version: 1.0.0
+
+summary: >
+  Transient notification message for non-critical feedback. Appears
+  briefly in the bottom-right corner and auto-dismisses. Supports
+  action buttons and semantic variants for success, error, and warning.
+
+when:
+  - confirming a successful action (save, create, update)
+  - non-blocking error feedback that does not require user action
+  - informational notices that are supplementary
+
+not_when:
+  - critical alert requiring acknowledgment (use AlertBanner)
+  - persistent status that must remain visible
+  - inline validation feedback (use form error messages)
+
+variants:
+  default: neutral informational toast
+  success: border-success for positive outcomes
+  error: border-destructive for failures (rule 13)
+  warning: border-warning for caution notices
+
+key_rules:
+  - never use for critical alerts (use AlertBanner instead)
+  - auto-dismiss after 5 seconds by default
+  - action button optional, single CTA only (rule 14)
+  - max 3 stacked toasts visible at once
+
+embedding_hint: >
+  toast notification sonner transient message
+  success error warning feedback confirm alert

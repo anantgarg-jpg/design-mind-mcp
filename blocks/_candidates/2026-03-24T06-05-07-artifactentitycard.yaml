@@ -1,0 +1,46 @@
+# Design Mind Pattern Candidate
+# Generated: 2026-03-24T06:05:07.000Z
+# Status: logged
+
+candidate_id: "2026-03-24T06-05-07-artifactentitycard"
+pattern_name: "ArtifactEntityCard"
+status: logged
+frequency_count: 1
+
+description: >
+  A card-contained layout surface for artifact blocks that display a single entity (patient,
+  provider, claim, etc.). The artifact's content lives inside a card container
+  (rounded-lg border border-border/30 bg-card shadow-sm flex flex-col overflow-hidden)
+  with a fixed identity header section (border-b), and a flex-1 scrollable body below.
+  The card boundary signals "this is the entity you are inspecting" — distinguishing
+  entity detail artifacts from ambient dashboard or queue surfaces which are full-bleed.
+
+intent_it_serves: >
+  User opens an entity detail from a list or queue and needs to inspect it in depth.
+  The card container communicates containment — the artifact has an edge, a boundary,
+  and clear internal hierarchy. Without it the artifact reads as a raw screen rather
+  than a focused record.
+
+why_existing_patterns_didnt_fit: >
+  Existing patterns describe content slots and data organisation within blocks but not
+  the outer container contract for artifact-level entity detail. Blocks that render
+  full-bleed (bg-background, no card boundary) are appropriate for dashboards and queues.
+  Entity detail views need a card wrapper to signal containment. No registered pattern
+  described this outer layout contract.
+
+implementation_ref: "src/solutions/care-management/blocks/PatientProfile.tsx"
+
+ontology_refs:
+  - entity-detail
+  - artifact
+  - card-container
+  - inspection-view
+
+similar_candidates:
+  []
+
+# Instructions for human ratification:
+# 1. Review the description and intent
+# 2. Check similar_candidates — merge if duplicate
+# 3. If valid: create blocks/ArtifactEntityCard/ with meta.yaml
+# 4. Run: node server/src/seed.js to re-index

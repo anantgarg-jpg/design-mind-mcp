@@ -1,0 +1,57 @@
+id: StatCard
+status: active
+component_type: card
+level: primitive
+npm_path: "@innovaccer/ui-assets/block-primitives/StatCard"
+structural_family: stat-metric-card
+family_invariants:
+  - "Label: text-sm font-medium uppercase tracking-wide text-muted-foreground"
+  - "Value: text-[32px] font-medium tabular-nums leading-none"
+  - "Maximum 4 StatCards per row"
+  - "Variant tokens: default=foreground, urgent=destructive, warning=warning, success=success"
+confidence: 0.88
+version: 1.0.0
+
+summary: >
+  Metric display card for dashboard summary rows. Shows a label,
+  a large numeric value, and an optional subtitle. Used in the
+  artifact content header area to give users a summary snapshot
+  at a glance.
+
+when:
+  - showing summary counts at the top of a dashboard artifact
+  - showing labelled count stats like Patients Need Attention or Tasks Due Today
+  - value needs to be scannable at a glance
+
+not_when:
+  - inline text metric — just use a span
+  - chart or trend data → use a chart component
+  - more than 6 stats in a row (breaks density)
+
+variants:
+  default: neutral — general counts
+  urgent: destructive red — requires immediate attention
+  warning: warning yellow — overdue or at-risk
+  success: success green — positive outcomes
+
+key_rules:
+  - uses Card block as container — elevation controlled via elevation prop
+  - "elevation: flat (default) on white surfaces, sm on bg-muted/bg-background grey surfaces, md for onboarding/expressive"
+  - value always uses tabular-nums for alignment
+  - label always uppercase tracking-wide (wayfinding, not a headline)
+  - max 4 StatCards in a single row for readability
+
+frozen:
+  - "zones: label (text-sm font-medium uppercase tracking-wide) and value (text-[32px] font-medium tabular-nums leading-none) — both always present"
+  - "max density: no more than 4 StatCards in a single row"
+  - "value: always tabular-nums — numeric alignment across a row of cards is non-negotiable"
+
+free:
+  - label: "any metric label string"
+  - value: "any numeric value"
+  - subtitle: "any supporting string, or absent"
+  - variant: "default | urgent | warning | success"
+
+embedding_hint: >
+  stat card metric dashboard summary count number value
+  items tasks overdue attention daily snapshot

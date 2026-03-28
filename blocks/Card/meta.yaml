@@ -1,0 +1,45 @@
+id: Card
+status: active
+component_type: layout
+level: primitive
+npm_path: "@innovaccer/ui-assets/block-primitives/Card"
+structural_family: content-container
+family_invariants:
+  - "rounded-lg border border-subtle bg-card"
+  - "shadow-sm when on muted/tinted background, no shadow on white background"
+confidence: 0.85
+version: 1.1.0
+
+summary: >
+  Pure surface container. Accepts any blocks or text as children — no
+  internal layout, padding, or content structure is imposed. Callers are
+  responsible for padding and content organisation.
+
+when:
+  - grouping related content into a visually distinct surface
+  - dashboard tiles or content panels
+  - form sections that need visual separation
+
+not_when:
+  - nesting a Card inside another Card (no nested cards)
+  - single-line items in a list (use a row component)
+  - full-width page sections without visual boundaries
+
+variants:
+  flat: no shadow, border-driven — default for white-on-white layouts
+  shadow-sm: raised card — for muted/tinted parent backgrounds
+  shadow-md: expressive card — for onboarding/highlight flows
+  interactive: clickable card with hover, active, focus, selected, and disabled states
+
+key_rules:
+  - elevation prop controls shadow — flat (default), sm (raised), md (expressive)
+  - hover uses bg-foreground/5, active uses bg-foreground/10
+  - selected state uses border-2 border-primary
+  - disabled state uses opacity-50 pointer-events-none
+  - no nested cards
+  - never use shadow transitions for hover — background color shift only
+  - content padding is the caller's responsibility
+
+embedding_hint: >
+  card container surface panel tile group
+  content section box wrapper

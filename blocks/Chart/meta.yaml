@@ -1,0 +1,38 @@
+id: Chart
+status: active
+component_type: data-display
+level: composite
+npm_path: "@innovaccer/ui-assets/block-composites/Chart"
+structural_family: chart-visualization
+family_invariants:
+  - "Container: rounded-lg border border-border/40 bg-card p-4 shadow-sm"
+  - "Labels and axes: text-sm text-muted-foreground"
+  - "Responsive: width 100% via ResponsiveContainer"
+confidence: 0.80
+version: 1.0.0
+
+summary: >
+  Data visualization container wrapping shadcn Chart (Recharts).
+  Provides consistent card framing, semantic color palette, and
+  accessible defaults for bar, line, area, and pie charts.
+
+when:
+  - displaying quantitative trends or comparisons
+  - dashboard needs visual data representation
+  - time-series or categorical data needs charting
+
+not_when:
+  - single numeric value — use StatCard
+  - tabular data with many columns — use DataTable
+
+key_rules:
+  - use accent palette semantic tokens for series colors
+  - tabular-nums on axis tick labels for alignment
+  - always include a legend for multi-series charts
+  - tooltip shown on hover with formatted values
+  - no animation on severity/critical data visualizations
+  - accessible color palette with shape or pattern differentiation (rule 19)
+
+embedding_hint: >
+  chart graph visualization bar line area pie recharts
+  data trend series axis legend tooltip dashboard

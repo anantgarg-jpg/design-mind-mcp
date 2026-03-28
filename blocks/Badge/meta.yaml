@@ -1,0 +1,50 @@
+id: Badge
+status: active
+component_type: data-display
+level: primitive
+npm_path: "@innovaccer/ui-assets/block-primitives/Badge"
+structural_family: status-label
+family_invariants:
+  - "rounded-full pill shape"
+  - "text-sm font-semibold"
+  - "px-2.5 py-0.5 compact padding"
+  - "inline-flex items-center"
+confidence: 0.85
+version: 2.0.0
+
+summary: >
+  Compact label for displaying status, category, or count information.
+  Wraps shadcn Badge with enforced accessibility — color is never the
+  sole differentiator; text label is always present.
+
+when:
+  - labeling status on a row or card (e.g., Active, Pending, Closed)
+  - categorizing items with short tags
+  - displaying small counts or metadata alongside content
+
+not_when:
+  - long-form descriptions (use a paragraph or tooltip)
+  - interactive filters (use toggle buttons or chips)
+  - severity indicators that require AlertBanner-level treatment
+
+props:
+  color:
+    type: enum
+    values: [blue, red, yellow, orange, green, grey]
+    default: blue
+    description: Semantic color of the badge
+  # Style is always "subtle" (tinted background) — no longer configurable
+  dot:
+    type: boolean
+    default: false
+    description: Renders a small leading dot icon for additional visual emphasis
+
+key_rules:
+  - color never sole differentiator for meaning (rule 19)
+  - always include a text label — no icon-only badges
+  - max approximately 20 characters
+  - badges are not interactive — no hover or pressed states
+
+embedding_hint: >
+  badge status label tag category count pill
+  indicator chip metadata compact

@@ -1,0 +1,37 @@
+id: DatePicker
+status: active
+component_type: action
+level: composite
+npm_path: "@innovaccer/ui-assets/block-composites/DatePicker"
+structural_family: date-selector
+family_invariants:
+  - "Trigger: h-9 rounded-md border border-subtle px-3 text-sm"
+  - "Calendar popover: rounded-md shadow-md bg-card border border-border"
+  - "Calendar icon: left-aligned inside trigger"
+confidence: 0.80
+version: 1.0.0
+
+summary: >
+  Click-triggered date selection combining a trigger button with a
+  popover calendar. Displays the selected date in the trigger using
+  a monospaced format for consistent width.
+
+when:
+  - user needs to pick a single date from a calendar
+  - date range selection is required
+  - form field requires a structured date value
+
+not_when:
+  - free-text date entry with flexible formats — use a text input with mask
+  - date-time picker needed — extend with time selector
+
+key_rules:
+  - selected date displayed in trigger with font-mono
+  - placeholder "Pick a date" in text-muted-foreground when empty
+  - calendar icon left-aligned in trigger for scannability
+  - range mode supported via optional prop
+  - keyboard navigable calendar cells
+
+embedding_hint: >
+  date picker calendar popover select day month year
+  range schedule deadline due form input

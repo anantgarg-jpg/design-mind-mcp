@@ -1,0 +1,42 @@
+id: Textarea
+status: active
+component_type: input
+level: primitive
+npm_path: "@innovaccer/ui-assets/block-primitives/Textarea"
+structural_family: form-input
+family_invariants:
+  - "Root: rounded-md border border-subtle bg-card px-3 py-2 text-base"
+  - "Focus: focus-visible:ring-2 ring-ring"
+  - "Min height: min-h-[80px]"
+confidence: 0.85
+version: 1.0.0
+
+summary: >
+  Multi-line text input for longer form content. Wraps a standard
+  textarea with project styling, error states, and vertical-only
+  resize behavior.
+
+when:
+  - user needs to enter multi-line text (notes, descriptions, comments)
+  - free-form text longer than a single line
+  - content area requiring visible text context
+
+not_when:
+  - single-line input sufficient (use Input)
+  - rich text editing needed (use a rich text editor)
+  - code entry (use a code editor component)
+
+variants:
+  default: standard multi-line input
+  error: border-destructive for validation failure
+
+key_rules:
+  - error state uses border-destructive (rule 13, never --severity-critical)
+  - resize vertical only (resize-y)
+  - placeholder uses text-muted-foreground
+  - always paired with a visible Label
+  - focus-visible ring never suppressed (rule 20)
+
+embedding_hint: >
+  textarea multi-line input text area form
+  notes description comment long-form content

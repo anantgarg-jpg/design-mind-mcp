@@ -1,0 +1,45 @@
+id: Dialog
+status: active
+component_type: overlay
+level: primitive
+npm_path: "@innovaccer/ui-assets/block-primitives/Dialog"
+structural_family: modal-dialog
+family_invariants:
+  - "Container: rounded-lg shadow-lg z-40 bg-card max-w-lg"
+  - "Backdrop: z-30 bg-background/80 backdrop-blur-sm"
+  - "Close button always present in top-right corner"
+  - "Focus trapped inside while open; ESC closes"
+confidence: 0.85
+version: 1.0.0
+
+summary: >
+  General-purpose modal dialog for presenting content, forms, or
+  informational messages that require user attention. Overlays the
+  page with a semi-transparent backdrop and centers the dialog.
+
+when:
+  - presenting a form that needs focused attention
+  - confirming a destructive or irreversible action
+  - displaying detailed information that interrupts the main flow
+
+not_when:
+  - content can live inline — use a collapsible section instead
+  - mobile context where a Drawer (bottom sheet) is more natural
+  - simple yes/no — consider AlertDialog instead
+
+variants:
+  default: standard dialog with title, description, and action buttons
+  form: dialog containing a form with submit/cancel actions
+  alert: confirmation dialog for destructive actions (single primary CTA)
+
+key_rules:
+  - close button always present (X icon top-right)
+  - ESC key closes the dialog
+  - focus is trapped inside the dialog while open
+  - secondary button says "Close" not "Cancel" (rule 17)
+  - max one primary CTA visible per dialog surface (rule 14)
+  - CTA labels never wrap (whitespace-nowrap, rule 18)
+
+embedding_hint: >
+  dialog modal overlay popup form confirm alert
+  lightbox backdrop focus-trap close escape

@@ -1,0 +1,117 @@
+id: ActionableRow
+status: active
+component_type: row
+level: composite
+npm_path: "@innovaccer/ui-assets/block-composites/ActionableRow"
+structural_family: actionable-list-row
+structural_role: "list-row"
+confidence: 0.95
+version: 1.0.0
+introduced: refactor-v1
+last_evolved: refactor-v1
+
+summary: >
+  The single actionable unit for any entity that appears in a list and needs
+  a primary action, optional secondary actions, and status display. Covers
+  any entity type that follows the "scan → act" workflow. Two layout variants
+  share identical interaction invariants: row (border-l-2 accent stripe,
+  border-b divider) and card (rounded-lg border, standalone shadow).
+
+  Rule: use ActionableRow. Do NOT create a new pattern just because the entity
+  domain changes. New pattern only when the STRUCTURE changes — different
+  interaction model, different layout container, different slot arrangement.
+
+when:
+  - displaying any entity in a list where the user can take a primary action
+  - worklist rows: tasks, protocols, assessments, items
+  - any severity-grouped list where each item has a primary action (Acknowledge, Dismiss, Accept, or similar) — use ActionableRow regardless of the entity domain
+  - variant="row" when rows live inside a shared container (bg-card rounded-lg border)
+  - variant="card" when each row is a standalone card (its own border + shadow)
+
+not_when:
+  - summary counts or metrics → use StatCard
+  - entity identity header → use EntityContextHeader
+  - alert requiring immediate acknowledgment → use AlertBanner
+  - read-only display with no actions (no primaryAction, no onExpand) — just use a plain div
+
+variants:
+  - id: row
+    description: >
+      Default. Used when rows share a container (bg-card rounded-lg border overflow-hidden).
+      Has a colored left border stripe (accent prop) and a bottom border divider.
+      last:border-0 removes the final divider automatically.
+    invariants:
+      - "flex items-start gap-3 px-4 py-3.5 border-b border-border/40 last:border-0 bg-card border-l-2 transition-colors hover:bg-muted/60"
+      - "accent stripe: border-l-2 border-{warning|accent|success|border}"
+    slots:
+      - title (required)
+      - label (optional monospace badge above title)
+      - contextLabel (optional entity name when not in entity-scoped view)
+      - status (optional Badge)
+      - meta[] (icon + text pairs, up to ~3)
+      - primaryAction (right-aligned button)
+      - secondaryActions (MoreHorizontal dropdown)
+      - onExpand (chevron that opens detail panel)
+
+  - id: card
+    description: >
+      Used when each row is a standalone card. No shared container.
+      Has its own border, rounded corners, and shadow.
+    invariants:
+      - "flex items-start justify-between gap-4 p-4 bg-card border border-border/60 rounded-lg shadow-sm hover:bg-accent/50 transition-colors"
+    slots:
+      - title (required)
+      - label (optional monospace badge above title)
+      - contextLabel (optional entity name)
+      - status (optional Badge)
+      - meta[] (icon + text pairs)
+      - primaryAction (right-aligned button)
+      - secondaryActions (MoreHorizontal dropdown)
+      - onExpand (not typically used in card variant)
+
+variation_rule: >
+  Slots are free — fill them with any label, icon, domain text, or token.
+  Slot content is NOT a new pattern. A new pattern is only warranted when
+  the STRUCTURE changes: different container type, different interaction model
+  (e.g., drag-and-drop, multi-select, inline edit), different slot arrangement,
+  or a layout that cannot be expressed as row or card variant.
+
+frozen:
+  - "container: row variant uses shared bg-card container with divide-y; card variant uses standalone rounded-lg border — no other containers permitted"
+  - "interaction: scan-and-act only — no drag-and-drop, no multi-select, no inline edit"
+  - "slot positions: title always left, primary action always right, border-l-2 accent stripe always present on row variant"
+  - "primary action: single Button, variant outline or default, h-7 text-sm — no other action control shapes"
+
+free:
+  - title: "any entity name or label"
+  - status: "any StatusKey value"
+  - meta: "any icon/text pairs up to ~3"
+  - primaryAction: "any action verb appropriate to the domain"
+  - accent: "warning | accent | success | none"
+  - contextLabel: "any entity name for non-entity-scoped surfaces"
+  - label: "any small badge above title (e.g. measure code)"
+
+props:
+  variant: '"row" | "card" — default "row"'
+  title: "string — primary label (required)"
+  titleMono: "boolean — renders title in monospace (for codes like PHQ-9)"
+  label: "string — small badge above title (e.g. measure code HBD)"
+  labelMono: "boolean — renders label in monospace"
+  contextLabel: "string — entity name when outside entity-scoped view"
+  status: "StatusKey — passed to Badge"
+  accent: '"warning" | "accent" | "success" | "none" — row stripe color'
+  meta: "MetaItem[] — [{icon?, text, urgent?, success?}]"
+  primaryAction: "{ label: string; onClick: () => void }"
+  secondaryActions: "SecondaryAction[] — rendered in MoreHorizontal dropdown"
+  onExpand: "() => void — shows ChevronRight button"
+  onRowClick: "() => void — makes full row clickable (e.g., open tab)"
+  dimmed: "boolean — opacity-50, no actions, no hover"
+
+embedding_hint: >
+  actionable row card list worklist task protocol assessment
+  complete assign exclude add note overdue status
+  accent stripe variant row card entity action unit scan act workflow
+  context label meta icon primary action secondary dropdown
+  alert queue priority queue severity grouped item row clinical alert
+  acknowledge dismiss escalate work item patient item escalated
+  care manager today view priority list action surface

@@ -1,0 +1,48 @@
+id: InlineEntityCard
+status: active
+component_type: card
+level: composite
+npm_path: "@innovaccer/ui-assets/block-composites/InlineEntityCard"
+structural_family: inline-chat-card
+family_invariants:
+  - "Only rendered inside Panel 2 chat context — never standalone"
+  - "Structure: avatar (initials, tier-tinted) + name + badge + max 2 info rows + footer divider"
+  - "Container: bg-card border border-border rounded-lg"
+  - "Always paired with a ChatQuickActionChip trigger"
+confidence: 0.85
+version: 1.0.0
+introduced: 2026-03-20
+last_evolved: 2026-03-20
+
+summary: >
+  A compact structured card rendered inside an assistant message bubble in Panel 2,
+  triggered by a ChatQuickActionChip. Uses a shared InlineCard shell: initials avatar
+  (tier-tinted color pool) + entity name + secondary badge, followed by 1-2 info rows
+  with icons, then a divider footer with metadata. Supports multiple implementations
+  for different entity types and data contexts.
+
+when:
+  - displaying structured entity data inline in the chat conversation after a chip tap
+  - data fits the avatar + 2 rows + footer template (not more complex)
+  - always paired with ChatQuickActionChip — never rendered standalone
+
+not_when:
+  - data requires more than 2 info rows — open a full artifact instead
+  - outside Panel 2 / chat context — use EntityRow or EntityContextHeader
+  - displaying more than one entity record — use a list artifact
+
+because: >
+  Inline cards keep the user in conversation flow. The shared InlineCard shell
+  ensures visual consistency across all chip-triggered responses regardless of the
+  data domain. Avatar + secondary badge + rows + footer is the minimum viable
+  structure for entity-scoped data.
+
+usage_signal:
+  renders_total: 0
+  products: []
+  override_rate: 0.0
+
+embedding_hint: >
+  inline card chat assistant message entity avatar initials tier
+  structured data compact two rows footer shared shell chip triggered
+  bubble panel 2

@@ -1,0 +1,39 @@
+id: Pagination
+status: active
+component_type: navigation
+level: composite
+npm_path: "@innovaccer/ui-assets/block-composites/Pagination"
+structural_family: page-navigation
+structural_role: "page-navigation"
+family_invariants:
+  - "Container: flex items-center gap-1"
+  - "Item: h-9 w-9 rounded-md text-sm"
+  - "Active: bg-primary text-primary-foreground font-medium"
+confidence: 0.80
+version: 1.0.0
+
+summary: >
+  Page-level navigation for paged data sets. Renders numbered page
+  links with first/last access, ellipsis gaps, and previous/next
+  controls. Designed for use alongside DataTable or any paged list.
+
+when:
+  - data set is split across multiple pages
+  - user needs direct access to specific page numbers
+  - complement to DataTable or paged list views
+
+not_when:
+  - fewer than 10 total items — show all inline (density rule)
+  - infinite scroll pattern is preferred
+  - simple prev/next without page numbers — use inline buttons
+
+key_rules:
+  - always show first and last page numbers
+  - ellipsis for non-adjacent page gaps
+  - current page rendered as non-interactive active state
+  - all interactive items meet 44px touch target (rule 21)
+  - never paginate fewer than 10 items
+
+embedding_hint: >
+  pagination pages navigate previous next first last
+  ellipsis numbered paging data table footer

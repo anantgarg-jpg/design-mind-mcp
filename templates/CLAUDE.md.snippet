@@ -1,0 +1,18 @@
+## Design System (design-mind MCP)
+
+Before generating ANY UI code:
+
+1. Ensure `@innovaccer/ui-assets` is in package.json. If not: `npm install @innovaccer/ui-assets`
+2. Ensure `import '@innovaccer/ui-assets/tokens'` is in the project entry file
+3. Call `consult_before_build` with:
+   - The application intent (rich description of what is being built)
+   - Workflows decomposed from the intent — bounded UI sections as `{ id, intent, region? }` objects
+   - Domain and user_type if inferable from codebase context
+4. Use the response as a construction packet, not a suggestion:
+   - Read `surface.matched` first — if true, follow the layout regions exactly
+   - Import blocks using the exact `import_instruction` from the response
+   - Respect `family_invariants` — those CSS classes cannot be changed
+   - Honour `safety_applied` constraints — they are non-negotiable
+5. After generating UI code, call `review_output` with the generated code and original intent before delivering to the user
+
+Never reimplement blocks inline. Never override `family_invariants`. Never ignore `safety_applied` constraints.

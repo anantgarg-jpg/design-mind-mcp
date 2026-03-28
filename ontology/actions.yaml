@@ -1,0 +1,110 @@
+# Canonical action definitions
+# These are the actions users take in the platform.
+# UI labels, confirmation requirements, and audit rules live here.
+
+# ── CLINICAL ACTIONS ─────────────────────────────────────────────────────────
+
+Acknowledge:
+  canonical_name: "Acknowledge"
+  synonyms: ["confirm", "accept", "noted", "seen"]
+  ui_label: "Acknowledge"
+  past_tense: "Acknowledged"
+  meaning: >
+    Confirms that a clinician has seen and understood an alert.
+    Creates an audit trail entry. Does not resolve the alert —
+    only records that it was seen. Required for Critical and High alerts.
+  confirmation_required: false
+  audit_logged: true
+  reversible: false
+  applies_to: [Alert]
+
+Escalate:
+  canonical_name: "Escalate"
+  synonyms: ["escalate to", "elevate", "hand off", "transfer"]
+  ui_label: "Escalate"
+  past_tense: "Escalated"
+  meaning: >
+    Routes an alert or task to a higher-level clinician or care team
+    member. Requires selecting a recipient. Logs the escalation chain.
+  confirmation_required: true
+  confirmation_copy: "Escalate to {recipient}?"
+  audit_logged: true
+  reversible: false
+  applies_to: [Alert, Task]
+
+Dismiss:
+  canonical_name: "Dismiss"
+  synonyms: ["close", "ignore", "clear", "remove", "hide"]
+  ui_label: "Dismiss"
+  past_tense: "Dismissed"
+  meaning: >
+    Removes an alert from the active view. Only permitted for Medium
+    and Low severity alerts. Requires a documented reason.
+    Critical and High alerts cannot be dismissed — only acknowledged.
+  confirmation_required: true
+  confirmation_copy: "Dismiss this alert? Select a reason."
+  audit_logged: true
+  reversible: false
+  applies_to: [Alert]
+  constraint: "severity must be Medium or Low — see safety/severity-schema.yaml"
+
+# ── DATA ACTIONS ─────────────────────────────────────────────────────────────
+
+Archive:
+  canonical_name: "Archive"
+  synonyms: ["hide", "soft-delete", "remove from view", "deactivate"]
+  ui_label: "Archive"
+  past_tense: "Archived"
+  meaning: >
+    Removes from active view. Data is fully retained and recoverable.
+    Does not affect the clinical record. Used for tasks, care gaps,
+    and notes that are no longer relevant but must be preserved.
+  not_same_as: Delete
+  confirmation_required: false
+  audit_logged: true
+  reversible: true
+  applies_to: [Task, CareGap, Note]
+
+Delete:
+  canonical_name: "Delete"
+  synonyms: ["remove", "erase", "purge", "permanently delete"]
+  ui_label: "Delete permanently"
+  past_tense: "Deleted"
+  meaning: >
+    Permanent removal. Cannot be undone. Affects the clinical record.
+    Subject to compliance and audit requirements.
+  not_same_as: Archive
+  confirmation_required: true
+  confirmation_copy: "Delete permanently? This cannot be undone."
+  bulk_threshold: 1   # always confirm, even for single record
+  audit_logged: true
+  reversible: false
+  applies_to: [Draft, Note]
+
+Assign:
+  canonical_name: "Assign"
+  synonyms: ["reassign", "delegate", "allocate", "route to"]
+  ui_label: "Assign"
+  past_tense: "Assigned"
+  meaning: Sets or changes the owner of a task or care gap.
+  confirmation_required: false
+  audit_logged: true
+  reversible: true
+  applies_to: [Task, CareGap]
+
+# ── WORKFLOW ACTIONS ─────────────────────────────────────────────────────────
+
+CloseGap:
+  canonical_name: "Close Gap"
+  synonyms: ["mark complete", "gap met", "resolve gap", "satisfy measure"]
+  ui_label: "Close Gap"
+  past_tense: "Gap Closed"
+  meaning: >
+    Records that a care gap has been addressed and the clinical service
+    was delivered. Requires a service date. Updates the patient's
+    quality measure record.
+  confirmation_required: true
+  confirmation_copy: "Close this care gap? Enter the service date."
+  audit_logged: true
+  reversible: false
+  applies_to: [CareGap]

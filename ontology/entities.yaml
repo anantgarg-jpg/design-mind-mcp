@@ -1,0 +1,75 @@
+# Canonical entity definitions
+# One definition per concept. Every surface uses these names exactly.
+# Synonyms are listed so agents can recognize them — not use them.
+
+Patient:
+  canonical_name: "Patient"
+  synonyms: ["member", "beneficiary", "individual", "client", "person"]
+  definition: >
+    A person receiving care managed or monitored through this platform.
+    Always referred to as "Patient" in UI copy. Never "member" or
+    "beneficiary" even if the business context uses those terms.
+  display_fields:
+    primary: full_name
+    secondary: [mrn, date_of_birth, primary_payer]
+  identifier_label: "MRN"
+
+Encounter:
+  canonical_name: "Encounter"
+  synonyms: ["visit", "appointment", "episode", "interaction"]
+  definition: >
+    A discrete clinical interaction between a patient and a care provider.
+    Can be in-person, telehealth, or phone.
+  display_fields:
+    primary: encounter_date
+    secondary: [encounter_type, provider_name, facility]
+
+CareGap:
+  canonical_name: "Care Gap"
+  synonyms: ["gap in care", "quality measure gap", "HEDIS gap", "open gap"]
+  definition: >
+    A clinical service or intervention that evidence indicates a patient
+    should have received but has not. Drives outreach and care coordination
+    workflows. Always two words: "Care Gap" not "caregap" or "care-gap".
+  display_fields:
+    primary: measure_name
+    secondary: [due_date, gap_status, assigned_to]
+
+Alert:
+  canonical_name: "Alert"
+  synonyms: ["notification", "flag", "warning", "issue", "event"]
+  definition: >
+    A system-generated signal that requires clinical attention or action.
+    Alerts have severity levels. They are never dismissed without
+    acknowledgment at Critical or High severity.
+  display_fields:
+    primary: alert_title
+    secondary: [severity, patient_name, triggered_at]
+
+Task:
+  canonical_name: "Task"
+  synonyms: ["action item", "to-do", "work item", "assignment", "activity"]
+  definition: >
+    A discrete unit of work assigned to a care team member. Has an owner,
+    a due date, and a status. Always referred to as "Task" in UI copy.
+  display_fields:
+    primary: task_title
+    secondary: [due_date, assigned_to, task_status, patient_name]
+
+Provider:
+  canonical_name: "Provider"
+  synonyms: ["clinician", "physician", "doctor", "practitioner", "clinican"]
+  definition: >
+    A licensed clinical professional who delivers or oversees patient care.
+    Use "Provider" in UI labels. Use "Clinician" in conversational contexts.
+  display_fields:
+    primary: provider_name
+    secondary: [npi, specialty, practice_name]
+
+CareTeam:
+  canonical_name: "Care Team"
+  synonyms: ["team", "care team members", "assigned team"]
+  definition: >
+    The group of providers and coordinators responsible for a patient's
+    care within this platform. Always "Care Team" — two words, title case
+    when used as a label.

@@ -1,0 +1,57 @@
+id: ActivityLogRow
+status: active
+component_type: row
+level: composite
+npm_path: "@innovaccer/ui-assets/block-composites/ActivityLogRow"
+structural_family: readonly-list-row
+family_invariants:
+  - "Layout: flex items-center gap-3 px-4 py-3 border-b border-border/40"
+  - "No action buttons — read-only display only"
+  - "Status indicators use icon + colored text, not Button components"
+  - "Hover: cursor-pointer if row opens detail, but no data modification on click"
+confidence: 0.85
+version: 1.0.0
+introduced: 2026-03-20
+last_evolved: 2026-03-20
+
+summary: >
+  A compact read-only row for a chronological activity log. Shows entity avatar
+  (initials, tier-tinted), entity name, related item context, activity type with icon,
+  outcome with colored icon and design token, actor name, and relative timestamp.
+  Flagged rows (e.g. no-answer) get a left-border warning accent. Used inside
+  activity log artifacts with type and outcome filters and a summary header.
+
+when:
+  - displaying a single completed activity in a chronological log
+  - audit or review surface showing all activity across a user's panel
+  - user needs to see what was done, what happened, and what needs follow-up
+
+not_when:
+  - scheduling or initiating new activities — this is a read-only log pattern
+  - entity-scoped surfaces showing activity for a single entity — use ActionableRow
+  - population-level activity metrics — use a stat/chart component
+
+frozen:
+  - "interaction: read-only display only — no action buttons, no data modification on click"
+  - "density: compact row (flex items-center gap-3 px-4 py-3) — padding must not be expanded"
+  - "ordering: chronological order is a parent concern — this block does not control sort or grouping"
+
+free:
+  - activityType: "any activity type label and icon"
+  - outcome: "any outcome label and color token"
+  - actor: "any actor name string"
+  - timestamp: "any formatted timestamp string"
+
+because: >
+  Users need a fast daily audit of activity. The compact row density
+  (per data-density rule) lets them scan the full day at once. Flagged left-border
+  accent makes unresolved attempts visually scannable without reading every row.
+
+usage_signal:
+  renders_total: 0
+  products: []
+  override_rate: 0.0
+
+embedding_hint: >
+  activity log row event record chronological audit read only
+  outcome type actor timestamp compact density panel filter

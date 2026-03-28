@@ -1,0 +1,44 @@
+id: InputOTP
+status: active
+component_type: input
+level: primitive
+npm_path: "@innovaccer/ui-assets/block-primitives/InputOTP"
+structural_family: form-input
+family_invariants:
+  - "Slots: gap-2 between slots"
+  - "Each slot: h-10 w-10 rounded-md border border-subtle text-center font-mono"
+  - "Min slot size: 44px (rule 21)"
+  - "Focus: focus-visible:ring-2 ring-ring"
+confidence: 0.85
+version: 1.0.0
+
+summary: >
+  One-time password or verification code input composed of individual
+  character slots. Auto-advances focus on input and supports paste.
+  Uses monospace font for code display.
+
+when:
+  - entering a verification code (OTP, 2FA)
+  - PIN or short numeric code input
+  - any fixed-length code entry requiring per-character slots
+
+not_when:
+  - free-text input — use Input
+  - long codes or tokens — use a standard text input
+  - password entry — use Input with type="password"
+
+variants:
+  default: 6-digit OTP with individual slots
+  grouped: slots visually grouped (e.g. 3-3 with a separator)
+
+key_rules:
+  - auto-focus next slot on character input
+  - paste support for full code
+  - font-mono for code display
+  - each slot meets 44px minimum touch target (rule 21)
+  - error state uses border-destructive (rule 13)
+  - focus-visible ring never suppressed (rule 20)
+
+embedding_hint: >
+  otp input code verification pin 2fa mfa
+  one-time password slot digit token

@@ -1,0 +1,17 @@
+[build]
+builder = "dockerfile"
+
+[deploy]
+startCommand = "sh /app/start.sh"
+healthcheckPath = "/health"
+healthcheckTimeout = 30
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
+
+[[deploy.environmentVariables]]
+name = "TRANSPORT"
+value = "sse"
+
+[[deploy.environmentVariables]]
+name = "NODE_ENV"
+value = "production"

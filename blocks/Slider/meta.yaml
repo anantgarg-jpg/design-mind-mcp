@@ -1,0 +1,40 @@
+id: Slider
+status: active
+component_type: input
+level: primitive
+npm_path: "@innovaccer/ui-assets/block-primitives/Slider"
+structural_family: form-input
+family_invariants:
+  - "Track: h-1.5 rounded-full bg-muted"
+  - "Thumb: h-4 w-4 rounded-full bg-primary border-2 border-primary-foreground shadow-sm"
+confidence: 0.85
+version: 1.0.0
+
+summary: >
+  Continuous or stepped range selector for numeric values. Renders a
+  horizontal track with a draggable thumb. Supports min, max, step,
+  and accessible value announcements.
+
+when:
+  - selecting a value within a continuous numeric range
+  - adjusting a setting like volume, brightness, or threshold
+  - stepped discrete values with visible step labels
+
+not_when:
+  - exact numeric input needed (use number Input)
+  - selecting from named options (use Select or RadioGroup)
+  - two-value range needed (use dual-thumb range slider)
+
+variants:
+  continuous: smooth value selection across range
+  stepped: snaps to discrete step values
+
+key_rules:
+  - 44px touch target on thumb via padding (rule 21)
+  - focus-visible ring on thumb never suppressed (rule 20)
+  - step labels shown when using discrete steps
+  - aria-valuetext for screen reader announcements
+
+embedding_hint: >
+  slider range input continuous stepped value
+  track thumb drag numeric adjust setting

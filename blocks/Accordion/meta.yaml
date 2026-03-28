@@ -1,0 +1,40 @@
+id: Accordion
+status: active
+component_type: layout
+level: primitive
+npm_path: "@innovaccer/ui-assets/block-primitives/Accordion"
+structural_family: disclosure
+family_invariants:
+  - "border-b border-border dividers between items"
+  - "py-4 vertical padding on each item"
+  - "font-semibold trigger text"
+confidence: 0.85
+version: 1.0.0
+
+summary: >
+  Collapsible section container for progressive disclosure of grouped content.
+  Wraps shadcn Accordion to present vertically stacked sections where only one
+  is expanded at a time by default, reducing visual noise on dense surfaces.
+
+when:
+  - grouping related content that benefits from progressive disclosure
+  - long-form content that overwhelms a surface when fully expanded
+  - FAQ-style question-and-answer layouts
+
+not_when:
+  - only a single collapsible section needed (use Collapsible instead)
+  - content must be visible at all times for comparison
+  - nested within another Accordion (no nesting permitted)
+
+variants:
+  single: only one section open at a time (default)
+  multiple: multiple sections may be open simultaneously
+
+key_rules:
+  - only one section open at a time by default (type="single")
+  - chevron indicator rotates on open/close
+  - no nested accordions
+
+embedding_hint: >
+  accordion collapsible section expand collapse disclosure
+  faq progressive reveal toggle panel

@@ -1,0 +1,47 @@
+# Design Mind Pattern Candidate
+# Generated: 2026-03-24T06:10:41.000Z
+# Status: logged
+
+candidate_id: "2026-03-24T06-10-41-filteredentitylisting"
+pattern_name: "FilteredEntityListing"
+status: logged
+frequency_count: 1
+
+description: >
+  An artifact panel surface for browsing and filtering a list of entities. Outer shell
+  is an ArtifactEntityCard (rounded-lg border border-border/30 bg-card shadow-sm).
+  Inside: a fixed header band with title and result count (border-b), a left filter
+  sidebar (w-44, border-r, overflow-y-auto, accessible checkboxes with min-h-[44px]
+  touch targets and sr-only <input type="checkbox"> + visible custom visual), and a
+  flex-1 scrollable list of full-width row buttons. Each row is a single <button>
+  spanning full width with hover:bg-muted/50, focus-visible:ring-2 focus-visible:ring-ring
+  focus-visible:ring-inset, and a trailing ChevronRight icon. Replaces the previous
+  pattern of cards with nested small action buttons that violated C21 (44×44px).
+
+intent_it_serves: >
+  User needs to browse and filter a list of entities by faceted criteria, scan result
+  rows at a glance, and drill into an individual entity detail in a new artifact tab.
+
+why_existing_patterns_didnt_fit: >
+  No genome pattern existed for a filterable entity listing panel inside an artifact.
+  KeyValueList covers detail views only. ActionableRow covers individual rows but not
+  the containing surface with sidebar filters and header band. This pattern codifies
+  the outer container + filter sidebar + full-row button composition as a reusable surface.
+
+implementation_ref: "src/solutions/care-access/blocks/FindCare.tsx"
+
+ontology_refs:
+  - entity-listing
+  - faceted-filter
+  - artifact-panel
+  - actionable-row
+  - drill-to-detail
+
+similar_candidates:
+  []
+
+# Instructions for human ratification:
+# 1. Review the description and intent
+# 2. Check similar_candidates — merge if duplicate
+# 3. If valid: create blocks/FilteredEntityListing/ with meta.yaml
+# 4. Run: node server/src/seed.js to re-index

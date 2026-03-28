@@ -1,0 +1,39 @@
+id: Collapsible
+status: active
+component_type: layout
+level: primitive
+npm_path: "@innovaccer/ui-assets/block-primitives/Collapsible"
+structural_family: disclosure
+family_invariants:
+  - "No visual border by default"
+  - "Trigger is any element"
+  - "Content animated open/close"
+confidence: 0.85
+version: 1.0.0
+
+summary: >
+  Single-section expand/collapse container. Wraps shadcn Collapsible for
+  simple show/hide patterns where a full Accordion is unnecessary.
+  Trigger can be any element; content animates between open and closed.
+
+when:
+  - a single section needs expand/collapse behavior
+  - progressive disclosure of optional detail within a card or row
+  - '"Show more" / "Show less" patterns'
+
+not_when:
+  - multiple collapsible sections in a group (use Accordion)
+  - content that should always be visible
+  - navigation menus (use dedicated nav components)
+
+variants:
+  default: no visible border, content animates on toggle
+
+key_rules:
+  - trigger element must be keyboard accessible
+  - aria-expanded on trigger element
+  - simpler than Accordion for single-section use cases
+
+embedding_hint: >
+  collapsible expand collapse toggle show hide
+  disclosure section reveal content single

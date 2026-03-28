@@ -1,0 +1,40 @@
+id: Tabs
+status: active
+component_type: layout
+level: primitive
+npm_path: "@innovaccer/ui-assets/block-primitives/Tabs"
+structural_family: tabbed-navigation
+family_invariants:
+  - "Trigger: text-sm font-semibold text-muted-foreground"
+  - "Active: text-foreground border-b-2 border-primary"
+  - "List: border-b border-border"
+confidence: 0.85
+version: 1.0.0
+
+summary: >
+  Content organization component using tab panels. Renders a
+  horizontal tab bar with instant content switching. Each tab
+  maps to a panel of related content.
+
+when:
+  - organizing related content into distinct switchable sections
+  - reducing vertical scroll by grouping content behind tabs
+  - content categories are mutually exclusive views
+
+not_when:
+  - navigation between separate pages (use a nav menu)
+  - more than 6 tabs (use a dropdown or scrollable nav)
+  - sequential workflow steps (use StepIndicator)
+
+variants:
+  default: underline-style tabs with border-b indicator
+
+key_rules:
+  - active tab always visible, never scrolled out of view
+  - keyboard navigable with arrow keys
+  - content switches instantly with no animation
+  - max 6 tabs before requiring overflow handling
+
+embedding_hint: >
+  tabs tabbed navigation panel content switch
+  section organize category view toggle

@@ -1,0 +1,39 @@
+id: SectionHeader
+status: active
+component_type: other
+level: primitive
+npm_path: "@innovaccer/ui-assets/block-primitives/SectionHeader"
+structural_family: section-divider
+structural_role: "section-divider"
+family_invariants:
+  - "Typography: text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+  - "Never bold or large — should recede visually, not dominate"
+  - "Always uppercase tracking-wider — wayfinding label, not a headline"
+confidence: 0.90
+version: 1.0.0
+
+summary: >
+  Artifact content section label with optional count and action.
+  Used to divide Panel 3 content into named groups — "NEEDS ATTENTION",
+  "COMING UP", "ITEMS". Muted and small — organizes without competing.
+
+when:
+  - dividing a list into named sections
+  - section has a count worth surfacing
+  - section has a single optional action (e.g. "View all")
+
+not_when:
+  - page-level heading — use an ArtifactContentHeader instead
+  - decorative divider with no semantic meaning — use a Separator
+
+key_rules:
+  - always uppercase tracking-wider — wayfinding, not a headline
+  - count urgent/warning variants only when the count itself is urgent
+  - never bold or large — should recede visually, not dominate
+
+embedding_hint: >
+  section header label group divider needs attention coming up
+  items count wayfinding artifact content organizer
+  severity group critical high medium low grouped by severity
+  priority section alert group section label queue section
+  coordinator today clinical section divider urgency group

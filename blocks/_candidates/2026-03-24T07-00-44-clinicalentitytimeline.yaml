@@ -1,0 +1,48 @@
+# Design Mind Pattern Candidate
+# Generated: 2026-03-24T07:00:44.000Z
+# Status: logged
+
+candidate_id: "2026-03-24T07-00-44-clinicalentitytimeline"
+pattern_name: "ClinicalEntityTimeline"
+status: logged
+frequency_count: 1
+
+description: >
+  A scrollable chronological timeline of clinical events rendered inside an
+  ArtifactEntityCard. Each event row has: a spine dot (aria-hidden, bg-* color) with a
+  vertical connector line to the next event, an icon + text type label side-by-side
+  (dot is never the sole differentiator — C19), an absolute date shown in the collapsed
+  header (C11), summary text, actor name, and an optional expandable detail section
+  triggered by a ChevronDown button (focus-visible:ring-2, C20). The expanded detail
+  shows full date + time (C11) and a left-border accent in the event's color family.
+  Empty state always renders a placeholder message — never blank (C10).
+  Supports up to 10 event types each with a distinct icon + dot color + accent class config.
+
+intent_it_serves: >
+  Care coordinator opens a patient profile and needs a chronological audit trail of all
+  clinical touchpoints — calls, assessments, admissions, discharges, care gaps, risk
+  changes, care plan reviews, enrollment — to understand history and plan next actions.
+
+why_existing_patterns_didnt_fit: >
+  ActivityLogRow covers a single row in an audit log but not the containing timeline
+  surface with spine connector lines, expandable detail, and per-type event configuration.
+  KeyValueList covers identity/demographic fields but not event sequences. This pattern
+  describes the full timeline composition including spine structure and event-type config map.
+
+implementation_ref: "src/solutions/care-management/blocks/PatientProfile.tsx"
+
+ontology_refs:
+  - clinical-event
+  - patient-timeline
+  - care-history
+  - audit-trail
+  - entity-detail
+
+similar_candidates:
+  []
+
+# Instructions for human ratification:
+# 1. Review the description and intent
+# 2. Check similar_candidates — merge if duplicate
+# 3. If valid: create blocks/ClinicalEntityTimeline/ with meta.yaml
+# 4. Run: node server/src/seed.js to re-index

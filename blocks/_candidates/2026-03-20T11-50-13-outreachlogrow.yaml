@@ -1,0 +1,33 @@
+# Design Mind Pattern Candidate
+# Generated: 2026-03-20T11:50:13.954Z
+# Status: logged
+
+candidate_id: "2026-03-20T11-50-13-outreachlogrow"
+pattern_name: "OutreachLogRow"
+status: ratified
+frequency_count: 1
+
+description: >
+  A compact list artifact showing all outreach activity across a coordinator's patient panel in a rolling 24-hour window. Each row shows: patient avatar + name (Last, First), related Care Gap or Task, outreach type (Phone Call / Portal Message / Letter) with icon, outcome (Reached / Left Voicemail / No Answer / Declined / Sent) with colored icon and token, coordinator name, and relative timestamp. Filterable by outreach type and outcome. No-answer rows get a left-border warning accent. Header summarises reached/no-answer/voicemail counts. Read-only — no actions modify records.
+
+intent_it_serves: >
+  Care coordinator needs a quick audit of all outreach performed across their patient panel today — who was contacted, what happened, and what still needs follow-up (no-answer rows).
+
+why_existing_patterns_didnt_fit: >
+  consult_before_build returned confidence 0.29. PatientRow (best match, 0.29) is a worklist row with risk scoring and CTA — not an audit log. No log/activity pattern exists in the genome. Outreach is not yet an ontology entity.
+
+implementation_ref: "shell/artifacts/OutreachLogArtifact.tsx"
+
+ontology_refs:
+  - Patient
+  - CareGap
+  - Task
+
+similar_candidates:
+  []
+
+# Instructions for human ratification:
+# 1. Review the description and intent
+# 2. Check similar_candidates — merge if duplicate
+# 3. If valid: create patterns/OutreachLogRow/ with meta.yaml and component.tsx
+# 4. Run: node server/src/seed.js to re-index

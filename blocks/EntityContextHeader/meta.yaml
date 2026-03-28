@@ -1,0 +1,73 @@
+id: EntityContextHeader
+status: active
+component_type: header
+level: composite
+npm_path: "@innovaccer/ui-assets/block-composites/EntityContextHeader"
+structural_family: entity-context-header
+family_invariants:
+  - "Layout: flex items-center justify-between gap-4 px-6 py-4 bg-card border-b border-border"
+  - "Entity name: format defined by consuming surface — never truncated, never abbreviated"
+  - "Primary identifier label is configurable — never hardcoded"
+  - "Secondary identifier uses full format per surface convention"
+  - "Always the topmost element of any entity-scoped surface"
+confidence: 0.90
+version: 1.0.0
+introduced: seed-v0
+last_evolved: seed-v0
+
+summary: >
+  Displays the current entity context at the top of any scoped workflow surface.
+  Ensures the user always knows which entity they are acting on. The most
+  visible component on any entity-scoped surface — inconsistency here
+  breaks user trust immediately.
+
+when:
+  - any surface scoped to a single entity's data
+  - any workflow where a user is taking action for a specific entity
+  - at the top of all entity-detail pages and workflow panels
+
+not_when:
+  - population-level views with no single entity context
+  - admin surfaces not scoped to an entity
+  - login, settings, or navigation-only pages
+
+required_fields:
+  - entity name (format defined by consuming surface)
+  - primary identifier (label configurable via prop)
+  - secondary identifier (label configurable via prop)
+
+optional_fields:
+  - tertiary label (additional context field)
+  - tier (risk/priority tier badge)
+  - team name
+  - active alert count (drives urgency indicator)
+
+layout:
+  - always renders as a horizontal strip at top of content area
+  - never collapses to icon-only — entity identity must always be text-visible
+  - alert count badge links to AlertBanner stack below
+
+safety_refs:
+  - safety/hard-constraints.md (formatting rules applied by consuming surfaces)
+
+frozen:
+  - "scope: always entity-scoped — never used on population-level or admin surfaces"
+  - "identity: always left-anchored, never truncated, never collapsed to icon-only"
+  - "alert indicator: always right-aligned when present"
+  - "position: always the topmost element of any entity-scoped surface"
+
+free:
+  - entityType: "any entity type (patient, provider, member, etc.)"
+  - identityFields: "primary and secondary identifier labels configurable via props"
+  - tier: "present or absent"
+  - teamName: "present or absent"
+  - alertCount: "any count value"
+
+usage_signal:
+  renders_total: 0
+  products: []
+  override_rate: 0.0
+
+embedding_hint: >
+  entity context header identity name identifier scoped
+  workflow top of page always visible team score alert count

@@ -1,0 +1,44 @@
+id: DropdownMenu
+status: active
+component_type: overlay
+level: primitive
+npm_path: "@innovaccer/ui-assets/block-primitives/DropdownMenu"
+structural_family: context-menu
+family_invariants:
+  - "Container: rounded-md shadow-md z-20 bg-popover py-1 min-w-[8rem]"
+  - "Items: px-3 py-2 text-base cursor-pointer"
+  - "Destructive items: text-destructive"
+  - "Separators between groups"
+confidence: 0.85
+version: 1.0.0
+
+summary: >
+  Click-triggered dropdown menu for secondary actions. Appears below
+  or beside the trigger element and supports grouped items, icons,
+  keyboard shortcuts, and destructive action styling.
+
+when:
+  - offering secondary actions on a row or card (e.g. edit, delete, share)
+  - overflow menu for actions that do not fit in the primary toolbar
+  - contextual actions triggered by a button or icon
+
+not_when:
+  - primary action path — use a visible button instead
+  - navigation — use NavigationMenu
+  - form selection — use Select or RadioGroup
+
+variants:
+  default: standard action list
+  grouped: items organized with separators and group labels
+  withIcons: each item prefixed with an icon for scannability
+
+key_rules:
+  - destructive items always use text-destructive (rule 13)
+  - fully keyboard navigable (arrow keys, Enter, Escape)
+  - group related items with separators
+  - never used as the primary action path
+  - 44px min touch target per item (rule 21)
+
+embedding_hint: >
+  dropdown menu context actions overflow more kebab
+  ellipsis secondary options edit delete share

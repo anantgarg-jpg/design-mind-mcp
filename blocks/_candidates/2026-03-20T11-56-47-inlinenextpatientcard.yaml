@@ -1,0 +1,33 @@
+# Design Mind Pattern Candidate
+# Generated: 2026-03-20T11:56:47.017Z
+# Status: logged
+
+candidate_id: "2026-03-20T11-56-47-inlinenextpatientcard"
+pattern_name: "InlineNextPatientCard"
+status: ratified
+frequency_count: 1
+
+description: >
+  An inline chat card showing the next priority patient for a coordinator. Displays: initials avatar with risk-tier tinted color, patient name (Last, First), risk tier with colored dot and label, open care gap count, a "Next up" section with the upcoming care gap name + due date + canonical status, and a suggested action footer with AlertTriangle icon. Rendered inside an assistant message bubble via the ChatQuickActionChip pattern.
+
+intent_it_serves: >
+  Coordinator needs a one-tap way to see who they should work on next — patient identity, risk context, the specific item due, and what action to take — without opening the worklist artifact.
+
+why_existing_patterns_didnt_fit: >
+  PatientRow (best match 0.39) is a Panel 3 list row with CTA button — not an inline chat card. PatientContextHeader is a full patient identity header for artifact surfaces. Neither fits the compact inline-in-chat card interaction model established by ChatQuickActionChip.
+
+implementation_ref: "shell/panels/ChatPanel.tsx"
+
+ontology_refs:
+  - Patient
+  - CareGap
+  - Task
+
+similar_candidates:
+  []
+
+# Instructions for human ratification:
+# 1. Review the description and intent
+# 2. Check similar_candidates — merge if duplicate
+# 3. If valid: create patterns/InlineNextPatientCard/ with meta.yaml and component.tsx
+# 4. Run: node server/src/seed.js to re-index

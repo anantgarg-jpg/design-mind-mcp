@@ -1,0 +1,41 @@
+id: Separator
+status: active
+component_type: layout
+level: primitive
+npm_path: "@innovaccer/ui-assets/block-primitives/Separator"
+structural_family: visual-divider
+family_invariants:
+  - "bg-border color token"
+  - "Horizontal: h-[1px] w-full"
+  - "Vertical: w-[1px] h-full"
+confidence: 0.85
+version: 1.0.0
+
+summary: >
+  Horizontal or vertical line divider for visual separation between
+  content sections. Decorative by default with role=none. Use sparingly
+  as spacing alone is usually preferred.
+
+when:
+  - visually separating distinct content groups within a card or panel
+  - dividing toolbar sections or navigation groups
+  - creating a clear boundary between unrelated content zones
+
+not_when:
+  - spacing alone provides sufficient separation
+  - between every item in a list (use border-b on items instead)
+  - inside dense data tables (use row borders)
+
+variants:
+  horizontal: full-width line divider (default)
+  vertical: full-height vertical divider
+
+key_rules:
+  - decorative by default with role=none
+  - uses bg-border token, never hardcoded colors
+  - prefer spacing over separators when possible
+  - never between every item in a repeating list
+
+embedding_hint: >
+  separator divider line horizontal vertical rule
+  section break border visual spacing

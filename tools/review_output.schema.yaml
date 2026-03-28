@@ -1,0 +1,88 @@
+tool: review_output
+version: 2.0.0
+description: >
+  Call after generating UI to get structured feedback. Runs deterministic
+  auto-checks (block sources, consultation alignment, token usage, copy voice,
+  terminology) followed by an LLM Critic review. Returns what honored the
+  genome, what was borderline, what needs fixing, and any novel blocks to report.
+
+input:
+  generated_output:
+    type: string
+    required: true
+    description: The generated code or detailed description of the UI
+
+  original_intent:
+    type: string
+    required: true
+    description: The same intent_description passed to consult_before_build
+
+  context_used:
+    type: object
+    required: false
+    description: >
+      The response from consult_before_build. When provided, enables
+      consultation alignment checks (surface import, layout ordering,
+      workflow completeness, block coverage, never constraints).
+
+output:
+  auto_checks:
+    type: array
+    description: >
+      All deterministic violations found by the three validation functions:
+      validateBlockSources (shadcn duplication, wrong tier, reimplementation),
+      validateConsultationAlignment (surface, layout, workflows),
+      validateTokenUsage (hex, rgb, non-semantic Tailwind, !important, arbitrary spacing).
+    items:
+      violation_type: string
+      found_text: string
+      correction: string
+      severity: string   # "blocker" | "warning"
+      rule_ref: string
+
+  honored:
+    type: array
+    items:
+      observation: string
+      rule_or_pattern_ref: string
+
+  borderline:
+    type: array
+    items:
+      observation: string
+      tension: string
+      recommendation: string
+
+  novel:
+    type: array
+    items:
+      description: string
+      coherence: string
+
+  fix:
+    type: array
+    description: >
+      All violations requiring correction. Includes blocker auto-checks
+      and LLM-identified issues. safety_block: true items must be resolved first.
+    items:
+      problem: string
+      rule_violated: string
+      correction: string
+      safety_block: boolean
+
+  candidate_patterns:
+    type: array
+    items:
+      name: string
+      description: string
+
+  copy_violations:
+    type: array
+    items:
+      rule: string
+      found: string
+      correction: string
+
+  confidence:
+    type: number
+    description: Overall genome compliance score (0.0–1.0).

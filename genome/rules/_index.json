@@ -1,0 +1,541 @@
+{
+  "version": "1.4.0",
+  "generated": "seed-v0",
+  "last_updated": "interface-guidelines-v1",
+  "rules": {
+    "interface-guidelines": {
+      "file": "genome/rules/interface-guidelines.rule.md",
+      "confidence": 0.95,
+      "status": "active",
+      "ratified_by": "design-leadership",
+      "mutation_count": 0,
+      "last_challenged": null,
+      "note": "v1.0.0 \u2014 replaces shell-layout and navigation-patterns. Covers threads, chat, artifacts (lifecycle, singleton/multi-instance, progressive disclosure, actions), navigator (solutions, default routes, custom threads), and building on the shell (solution structure, manifest contract, block components, chat handlers, pre-requisite flows)."
+    },
+    "destructive-actions": {
+      "file": "genome/rules/destructive-actions.rule.md",
+      "confidence": 0.95,
+      "status": "active",
+      "ratified_by": "design-leadership",
+      "mutation_count": 0,
+      "last_challenged": null
+    },
+    "data-density": {
+      "file": "genome/rules/data-density.rule.md",
+      "confidence": 0.88,
+      "status": "active",
+      "ratified_by": "design-leadership",
+      "mutation_count": 0,
+      "last_challenged": null
+    },
+    "styling-tokens": {
+      "file": "genome/rules/styling-tokens.rule.md",
+      "confidence": 0.97,
+      "status": "active",
+      "ratified_by": "design-leadership",
+      "mutation_count": 1,
+      "last_challenged": "v2-expansion",
+      "note": "v2.0.0 — expanded from color-only tokens to full styling system: typography (DM Sans), spacing (4px grid), border-radius, elevation, z-index, motion. Colors updated to the color palette defined in theme.css. Single comprehensive file. Load this rule for ANY styling decision."
+    },
+    "copy-voice": {
+      "file": "genome/rules/copy-voice.rule.md",
+      "confidence": 0.95,
+      "status": "active",
+      "version": "1.0.0",
+      "applies_to": "every string in every component, surface, and generated output"
+    },
+    "accessibility": {
+      "file": "genome/rules/accessibility.rule.md",
+      "confidence": 0.95,
+      "status": "active",
+      "version": "1.1.0",
+      "applies_to": "every component, every surface, every generated UI"
+    }
+  },
+  "blocks": {
+    "SectionHeader": {
+      "file": "blocks/SectionHeader/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.90,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "StatCard": {
+      "file": "blocks/StatCard/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.88,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "ActionableRow": {
+      "file": "blocks/ActionableRow/meta.yaml",
+      "level": "composite",
+      "confidence": 0.95,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "AlertBanner": {
+      "file": "blocks/AlertBanner/meta.yaml",
+      "level": "composite",
+      "confidence": 0.80,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "EntityContextHeader": {
+      "file": "blocks/EntityContextHeader/meta.yaml",
+      "level": "composite",
+      "confidence": 0.90,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "EntityRow": {
+      "file": "blocks/EntityRow/meta.yaml",
+      "level": "composite",
+      "confidence": 0.92,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "ChatQuickActionChip": {
+      "file": "blocks/ChatQuickActionChip/meta.yaml",
+      "level": "composite",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "InlineEntityCard": {
+      "file": "blocks/InlineEntityCard/meta.yaml",
+      "level": "composite",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "ActivityLogRow": {
+      "file": "blocks/ActivityLogRow/meta.yaml",
+      "level": "composite",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "AssessmentTab": {
+      "file": "blocks/AssessmentTab/meta.yaml",
+      "level": "composite",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Accordion": {
+      "file": "blocks/Accordion/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Alert": {
+      "file": "blocks/Alert/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "AlertDialog": {
+      "file": "blocks/AlertDialog/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Avatar": {
+      "file": "blocks/Avatar/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Badge": {
+      "file": "blocks/Badge/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Button": {
+      "file": "blocks/Button/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Breadcrumb": {
+      "file": "blocks/Breadcrumb/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Calendar": {
+      "file": "blocks/Calendar/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Card": {
+      "file": "blocks/Card/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Checkbox": {
+      "file": "blocks/Checkbox/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Collapsible": {
+      "file": "blocks/Collapsible/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "ContextMenu": {
+      "file": "blocks/ContextMenu/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Dialog": {
+      "file": "blocks/Dialog/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Drawer": {
+      "file": "blocks/Drawer/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "DropdownMenu": {
+      "file": "blocks/DropdownMenu/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "HoverCard": {
+      "file": "blocks/HoverCard/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Input": {
+      "file": "blocks/Input/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "InputOTP": {
+      "file": "blocks/InputOTP/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Label": {
+      "file": "blocks/Label/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "NavigationMenu": {
+      "file": "blocks/NavigationMenu/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Popover": {
+      "file": "blocks/Popover/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Progress": {
+      "file": "blocks/Progress/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "RadioGroup": {
+      "file": "blocks/RadioGroup/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Resizable": {
+      "file": "blocks/Resizable/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "ScrollArea": {
+      "file": "blocks/ScrollArea/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Select": {
+      "file": "blocks/Select/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Separator": {
+      "file": "blocks/Separator/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Sheet": {
+      "file": "blocks/Sheet/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Skeleton": {
+      "file": "blocks/Skeleton/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Slider": {
+      "file": "blocks/Slider/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Sonner": {
+      "file": "blocks/Sonner/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Switch": {
+      "file": "blocks/Switch/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Table": {
+      "file": "blocks/Table/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Tabs": {
+      "file": "blocks/Tabs/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Textarea": {
+      "file": "blocks/Textarea/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Toggle": {
+      "file": "blocks/Toggle/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "ToggleGroup": {
+      "file": "blocks/ToggleGroup/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Tooltip": {
+      "file": "blocks/Tooltip/meta.yaml",
+      "level": "primitive",
+      "confidence": 0.85,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Command": {
+      "file": "blocks/Command/meta.yaml",
+      "level": "composite",
+      "confidence": 0.80,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Combobox": {
+      "file": "blocks/Combobox/meta.yaml",
+      "level": "composite",
+      "confidence": 0.80,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "DatePicker": {
+      "file": "blocks/DatePicker/meta.yaml",
+      "level": "composite",
+      "confidence": 0.80,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "DataTable": {
+      "file": "blocks/DataTable/meta.yaml",
+      "level": "composite",
+      "confidence": 0.80,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Form": {
+      "file": "blocks/Form/meta.yaml",
+      "level": "composite",
+      "confidence": 0.80,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Chart": {
+      "file": "blocks/Chart/meta.yaml",
+      "level": "composite",
+      "confidence": 0.80,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Carousel": {
+      "file": "blocks/Carousel/meta.yaml",
+      "level": "composite",
+      "confidence": 0.80,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    },
+    "Pagination": {
+      "file": "blocks/Pagination/meta.yaml",
+      "level": "composite",
+      "confidence": 0.80,
+      "status": "active",
+      "renders_total": 0,
+      "override_rate": 0.0
+    }
+  },
+  "ontology": {
+    "entities": {
+      "file": "ontology/entities.yaml",
+      "owned_by": "clinical-smes"
+    },
+    "states": {
+      "file": "ontology/states.yaml",
+      "owned_by": "clinical-smes"
+    },
+    "actions": {
+      "file": "ontology/actions.yaml",
+      "owned_by": "clinical-smes"
+    },
+    "copy-voice": {
+      "file": "ontology/copy-voice.md",
+      "owned_by": "design-leadership"
+    }
+  },
+  "safety": {
+    "hard-constraints": {
+      "file": "safety/hard-constraints.md",
+      "owned_by": "clinical-leadership",
+      "agent_mutable": false
+    },
+    "severity-schema": {
+      "file": "safety/severity-schema.yaml",
+      "owned_by": "clinical-leadership",
+      "agent_mutable": false
+    }
+  },
+  "notes": {
+    "token_file": "theme.css",
+    "font": "DM Sans via --font-sans, DM Mono via --font-mono",
+    "critical_disambiguation": "--alert token = Orange = High severity. NOT the Alert clinical entity.",
+    "destructive_dual_use": "--destructive = delete actions AND Critical severity \u2014 same color, both are highest-stakes."
+  }
+}

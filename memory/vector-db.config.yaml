@@ -1,0 +1,28 @@
+# Vector DB configuration
+# Provider-agnostic config. Swap provider without changing how the
+# context-builder queries it — only the client implementation changes.
+
+embedding_model: nomic-embed-text
+embedding_dimensions: 768
+embedding_provider: ollama      # local, no API key needed. swap: voyageai, openai-ada-002
+
+collections:
+  patterns:
+    description: All pattern meta.yaml files + their embedding_hint fields
+    index_fields: [id, summary, when, embedding_hint, status, confidence]
+    filter_fields: [status, confidence]
+
+  episodic_log:
+    description: Every consult_before_build and review_output interaction
+    index_fields: [intent_description, domain, component_type, user_type]
+    filter_fields: [product_area, timestamp]
+
+  generated_outputs:
+    description: Every agent-generated UI component embedded at merge time
+    index_fields: [intent, output_summary, novel_patterns_detected]
+    filter_fields: [product_area, timestamp, confidence]
+
+retrieval_defaults:
+  top_k: 4
+  min_confidence_threshold: 0.5
+  status_filter: active           # never retrieve deprecated patterns
