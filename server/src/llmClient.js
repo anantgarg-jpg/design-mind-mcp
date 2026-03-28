@@ -235,7 +235,7 @@ async function geminiCall(systemPrompt, userContent, label) {
 /**
  * Call the Design Mind agent.
  */
-export async function callDesignMind({ genomeContext, intent, scope, domain, userType, workflows }) {
+export async function callDesignMind({ genomeContext, intent, domain, userType, workflows }) {
   const provider = getProvider();
 
   if (!provider) {
@@ -245,7 +245,6 @@ export async function callDesignMind({ genomeContext, intent, scope, domain, use
 
   const dynamicParts = [
     `Intent: ${intent}`,
-    `Scope: ${scope}`,
     `Domain: ${domain || 'unspecified'}`,
     `User types: ${(userType || []).join(', ') || 'unspecified'}`,
   ];

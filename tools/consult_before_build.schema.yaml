@@ -12,9 +12,8 @@ description: >
 
   HOW TO CALL:
   1. Describe WHAT you are building — who uses it, what data, what actions.
-  2. Send a SCOPE HINT: "surface" | "block" | "token".
-  3. Include domain and user_type if inferable.
-  4. DECOMPOSE the intent into WORKFLOWS — bounded UI sections as { id, intent, region? }.
+  2. Include domain and user_type if inferable.
+  3. DECOMPOSE the intent into WORKFLOWS — bounded UI sections as { id, intent, region? }.
 
   HOW TO USE THE RESPONSE:
   1. Read surface.matched first. If true, layout is authoritative. If false, layout is generated.
@@ -28,12 +27,6 @@ input:
     type: string
     required: true
     description: "Rich description of what to build — who uses it, what data it shows, what actions are available"
-
-  scope:
-    type: string
-    enum: ["surface", "block", "token"]
-    required: true
-    description: "Routing hint: surface=full page, block=single component, token=styling question"
 
   domain:
     type: string

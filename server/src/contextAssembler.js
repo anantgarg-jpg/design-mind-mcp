@@ -55,7 +55,6 @@ function toArray(val) {
 export async function consultBeforeBuild(params, _kb, _patternIndex, _ruleIndex, _surfaces) {
   const {
     intent_description,
-    scope = 'block',
     domain,
     user_type,
     workflows,
@@ -69,7 +68,6 @@ export async function consultBeforeBuild(params, _kb, _patternIndex, _ruleIndex,
   const llmResult = await callDesignMind({
     genomeContext,
     intent: intent_description,
-    scope,
     domain,
     userType: user_type,
     workflows,
@@ -118,7 +116,6 @@ export async function consultBeforeBuild(params, _kb, _patternIndex, _ruleIndex,
   logEpisodic({
     timestamp: new Date().toISOString(),
     intent: intent_description,
-    scope,
     domain,
     workflows: workflows || [],
     surface_matched: surfaceResult.matched,

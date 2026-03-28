@@ -7,7 +7,7 @@ Before writing ANY UI code, call `consult_before_build` with the application int
 **How to call:**
 1. Describe the full application intent (who uses it, what data, what actions)
 2. Decompose the intent into workflows — bounded UI sections as `{ id, intent, region? }` objects
-3. Include scope, domain, and user_type
+3. Include domain and user_type if inferable
 4. The response includes `surface` (matched or not), `layout` (regions), and `workflows` (per-workflow blocks)
 
 **How to use the response:**

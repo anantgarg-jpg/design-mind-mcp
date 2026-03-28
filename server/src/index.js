@@ -113,10 +113,8 @@ const TOOLS = [
       'HOW TO CALL:\n' +
       '1. Describe WHAT you are building — who uses it, what data it shows, what actions\n' +
       '   are available, and whether this is a new build or modification.\n' +
-      '2. Send a SCOPE HINT: "surface" (full page/panel), "block" (single component),\n' +
-      '   "token" (styling/spacing question).\n' +
-      '3. Include domain and user_type if you can infer them from the codebase.\n' +
-      '4. DECOMPOSE the intent into WORKFLOWS — an array of { id, intent, region? }\n' +
+      '2. Include domain and user_type if you can infer them from the codebase.\n' +
+      '3. DECOMPOSE the intent into WORKFLOWS — an array of { id, intent, region? }\n' +
       '   objects representing bounded UI sections. Example:\n' +
       '   Intent: "Care gap worklist for coordinators with filters and bulk actions"\n' +
       '   Workflows: [\n' +
@@ -138,16 +136,11 @@ const TOOLS = [
       '5. After generating code, call review_output with the generated code and original intent.',
     inputSchema: {
       type: 'object',
-      required: ['intent_description', 'scope'],
+      required: ['intent_description'],
       properties: {
         intent_description: {
           type: 'string',
           description: 'Rich description of what to build — who uses it, what data it shows, what actions are available',
-        },
-        scope: {
-          type: 'string',
-          enum: ['surface', 'block', 'token'],
-          description: 'Routing hint: surface=full page, block=single component, token=styling question',
         },
         domain: {
           type: 'string',

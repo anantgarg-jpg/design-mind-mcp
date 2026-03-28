@@ -7,7 +7,6 @@ Before generating ANY UI code:
 3. Call `consult_before_build` with:
    - The application intent (rich description of what is being built)
    - Workflows decomposed from the intent — bounded UI sections as `{ id, intent, region? }` objects
-   - Scope (`"surface"` for full pages, `"block"` for single components, `"token"` for styling)
    - Domain and user_type if inferable from codebase context
 4. Use the response as a construction packet, not a suggestion:
    - Read `surface.matched` first — if true, follow the layout regions exactly
