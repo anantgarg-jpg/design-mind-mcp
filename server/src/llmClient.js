@@ -67,10 +67,13 @@ function extractJson(text) {
 // ── Provider detection ────────────────────────────────────────────────────────
 
 function getProvider() {
-  if (process.env.ANTHROPIC_API_KEY)                           return 'anthropic';
+  // OpenAI-compatible gateway (TrueFoundry, Azure, etc.) takes priority when
+  // OPENAI_BASE_URL is set — this covers deployments that route all models
+  // through a gateway and cannot use provider-native keys directly.
   if (process.env.OPENAI_API_KEY && process.env.OPENAI_BASE_URL) return 'openai';
-  if (process.env.OPENROUTER_API_KEY)                          return 'openrouter';
-  if (process.env.GEMINI_API_KEY)                              return 'gemini';
+  if (process.env.ANTHROPIC_API_KEY)                             return 'anthropic';
+  if (process.env.OPENROUTER_API_KEY)                            return 'openrouter';
+  if (process.env.GEMINI_API_KEY)                                return 'gemini';
   return null;
 }
 
