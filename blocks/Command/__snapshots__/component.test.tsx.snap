@@ -1,3 +1,0 @@
-// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
-
-exports[`CommandPalette > snapshots > renders closed (no portal) 1`] = `null`;

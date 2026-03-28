@@ -1,9 +1,0 @@
-// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
-
-exports[`HoverCardBlock > snapshots > renders trigger 1`] = `
-<button
-  data-state="closed"
->
-  hover
-</button>
-`;
