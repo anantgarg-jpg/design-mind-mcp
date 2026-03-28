@@ -2,7 +2,7 @@ id: StatCard
 status: active
 component_type: card
 level: primitive
-npm_path: @innovaccer/ui-assets/block-primitives/StatCard
+npm_path: "@innovaccer/ui-assets/block-primitives/StatCard"
 structural_family: stat-metric-card
 family_invariants:
   - "Label: text-sm font-medium uppercase tracking-wide text-muted-foreground"

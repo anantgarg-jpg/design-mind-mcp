@@ -2,7 +2,7 @@ id: Checkbox
 status: active
 component_type: input
 level: primitive
-npm_path: @innovaccer/ui-assets/block-primitives/Checkbox
+npm_path: "@innovaccer/ui-assets/block-primitives/Checkbox"
 structural_family: form-input
 family_invariants:
   - "h-4 w-4 rounded-sm border border-subtle"

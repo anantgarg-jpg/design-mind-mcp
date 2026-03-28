@@ -2,7 +2,7 @@ id: Button
 status: active
 component_type: action
 level: primitive
-npm_path: @innovaccer/ui-assets/block-primitives/Button
+npm_path: "@innovaccer/ui-assets/block-primitives/Button"
 structural_family: action-trigger
 family_invariants:
   - "rounded-md border radius"

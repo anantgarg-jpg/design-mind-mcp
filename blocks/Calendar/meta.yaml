@@ -2,7 +2,7 @@ id: Calendar
 status: active
 component_type: data-display
 level: primitive
-npm_path: @innovaccer/ui-assets/block-primitives/Calendar
+npm_path: "@innovaccer/ui-assets/block-primitives/Calendar"
 structural_family: date-selector
 family_invariants:
   - "rounded-md container"

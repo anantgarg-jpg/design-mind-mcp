@@ -2,7 +2,7 @@ id: Card
 status: active
 component_type: layout
 level: primitive
-npm_path: @innovaccer/ui-assets/block-primitives/Card
+npm_path: "@innovaccer/ui-assets/block-primitives/Card"
 structural_family: content-container
 family_invariants:
   - "rounded-lg border border-subtle bg-card"

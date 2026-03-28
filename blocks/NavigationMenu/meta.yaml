@@ -2,7 +2,7 @@ id: NavigationMenu
 status: active
 component_type: navigation
 level: primitive
-npm_path: @innovaccer/ui-assets/block-primitives/NavigationMenu
+npm_path: "@innovaccer/ui-assets/block-primitives/NavigationMenu"
 structural_family: wayfinding
 family_invariants:
   - "Layout: flex items-center gap-1"

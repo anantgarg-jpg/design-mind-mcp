@@ -2,7 +2,7 @@ id: Label
 status: active
 component_type: form-control
 level: primitive
-npm_path: @innovaccer/ui-assets/block-primitives/Label
+npm_path: "@innovaccer/ui-assets/block-primitives/Label"
 structural_family: form-label
 family_invariants:
   - "Typography: text-base font-semibold leading-none"

@@ -2,7 +2,7 @@ id: HoverCard
 status: active
 component_type: overlay
 level: primitive
-npm_path: @innovaccer/ui-assets/block-primitives/HoverCard
+npm_path: "@innovaccer/ui-assets/block-primitives/HoverCard"
 structural_family: hover-preview
 family_invariants:
   - "Container: rounded-lg shadow-md z-20 bg-card border border-border p-4 max-w-[320px]"

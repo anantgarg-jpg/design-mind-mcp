@@ -2,7 +2,7 @@ id: EntityRow
 status: active
 component_type: row
 level: composite
-npm_path: @innovaccer/ui-assets/block-composites/EntityRow
+npm_path: "@innovaccer/ui-assets/block-composites/EntityRow"
 structural_family: actionable-list-row
 structural_role: "list-row"
 family_invariants:

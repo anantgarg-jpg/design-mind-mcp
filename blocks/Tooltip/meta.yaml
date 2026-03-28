@@ -2,7 +2,7 @@ id: Tooltip
 status: active
 component_type: overlay
 level: primitive
-npm_path: @innovaccer/ui-assets/block-primitives/Tooltip
+npm_path: "@innovaccer/ui-assets/block-primitives/Tooltip"
 structural_family: info-tooltip
 family_invariants:
   - "Content: rounded-md shadow-sm z-60"

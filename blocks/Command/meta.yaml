@@ -2,7 +2,7 @@ id: Command
 status: active
 component_type: action
 level: composite
-npm_path: @innovaccer/ui-assets/block-composites/Command
+npm_path: "@innovaccer/ui-assets/block-composites/Command"
 structural_family: command-palette
 family_invariants:
   - "Container: rounded-lg shadow-lg z-40 border border-border bg-card"

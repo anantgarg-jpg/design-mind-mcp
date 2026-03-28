@@ -2,7 +2,7 @@ id: AssessmentTab
 status: active
 component_type: form
 level: composite
-npm_path: @innovaccer/ui-assets/block-composites/AssessmentTab
+npm_path: "@innovaccer/ui-assets/block-composites/AssessmentTab"
 structural_family: assessment-form
 family_invariants:
   - "Instrument questions are verbatim — never paraphrased or shortened"

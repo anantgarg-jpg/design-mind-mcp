@@ -2,7 +2,7 @@ id: ActionableRow
 status: active
 component_type: row
 level: composite
-npm_path: @innovaccer/ui-assets/block-composites/ActionableRow
+npm_path: "@innovaccer/ui-assets/block-composites/ActionableRow"
 structural_family: actionable-list-row
 structural_role: "list-row"
 confidence: 0.95

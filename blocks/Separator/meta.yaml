@@ -2,7 +2,7 @@ id: Separator
 status: active
 component_type: layout
 level: primitive
-npm_path: @innovaccer/ui-assets/block-primitives/Separator
+npm_path: "@innovaccer/ui-assets/block-primitives/Separator"
 structural_family: visual-divider
 family_invariants:
   - "bg-border color token"

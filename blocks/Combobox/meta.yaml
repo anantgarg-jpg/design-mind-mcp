@@ -2,7 +2,7 @@ id: Combobox
 status: active
 component_type: action
 level: composite
-npm_path: @innovaccer/ui-assets/block-composites/Combobox
+npm_path: "@innovaccer/ui-assets/block-composites/Combobox"
 structural_family: searchable-select
 family_invariants:
   - "Trigger: h-9 rounded-md border border-subtle px-3 text-sm"

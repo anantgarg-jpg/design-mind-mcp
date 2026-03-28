@@ -2,7 +2,7 @@ id: Switch
 status: active
 component_type: input
 level: primitive
-npm_path: @innovaccer/ui-assets/block-primitives/Switch
+npm_path: "@innovaccer/ui-assets/block-primitives/Switch"
 structural_family: form-input
 family_invariants:
   - "Root: h-5 w-9 rounded-full"

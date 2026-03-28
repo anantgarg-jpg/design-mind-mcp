@@ -2,7 +2,7 @@ id: Select
 status: active
 component_type: input
 level: primitive
-npm_path: @innovaccer/ui-assets/block-primitives/Select
+npm_path: "@innovaccer/ui-assets/block-primitives/Select"
 structural_family: form-input
 family_invariants:
   - "Trigger: h-9 rounded-md border border-subtle px-3 bg-card"

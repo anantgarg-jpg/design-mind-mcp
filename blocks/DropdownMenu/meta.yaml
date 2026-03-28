@@ -2,7 +2,7 @@ id: DropdownMenu
 status: active
 component_type: overlay
 level: primitive
-npm_path: @innovaccer/ui-assets/block-primitives/DropdownMenu
+npm_path: "@innovaccer/ui-assets/block-primitives/DropdownMenu"
 structural_family: context-menu
 family_invariants:
   - "Container: rounded-md shadow-md z-20 bg-popover py-1 min-w-[8rem]"

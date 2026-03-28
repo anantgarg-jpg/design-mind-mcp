@@ -2,7 +2,7 @@ id: ScrollArea
 status: active
 component_type: layout
 level: primitive
-npm_path: @innovaccer/ui-assets/block-primitives/ScrollArea
+npm_path: "@innovaccer/ui-assets/block-primitives/ScrollArea"
 structural_family: scroll-container
 family_invariants:
   - "Container: overflow-hidden"

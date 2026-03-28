@@ -2,7 +2,7 @@ id: Table
 status: active
 component_type: data-display
 level: primitive
-npm_path: @innovaccer/ui-assets/block-primitives/Table
+npm_path: "@innovaccer/ui-assets/block-primitives/Table"
 structural_family: data-table
 family_invariants:
   - "Root: w-full text-base"

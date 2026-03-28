@@ -2,7 +2,7 @@ id: InlineEntityCard
 status: active
 component_type: card
 level: composite
-npm_path: @innovaccer/ui-assets/block-composites/InlineEntityCard
+npm_path: "@innovaccer/ui-assets/block-composites/InlineEntityCard"
 structural_family: inline-chat-card
 family_invariants:
   - "Only rendered inside Panel 2 chat context — never standalone"

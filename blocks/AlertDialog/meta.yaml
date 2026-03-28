@@ -2,7 +2,7 @@ id: AlertDialog
 status: active
 component_type: overlay
 level: primitive
-npm_path: @innovaccer/ui-assets/block-primitives/AlertDialog
+npm_path: "@innovaccer/ui-assets/block-primitives/AlertDialog"
 structural_family: confirmation-dialog
 family_invariants:
   - "rounded-lg shadow-lg container"

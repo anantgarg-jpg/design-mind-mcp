@@ -2,7 +2,7 @@ id: DataTable
 status: active
 component_type: data-display
 level: composite
-npm_path: @innovaccer/ui-assets/block-composites/DataTable
+npm_path: "@innovaccer/ui-assets/block-composites/DataTable"
 structural_family: data-table
 structural_role: "list-container"
 family_invariants:

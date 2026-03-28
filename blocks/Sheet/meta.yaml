@@ -2,7 +2,7 @@ id: Sheet
 status: active
 component_type: overlay
 level: primitive
-npm_path: @innovaccer/ui-assets/block-primitives/Sheet
+npm_path: "@innovaccer/ui-assets/block-primitives/Sheet"
 structural_family: slide-panel
 family_invariants:
   - "Panel: bg-card z-40 shadow-lg inset-y-0"

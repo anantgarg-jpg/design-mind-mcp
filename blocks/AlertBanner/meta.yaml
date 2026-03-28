@@ -2,7 +2,7 @@ id: AlertBanner
 status: active
 component_type: banner
 level: composite
-npm_path: @innovaccer/ui-assets/block-composites/AlertBanner
+npm_path: "@innovaccer/ui-assets/block-composites/AlertBanner"
 structural_family: severity-alert-banner
 family_invariants:
   - "Severity token map: critical=destructive, high=alert, medium=warning, low=accent"
