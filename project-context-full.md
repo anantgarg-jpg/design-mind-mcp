@@ -1,9 +1,10 @@
 # Design Mind MCP — Project Context
 
-> Auto-generated from repo on 2026-03-21. Do not edit manually — run `node scripts/generate-context.js` to refresh.
+> Auto-generated from repo on 2026-03-28. Do not edit manually — run `node scripts/generate-context.js` to refresh.
 
-**Repo:** https://github.com/anantgarg-jpg/design-mind-mcp
-**Hosted MCP:** https://design-mind-mcp-production.up.railway.app/sse
+**Repo (GitLab):** https://gitlab.innovaccer.com/innovaccer-ui/design-mind-mcp.git
+**Hosted MCP:** https://design-mind.truefoundry-aws.innovaccer.com/sse
+**Showcase repo:** https://gitlab.innovaccer.com/innovaccer-ui/design-mind-showcase
 
 ---
 
@@ -13,7 +14,7 @@ Design Mind MCP is a Claude Code tool (MCP server) that enforces consistent, saf
 
 Any team can point their `.mcp.json` at the hosted server and get the full Design Mind genome at build time.
 
-Tech stack: Node.js 18+, ES modules, dual stdio/HTTP+SSE transport, Railway deployment, flat-file cosine vector store (semantic) with TF-IDF fallback. No framework — pure Node `http`.
+Tech stack: Node.js 18+, ES modules, dual stdio/HTTP+SSE transport, TrueFoundry deployment, LLM reasoning over full genome (no flat-file vector store). No framework — pure Node `http`. Source of truth for block implementations: `@innovaccer/ui-assets` npm package.
 
 ---
 
@@ -21,117 +22,148 @@ Tech stack: Node.js 18+, ES modules, dual stdio/HTTP+SSE transport, Railway depl
 
 Three tools exposed by the server:
 
-**`consult_before_build`** — Call BEFORE generating any UI. Required: `intent_description`, `component_type`, `domain`, `user_type`. Returns: surface spec, structural guidance (dominant pattern family + invariants), top 5 patterns ranked by relevance, applicable genome rules (styling-tokens always included), ontology refs, all safety constraints with `applies_because`, episodic similar builds, confidence score (0.0–1.0), and gap flags.
+**`consult_before_build`** — Call BEFORE generating any UI. Required: `intent_description`. Optional: `domain`, `user_type`, `workflows`, `project_root`. Returns: surface matching (always `matched: false` — surfaces removed from genome), layout structure (LLM-generated from genome principles), per-workflow block assignments, applicable genome rules, ontology refs, safety constraints, confidence score (0.0–1.0), and gap flags.
 
-**`review_output`** — Call AFTER generating UI. Takes `generated_output` (code) + `original_intent`. Returns: `honored` (what followed the genome), `borderline` (defensible but not clearly right), `novel` (invented patterns with taste assessment), `fix` (violations with correction guidance), `copy_violations` (copy-voice.md breaches), `confidence` score. Auto-checks: hardcoded hex colors, Tailwind default color classes, Critical alert dismiss buttons, patient first-name-only, forbidden clinical terms, copy voice violations (see COPY_VOICE_CHECKS in contextAssembler.js).
+**`review_output`** — Call AFTER generating UI. Takes `generated_output` (code) + `original_intent` + optional `context_used`. Returns: `honored` (what followed the genome), `borderline` (defensible but not clearly right), `novel` (invented patterns with taste assessment), `fix` (violations with correction guidance), `copy_violations` (copy-voice.md breaches), `confidence` score. Auto-checks: hardcoded hex colors, Tailwind default color classes, Critical alert dismiss buttons, patient first-name-only, forbidden clinical terms, copy voice violations.
 
-**`report_pattern`** — Call ONLY when UI STRUCTURE changes (new layout, new interaction model, new slot arrangement). NOT when slot content changes (label, domain, icon, entity type). Submits to hosted API → Slack → human ratification. Falls back to `patterns/_candidates/` YAML. 3+ reports across projects = `ready_for_ratification`.
+**`report_pattern`** — Call ONLY when UI STRUCTURE changes (new layout, new interaction model, new slot arrangement). NOT when slot content changes (label, domain, icon, entity type). Submits to hosted API → Slack → human ratification. Falls back to `blocks/_candidates/` YAML. 3+ reports across projects = `ready_for_ratification`.
 
-**Pattern variation rule:** "Am I changing structure or content?" Content changes → use existing pattern. Structure changes → call `report_pattern`.
+**Pattern variation rule:** "Am I changing structure or content?" Content changes → use existing block. Structure changes → call `report_pattern`.
 
 ### Tool schemas
 
 #### consult_before_build
 ```yaml
 tool: consult_before_build
-version: 1.0.0
+version: 3.0.0
 description: >
-  Call before generating any UI surface or component. Returns the
-  relevant patterns, rules, ontology refs, and institutional memory
-  for the stated intent. Closes the context gap before generation.
+  REQUIRED before generating ANY UI — component, page, surface, or style change.
+  Returns the design genome construction packet: layout structure,
+  per-workflow block assignments, safety constraints, and copy rules.
+  The response is a blueprint, not a suggestion.
+
+  PRE-FLIGHT:
+  Ensure @innovaccer/ui-assets is in the project's package.json.
+  Ensure import '@innovaccer/ui-assets/tokens' is in the project entry file.
+
+  HOW TO CALL:
+  1. Describe WHAT you are building — who uses it, what data, what actions.
+  2. Include domain and user_type if inferable.
+  3. DECOMPOSE the intent into WORKFLOWS — bounded UI sections as { id, intent, region? }.
+
+  HOW TO USE THE RESPONSE:
+  1. layout is always LLM-generated (surfaces removed from genome) — treat as strong recommendation.
+  2. For each workflow, import blocks using exact import_instruction from @innovaccer/ui-assets.
+  3. family_invariants are CSS classes that must never be changed.
+  4. safety_applied constraints are non-negotiable.
+  5. After generating code, call review_output.
 
 input:
   intent_description:
     type: string
     required: true
-    description: >
-      Plain language description of what you are about to build.
-      Be specific about the user type, the data being shown,
-      and the actions available.
-    example: "A worklist row showing a care gap with status,
-              due date, and a Close Gap action for coordinators"
-
-  component_type:
-    type: string
-    required: true
-    enum: [card, row, banner, header, modal, drawer, form,
-           table, list, badge, button, page, panel, other]
+    description: "Rich description of what to build — who uses it, what data it shows, what actions are available"
 
   domain:
     type: string
-    required: true
-    enum: [clinical-alerts, patient-data, care-gaps, tasks,
-           navigation, data-display, forms, admin, other]
+    enum: ["clinical-alerts", "patient-data", "care-gaps", "tasks", "navigation", "data-display", "forms", "admin", "other"]
+    required: false
 
   user_type:
     type: array
     items:
-      enum: [clinician, coordinator, patient, admin]
-    required: true
+      type: string
+      enum: ["clinician", "coordinator", "patient", "admin", "data-engineer"]
+    required: false
 
-  product_area:
+  project_root:
     type: string
     required: false
-    description: Which product this is being built for
+    description: "Absolute path to the consuming project root. Auto-detected if omitted."
 
-output:
-  patterns:
+  workflows:
     type: array
-    description: Ranked relevant patterns from the library
+    required: false
+    description: >
+      Optional workflow decompositions. Each represents a bounded UI section.
+      When provided, the response maps blocks to each workflow individually.
+      When omitted, the entire intent is treated as a single workflow.
     items:
       id: string
-      relevance_score: number
-      when: string
-      not_when: string
-      because: string
-      confidence: number
-      usage_signal: object
+      intent: string
+      region: string   # optional
 
-  rules:
+output:
+  surface:
+    type: object
+    description: Always { matched: false, confidence: 0, surface_id: null, import_instruction: null } — surfaces removed from genome.
+    properties:
+      matched: boolean
+      confidence: number
+      surface_id: string   # always null
+      import_instruction: string   # always null
+
+  layout:
+    type: object
+    description: >
+      Layout structure. source is always "generated" — LLM composes regions from genome principles.
+    properties:
+      source: string   # always "generated"
+      regions:
+        type: array
+        items:
+          id: string
+          order: number
+          blocks: array
+          never: array
+
+  workflows:
     type: array
-    description: Applicable cross-component rules
+    description: Per-workflow block assignments. Each block is enriched with genome metadata.
+    items:
+      id: string
+      intent: string
+      blocks:
+        type: array
+        items:
+          id: string
+          level: string   # "primitive" | "composite"
+          npm_path: string
+          import_instruction: string
+          family_invariants: array
+          when: string
+          not_when: string
+
+  blocks:
+    type: array
+    description: Flat list of all blocks across all workflows (backwards compatibility).
+
+  rules_applied:
+    type: array
     items:
       rule_id: string
-      summary: string
+      applies_because: string
+
+  safety_applied:
+    type: array
+    items:
+      constraint_id: number
       applies_because: string
 
   ontology_refs:
     type: array
-    description: Relevant concept definitions
     items:
       concept: string
       canonical_name: string
       ui_label: string
-      notes: string
-
-  safety_constraints:
-    type: array
-    description: Hard constraints in scope for this intent
-    items:
-      constraint_id: number
-      rule: string
-      applies_because: string
-
-  similar_builds:
-    type: array
-    description: Past builds from episodic memory with similar intent
-    items:
-      build_id: string
-      intent: string
-      what_worked: string
-      what_to_watch: string
 
   confidence:
     type: number
-    description: >
-      How well the genome covers this intent (0.0–1.0).
-      Below 0.7 means the agent is likely to invent — flag output.
+    description: How well the genome covers this intent (0.0–1.0).
 
   gaps:
     type: array
-    description: What the system doesn't have a pattern for yet
-    items:
-      type: string
+    description: What the system does not have coverage for.
 ```
 
 #### report_pattern
@@ -139,37 +171,41 @@ output:
 tool: report_pattern
 version: 1.0.0
 description: >
-  Call when you have built something novel that the genome doesn't
-  cover. This is how new patterns enter the candidate queue.
-  The Design Mind reviews, and if seen by 3+ teams, it goes to
-  human ratification.
+  Call when you have built something novel that the genome doesn't cover.
+  This is how new blocks enter the candidate queue.
+  The Design Mind reviews, and if seen by 3+ teams, it goes to human ratification.
 
 input:
   pattern_name:
     type: string
     required: true
-    description: A short descriptive name for the pattern
+    description: A short descriptive name for the block (e.g. "BulkActionToolbar")
+
+  type:
+    type: string
+    enum: ["primitive", "composite", "domain", "surface"]
+    required: false
 
   description:
     type: string
     required: true
-    description: What the pattern is and what problem it solves
+    description: What the block is and what problem it solves
 
   intent_it_serves:
     type: string
     required: true
-
-  implementation_ref:
-    type: string
-    required: false
-    description: File path or PR link to the implementation
 
   why_existing_patterns_didnt_fit:
     type: string
     required: true
     description: >
       What you looked for in consult_before_build and why
-      none of the returned patterns covered this case
+      none of the returned blocks covered this case
+
+  closest_match_block_id:
+    type: string
+    required: true
+    description: The ID of the closest block from consult_before_build. Pass "none" if nothing matched.
 
   ontology_refs:
     type: array
@@ -179,7 +215,7 @@ input:
 output:
   candidate_id:
     type: string
-    description: ID assigned to this candidate in patterns/_candidates/
+    description: ID assigned to this candidate in blocks/_candidates/
 
   similar_candidates:
     type: array
@@ -251,13 +287,11 @@ output:
       rule_violated: string
       correction: string
 
-  candidate_patterns:
+  copy_violations:
     type: array
-    description: Novel items worth promoting to the genome
     items:
-      name: string
-      description: string
-      promoted_to_candidates: boolean
+      violation: string
+      correction: string
 
   confidence:
     type: number
@@ -272,9 +306,8 @@ output:
 | Level | Location | Encodes |
 |-------|----------|---------|
 | **Tokens** | `genome/rules/styling-tokens.rule.md` | Design tokens, DM Sans, 4px grid, elevation, z-index, motion |
-| **Decisions** | `patterns/*/meta.yaml` | Atomic UI choices (StatusBadge, ClinicalAlertBanner, StatCard, SectionHeader) |
-| **Compositions** | `patterns/*/meta.yaml` | Governed combinations (ActionableRow, PatientContextHeader, PatientRow) |
-| **Surfaces** | `surfaces/*.surface.yaml` | Full artifacts: intent, omissions, ordering, actions, hard never rules |
+| **Blocks** | `blocks/*/meta.yaml` | Reusable UI structures with product decisions baked in. Implementations live in `@innovaccer/ui-assets` npm package. Two sub-levels: `primitive` (single-purpose), `composite` (assembles primitives). |
+| **Surfaces** | *(removed)* | Surface YAMLs have been deleted — surfaces are no longer part of the genome. `consult_before_build` always returns `surface.matched: false`. |
 
 **Rules registry (v1.3.0):**
 
@@ -556,8 +589,8 @@ WHEN building any artifact surface:
 USE:
   - Full-width content filling the Panel 3 tab area
   - Own content header if needed (title + primary action, e.g. "New task")
-  - PatientContextHeader at the top when surface is patient-scoped
-  - ClinicalAlertBanner above content header when active alerts exist
+  - EntityContextHeader at the top when surface is patient-scoped
+  - AlertBanner above content header when active alerts exist
 
 NOT:
   - Top navigation bar within the artifact — shell handles navigation
@@ -658,7 +691,7 @@ WHEN — patient context switching:
   - user is in a patient-scoped workflow in Panel 3
 
 USE:
-  - PatientContextHeader at the top of the artifact surface
+  - EntityContextHeader at the top of the artifact surface
   - patient search accessible via Panel 2 (ask the chat)
   - explicit dismiss affordance to return to population-level view
 
@@ -1005,7 +1038,7 @@ Base unit: 4px. All spacing is a multiple of 4.
   space-2  8px     p-2        Badge padding, chip padding, inline gaps
   space-3  12px    p-3        Alert banner padding, compact card padding
   space-4  16px    p-4        Standard card padding, section padding
-  space-6  24px    p-6        PatientContextHeader horizontal padding
+  space-6  24px    p-6        EntityContextHeader horizontal padding
   space-8  32px    p-8        Major section separation, panel gutters
   space-12 48px    p-12       Page-level vertical spacing (rare)
   space-16 64px    p-16       Reserved (almost never needed)
@@ -1014,7 +1047,7 @@ COMPONENT SPACING CONVENTIONS:
   Cards (bg-card):        p-4 (16px all sides)
   Rows (list items):      px-4 py-3.5 (16px horizontal, 14px vertical)
   Alert banners:          p-4 with gap-3 internal
-  PatientContextHeader:   px-6 py-4
+  EntityContextHeader:    px-6 py-4
   Section gaps:           gap-4 (16px) between cards, gap-3 (12px) between rows
   Meta row (below title): mt-1.5 (6px), gap-3 (12px) between items
   Button groups:          gap-2 (8px) between buttons, gap-1.5 (6px) for icon buttons
@@ -1045,18 +1078,18 @@ NEVER:
   sm           rounded-sm      2px      Rarely used — prefer md
   md (default) rounded-md      6px      Inputs, buttons, dropdowns, tooltips
   lg           rounded-lg      8px      Cards, panels, dialogs, alert banners
-  xl           rounded-xl      12px     Inline cards within chat (InlinePatientCard)
+  xl           rounded-xl      12px     Inline cards within chat (InlineEntityCard)
   full         rounded-full    9999px   Badges, pills, status indicators, avatars, chips
 
 COMPONENT DEFAULTS:
-  Cards (CareGapCard, StatCard):   rounded-lg
-  Alert banners:                    rounded-r-md (left border accent, right rounded)
-  StatusBadge:                      rounded-full (always)
-  ChatQuickActionChip:              rounded-full (always)
-  Buttons:                          rounded-md (inherited from component library)
-  Inputs:                           rounded-md
-  Avatars/initials:                 rounded-full
-  Dropdowns/popovers:               rounded-md
+  Cards (StatCard, ActionableRow card variant):   rounded-lg
+  Alert banners:                                   rounded-r-md (left border accent, right rounded)
+  StatusBadge:                                     rounded-full (always)
+  ChatQuickActionChip:                             rounded-full (always)
+  Buttons:                                         rounded-md (inherited from component library)
+  Inputs:                                          rounded-md
+  Avatars/initials:                                rounded-full
+  Dropdowns/popovers:                              rounded-md
 
 NEVER:
   - Use rounded-2xl or rounded-3xl — too soft for clinical context
@@ -1072,7 +1105,7 @@ borders, not shadows, for visual separation.
   LEVEL         CLASS               WHEN
   ────────────  ──────────────────  ────────────────────────────────────────
   flat          (no shadow)         Rows, list items, inline elements, headers
-  card          shadow-card         Cards at rest (CareGapCard, StatCard)
+  card          shadow-card         Cards at rest (StatCard, ActionableRow card)
   card-hover    shadow-card-hover   Cards on hover — subtle lift
   dropdown      shadow-md           Dropdowns, popovers, context menus
   dialog        shadow-lg           Modals, dialogs, command palette
@@ -1080,8 +1113,8 @@ borders, not shadows, for visual separation.
 
 WHEN NOT TO USE SHADOWS:
   - Rows in lists — rows use border-b, never shadow
-  - PatientContextHeader — uses border-b, no shadow
-  - ClinicalAlertBanner — uses colored left border, no shadow
+  - EntityContextHeader — uses border-b, no shadow
+  - AlertBanner — uses colored left border, no shadow
   - Sidebar content — sidebar tokens handle their own surface treatment
   - Any element inside a card — shadows are for top-level containers only
 
@@ -1096,7 +1129,7 @@ NEVER:
   LAYER         Z-INDEX   WHAT
   ────────────  ────────  ──────────────────────────────────────
   base          0         Normal content flow
-  sticky        10        Sticky headers, tab bars, PatientContextHeader
+  sticky        10        Sticky headers, tab bars, EntityContextHeader
   dropdown      20        Dropdowns, popovers, context menus
   overlay       30        Modal backdrops, drawer overlays
   modal         40        Dialogs, confirmation modals, command palette
@@ -1211,79 +1244,131 @@ NEVER:
 # Hard constraints
 # These rules are authored by clinical SMEs and design leadership.
 # No agent — including the Design Mind — can propose mutations to this file.
-# Changes require explicit approval from clinical leadership + a human commit.
+# Changes require explicit approval from design leadership + a human commit.
 
 ---
 
 ## Severity color rules
 
-1. The color red (--severity-critical, hex #DC2626 ± 10% lightness)
-   is reserved exclusively for Critical severity clinical alerts.
-   It may not be used for: brand elements, CTAs, hover states,
-   success states, decorative elements, or any non-clinical signal.
+1. `--severity-critical` is reserved exclusively for Critical severity alerts and Alert-type CTAs
+   that are part of a critical alert component. It may not be used for: brand elements,
+   general CTAs, hover states, success states, or decorative elements.
 
-2. Amber (--severity-high, hex #D97706 ± 10% lightness) is reserved
-   for High severity alerts and Overdue status indicators only.
+2. `--severity-high` is reserved for High severity alerts and Overdue status indicators only.
 
-3. Green (--status-success) is used for Completed and Closed states.
-   It is never used for promotional content or marketing copy.
+3. `--status-success` is used for success, Completed, and Closed states. It may only appear
+   in a CTA when that CTA is within a success toast or confirmation message. It is not used
+   for decorative or neutral UI elements.
 
-4. Severity colors are never overridden by theme customization,
-   white-label configuration, or per-product styling.
+4. Severity colors are never overridden by theme customization, white-label configuration,
+   or per-block, per-artifact, or per-surface styling.
 
 ---
 
 ## Alert dismissal rules
 
-5. Critical severity alerts cannot be dismissed. The only permitted
-   actions are: Acknowledge, Escalate. Any UI that renders a
-   "Dismiss" or "Close" control for a Critical alert is non-compliant.
+5. Critical severity alerts cannot be dismissed. The only permitted actions are Acknowledge
+   and Escalate — these are intents, not required copy. Any UI that renders a dismiss or
+   close control for a Critical alert is non-compliant.
 
-6. High severity alerts cannot be dismissed without a documented reason.
-   A reason selector is required before the dismiss action completes.
-
-7. Acknowledgment of Critical or High alerts always creates an audit
-   log entry. This entry cannot be suppressed or deferred.
+6. High severity alert dismissal behavior is use-case defined but must be intentional
+   and reversible.
 
 ---
 
 ## Patient identity rules
 
-8. Patient name is always displayed as: Last, First (formal display)
-   or First Last (conversational display). Never First name only
-   in clinical contexts. Middle name is optional.
+7. Patient name is always displayed as: Last, First (formal display) or First Last
+   (conversational display). Never first name only. Middle name is optional. When a patient
+   name appears within a sentence, First Last is used even in formal display contexts.
 
-9. MRN (Medical Record Number) is always labeled "MRN" — never
-   "ID", "Patient ID", "Record #", or any other label.
-
-10. Date of birth is always displayed in full (MMM D, YYYY).
-    Never abbreviated to age alone in clinical contexts.
-    Age may be shown alongside DOB but never replaces it.
+8. Date of birth is always displayed as MM/DD/YYYY. MM/DD/YY may be used only when space
+   is critically constrained. Age may be shown alongside DOB but never replaces it.
 
 ---
 
-## Confirmation rules
+## Confirmation and destructive action rules
 
-11. Any action that modifies or deletes clinical record data requires
-    an explicit confirmation step with a consequence statement.
-    "Are you sure?" alone is never sufficient.
-
-12. Bulk actions affecting more than 10 patient records require a
-    typed confirmation string (not just a button click).
+9. Any modification or deletion of data requires an explicit confirmation step.
+   Delete actions must use destructive tokens.
 
 ---
 
-## Terminology rules
+## Data display rules
 
-13. The following terms are forbidden in all UI copy:
-    - "Normal" (use specific clinical values or "Within range")
-    - "Fine" (too casual for clinical communication)
-    - "Don't worry" (dismisses clinical concern)
-    - "Unfortunately" (adds emotional weight to factual statements)
+10. Empty or null data fields must never appear blank. A consistent placeholder —
+    such as "—" or "Not recorded" — must be shown. Blank space in a data field
+    can be misread as a cleared or zero value.
 
-14. Diagnoses, medications, and clinical codes are never paraphrased
-    or simplified in data display. Show the canonical clinical term.
-    Plain language explanations may be shown alongside, never instead.
+11. Timestamps must always display an absolute date and time. Relative formats
+    (e.g. "2 hours ago", "Yesterday") may be shown alongside but never replace
+    the absolute value.
+
+---
+
+## Interactive state rules
+
+12. Any surface containing data entry must warn the user before navigating away
+    with unsaved changes. Silent discard is not permitted.
+
+13. Form and input error states must use the designated error token. `--severity-critical`
+    must not be used for routine validation errors.
+
+---
+
+## CTA hierarchy rules
+
+14. Only one primary CTA may be visible to the user on any single page or surface
+    at a time. No surface may render two or more simultaneously visible primary CTAs —
+    not in wizards, multi-action surfaces, or modals.
+    Exception: row-level or item-level primary CTAs that appear exclusively on hover are
+    permitted, because only one can be visible at a time. This exception applies only when
+    the CTA is fully hidden at rest (opacity-0 or not rendered) and revealed solely on
+    hover of its parent row or item. A primary CTA that is visible at rest — even at
+    reduced opacity — does not qualify for this exception.
+    Secondary and tertiary actions must use visually subordinate treatments regardless
+    of hover state.
+
+---
+
+## Copy and language constraints
+
+15. "We" and all first-person constructions are prohibited in
+    every user-facing string. No exceptions.
+
+16. Confirmation dialogs must never use "Are you sure?" or
+    equivalent. The header must state the consequence. The
+    primary CTA label must match the header.
+
+17. Secondary buttons on modals, interstitials, and popovers
+    must use "Close", not "Cancel".
+
+---
+
+## CTA display rules
+
+18. CTA label text must never wrap. Button labels are always single-line
+    (whitespace-nowrap). When space is constrained, other content columns — such as
+    names, descriptions, or metadata — must shrink or truncate to preserve the full
+    visibility of the CTA label.
+
+---
+
+## Accessibility constraints
+
+20. focus-visible must never be suppressed with outline:none or
+    ring-0 without an explicit visible replacement. The --ring
+    token exists for this purpose.
+
+## Block constraints
+
+22. When a Block composes another Block, the consuming Block must not pass className overrides that conflict with any CSS property listed in the composed Block's family_invariants. Only additive classes — positioning, sizing, spacing, and layout — are permitted on a child Block. To change an invariant property, the source Block's meta.yaml and component must be updated directly, only when the change is justified by a new design requirement.
+
+23. When a primitive or composite Block's component or meta.yaml is modified, all consuming Blocks and surfaces that import or compose that Block must be reviewed and updated to reflect the change. No upstream change may be committed without verifying downstream consumers remain compliant.
+
+24. Import blocks from @innovaccer/ui-assets using the exact tier path (block-primitives, block-composites). Never import from shadcn (@/components/ui/), local paths, or relative paths when a genome block exists. Never reimplement a block inline. If a block needs changes that alter its structure, register a candidate pattern via report_pattern.
+
+25. Only build composite blocks using the primitive blocks. Never modify existing primitives. Do not create new primitives unless the functionality is completely different from what is supported by existing primitives, regardless of domain or semantics.
 
 ---
 
@@ -1293,8 +1378,7 @@ NEVER:
 # Severity schema — machine-readable
 # Single source of truth for severity rendering across all surfaces.
 # Updated to use the design system tokens from theme.css.
-# Referenced by: ClinicalAlertBanner/meta.yaml, StatusBadge/meta.yaml,
-# runtime generation layer, conversational layer.
+# Referenced by: AlertBanner/meta.yaml, runtime generation layer, conversational layer.
 
 # IMPORTANT NAMING NOTE:
 # The CSS token --alert is Orange and maps to HIGH clinical severity.
@@ -1536,8 +1620,8 @@ AlertSeverity:
     critical:
       canonical_name: "Critical"
       synonyms: ["urgent", "STAT", "P1", "high-priority", "emergent"]
-      color_token: "--severity-critical"
-      hex_reference: "#DC2626"   # red-600 — never change without SME approval
+      color_token: "--destructive"
+      hex_reference: "#D62400"
       badge_variant: "solid-red"
       requires_acknowledgment: true
       sla_hours: 1
@@ -1548,8 +1632,8 @@ AlertSeverity:
     high:
       canonical_name: "High"
       synonyms: ["elevated", "P2", "important", "significant"]
-      color_token: "--severity-high"
-      hex_reference: "#D97706"   # amber-600
+      color_token: "--alert"
+      hex_reference: "#B24D00"
       badge_variant: "solid-amber"
       requires_acknowledgment: true
       sla_hours: 4
@@ -1558,8 +1642,8 @@ AlertSeverity:
     medium:
       canonical_name: "Medium"
       synonyms: ["moderate", "P3", "informational", "standard"]
-      color_token: "--severity-medium"
-      hex_reference: "#CA8A04"   # yellow-600
+      color_token: "--warning"
+      hex_reference: "#AD8200"
       badge_variant: "subtle-yellow"
       requires_acknowledgment: false
       sla_hours: 24
@@ -1568,8 +1652,8 @@ AlertSeverity:
     low:
       canonical_name: "Low"
       synonyms: ["minor", "P4", "routine", "informational"]
-      color_token: "--severity-low"
-      hex_reference: "#2563EB"   # blue-600
+      color_token: "--accent"
+      hex_reference: "#0051AD"
       badge_variant: "subtle-blue"
       requires_acknowledgment: false
       sla_hours: 72
@@ -1786,1839 +1870,120 @@ Destructive action button copy: match the action label exactly
 
 ---
 
-## Patterns — ratified
+## Blocks — ratified
 
-11 ratified patterns:
+54 ratified blocks (all meta.yaml only — implementations live in `@innovaccer/ui-assets`):
 
-- **ActionableRow**
-- **ChatQuickActionChip**
-- **ClinicalAlertBanner**
-- **InlinePatientCard**
-- **OutreachLogRow**
-- **PatientContextHeader**
-- **PatientRow**
-- **SdohAssessmentTab**
-- **SectionHeader**
-- **StatCard**
-- **StatusBadge**
+Accordion, ActionableRow, ActivityLogRow, Alert, AlertBanner, AlertDialog,
+AssessmentTab, Avatar, Badge, Breadcrumb, Button, Calendar, Card, Carousel,
+Chart, ChatQuickActionChip, Checkbox, Collapsible, Combobox, Command,
+ContextMenu, DataTable, DatePicker, Dialog, Drawer, DropdownMenu,
+EntityContextHeader, EntityRow, Form, HoverCard, InlineEntityCard, Input,
+InputOTP, Label, NavigationMenu, Pagination, Popover, Progress, RadioGroup,
+Resizable, ScrollArea, SectionHeader, Select, Separator, Sheet, Skeleton,
+Slider, Sonner, StatCard, Switch, Table, Tabs, Textarea, Tooltip
 
----
-
-### ActionableRow
-
-#### meta.yaml
-```yaml
-id: ActionableRow
-status: active
-component_type: row
-structural_family: actionable-list-row
-confidence: 0.95
-version: 1.0.0
-introduced: refactor-v1
-last_evolved: refactor-v1
-
-summary: >
-  The single actionable unit for any entity that appears in a list and needs
-  a primary action, optional secondary actions, and status display. Covers
-  care gaps, tasks, protocols, assessments, patients — anything that follows
-  the "scan → act" coordinator workflow. Two layout variants share identical
-  interaction invariants: row (border-l-2 accent stripe, border-b divider)
-  and card (rounded-lg border, standalone shadow).
-
-  Rule: use ActionableRow. Do NOT create a new pattern just because the entity
-  domain changes. New pattern only when the STRUCTURE changes — different
-  interaction model, different layout container, different slot arrangement.
-
-when:
-  - displaying any entity in a list where the user can take a primary action
-  - worklist rows: care gaps, tasks, protocols, assessments
-  - variant="row" when rows live inside a shared container (bg-card rounded-lg border)
-  - variant="card" when each row is a standalone card (its own border + shadow)
-
-not_when:
-  - summary counts or metrics → use StatCard
-  - patient identity header → use PatientContextHeader
-  - clinical alert requiring immediate acknowledgment → use ClinicalAlertBanner
-  - read-only display with no actions (no primaryAction, no onExpand) — just use a plain div
-
-variants:
-  - id: row
-    description: >
-      Default. Used when rows share a container (bg-card rounded-lg border overflow-hidden).
-      Has a colored left border stripe (accent prop) and a bottom border divider.
-      last:border-0 removes the final divider automatically.
-    invariants:
-      - "flex items-start gap-3 px-4 py-3.5 border-b border-border/40 last:border-0 bg-card border-l-2 transition-colors hover:bg-muted/60"
-      - "accent stripe: border-l-2 border-{warning|accent|success|border}"
-    slots:
-      - title (required)
-      - label (optional monospace badge above title)
-      - contextLabel (optional patient name when not in patient-scoped view)
-      - status (optional StatusBadge)
-      - meta[] (icon + text pairs, up to ~3)
-      - primaryAction (right-aligned button)
-      - secondaryActions (MoreHorizontal dropdown)
-      - onExpand (chevron that opens detail panel)
-
-  - id: card
-    description: >
-      Used when each row is a standalone card. No shared container.
-      Has its own border, rounded corners, and shadow.
-    invariants:
-      - "flex items-start justify-between gap-4 p-4 bg-card border border-border/60 rounded-lg shadow-card hover:shadow-card-hover transition-shadow"
-    slots:
-      - title (required)
-      - label (optional monospace badge above title)
-      - contextLabel (optional patient name)
-      - status (optional StatusBadge)
-      - meta[] (icon + text pairs)
-      - primaryAction (right-aligned button)
-      - secondaryActions (MoreHorizontal dropdown)
-      - onExpand (not typically used in card variant)
-
-variation_rule: >
-  Slots are free — fill them with any label, icon, domain text, or token.
-  Slot content is NOT a new pattern. A new pattern is only warranted when
-  the STRUCTURE changes: different container type, different interaction model
-  (e.g., drag-and-drop, multi-select, inline edit), different slot arrangement,
-  or a layout that cannot be expressed as row or card variant.
-
-props:
-  variant: '"row" | "card" — default "row"'
-  title: "string — primary label (required)"
-  titleMono: "boolean — renders title in monospace (for codes like PHQ-9)"
-  label: "string — small badge above title (e.g. measure code HBD)"
-  labelMono: "boolean — renders label in monospace"
-  contextLabel: "string — patient name when outside patient-scoped view"
-  status: "StatusKey — passed to StatusBadge"
-  accent: '"warning" | "accent" | "success" | "none" — row stripe color'
-  meta: "MetaItem[] — [{icon?, text, urgent?, success?}]"
-  primaryAction: "{ label: string; onClick: () => void }"
-  secondaryActions: "SecondaryAction[] — rendered in MoreHorizontal dropdown"
-  onExpand: "() => void — shows ChevronRight button"
-  onRowClick: "() => void — makes full row clickable (e.g., open tab)"
-  dimmed: "boolean — opacity-50, no actions, no hover"
-
-ontology_refs:
-  entities: [CareGap, Task, CareProtocol, Assessment, Patient]
-  states: [CareGapStatus, TaskStatus, ProtocolStatus]
-  actions: [CloseGap, Complete, Activate, View, Assign, AddNote, Exclude, StartAssessment]
-
-embedding_hint: >
-  actionable row card list worklist care gap task protocol assessment
-  coordinator close gap complete assign exclude add note overdue status
-  accent stripe variant row card entity action unit scan act workflow
-  patient name context label meta icon primary action secondary dropdown
-```
+All blocks are imported from `@innovaccer/ui-assets` using the exact `import_instruction`
+returned by `consult_before_build`. Block snapshots are no longer stored in the repo —
+the npm package is the single source of truth for implementations.
 
 ---
 
-### ChatQuickActionChip
+## Architecture
 
-#### meta.yaml
-```yaml
-id: ChatQuickActionChip
-status: active
-component_type: button
-structural_family: quick-action-chip
-family_invariants:
-  - "Shape: rounded-full border border-border/70 hover:border-primary/50 shadow-card"
-  - "Triggers inline card in Panel 2 only — never opens artifact tab"
-  - "Read-only triggers — chips never modify data directly"
-  - "Maximum ~4 chips in strip before needing command palette"
-confidence: 0.85
-version: 1.0.0
-introduced: 2026-03-20
-last_evolved: 2026-03-20
+### Genome loader
 
-summary: >
-  A persistent strip of pill-shaped chip buttons rendered above the chat input in
-  Panel 2. Each chip is a one-tap shortcut that injects a structured assistant
-  response inline in the conversation — no artifact tab is opened. The chip style
-  is rounded-full, border-border/70, hover:border-primary/50, shadow-card. The
-  triggered response is an assistant message with a text lead and an InlineCard
-  attached below it.
+At startup, `genomeLoader.js` reads all blocks (`blocks/*/meta.yaml`), rules (`genome/rules/*.rule.md`), safety constraints (`safety/hard-constraints.md`), ontology files, taste, and principles into a module-level in-memory cache. The cache is used for all tool calls; hot-reload (dev only) polls for file changes and swaps the cache atomically.
 
-when:
-  - adding a one-tap shortcut for a frequently-needed data lookup in Panel 2
-  - the data to surface is compact enough to fit in an inline card (not a full artifact)
-  - coordinator needs the answer in conversation flow without context-switching
+Surfaces (`surfaces/`) have been removed from the genome — the directory no longer exists. `consult_before_build` always returns `surface.matched: false` and `layout.source: "generated"`.
 
-not_when:
-  - the data requires a full list, table, or multi-record view — open an artifact tab instead
-  - the action modifies data — chips are read-only triggers
-  - more than ~4 chips (strip becomes unwieldy — consider a command palette instead)
+### LLM composition
 
-because: >
-  Panel 2 is the primary navigation instrument. Chips let coordinators surface
-  structured context without typing a query or leaving the conversation flow. They
-  complement — not replace — full artifact tabs.
+`llmClient.js` supports two modes:
 
-ontology_refs:
-  entities: [Patient, CareGap]
-  states: []
-  actions: []
+**Gateway mode (recommended for production):**
+Set `OPENAI_API_KEY` + `OPENAI_BASE_URL`. The gateway (TrueFoundry) serves all models through one OpenAI-compatible endpoint. Models are tried in priority order:
+  1. `ANTHROPIC_MODEL` (default: `claude-sonnet-4-5`)
+  2. `OPENAI_MODEL` (default: `gpt-4o`)
+  3. `GEMINI_MODEL` (fallback)
 
-usage_signal:
-  renders_total: 0
-  products: []
-  override_rate: 0.0
+**Direct provider mode (local / CI):**
+Set `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` (no BASE_URL), or `GEMINI_API_KEY`. Priority: Anthropic → OpenAI → Gemini.
 
-embedding_hint: >
-  chat chip quick action shortcut pill button panel 2 inline card conversation
-  one tap lookup coordinator last outreach next patient structured response
-  no artifact tab chat input strip persistent
-```
+Two LLM calls:
+- `callDesignMind` — used by `consult_before_build`. Sends the full serialised genome as context, then the intent/domain/user_type/workflows. The model selects matching blocks, composes layout regions from genome principles (no surface matching), applies rules and safety constraints, and returns structured JSON.
+- `callCritic` — used by `review_output`. Sends the genome plus the generated code and auto-check results. Returns `honored`, `borderline`, `fix`, `novel`, and `copy_violations` arrays.
 
-#### component.tsx
-```tsx
-// Canonical implementation lives in shell/panels/ChatPanel.tsx
-// The chip strip and handleXxxChip handlers are the reference implementation.
-// See also: patterns/InlinePatientCard/ for the card triggered by each chip.
-export { ChatPanel } from "../../shell/panels/ChatPanel"
-```
+Both calls include a JSON-parse retry loop: if the model returns invalid JSON, one follow-up message is sent requesting clean JSON before giving up.
+
+### Prompt caching (Anthropic direct mode only)
+
+The genome context string is sent as a `cache_control: { type: "extended" }` block in the first user message. This caches the genome prefix at the Anthropic API level so repeated calls within the cache TTL avoid re-tokenising the genome on every request.
+
+### Tools summary
+
+| Tool | Required fields | Notes |
+|------|----------------|-------|
+| `consult_before_build` | `intent_description` | `scope` parameter removed. `domain`, `user_type`, `workflows`, `project_root` optional. |
+| `review_output` | `generated_output`, `original_intent` | Hybrid: auto-checks run first, then LLM critique |
+| `report_pattern` | `pattern_name`, `description`, `intent_it_serves`, `why_existing_patterns_didnt_fit`, `closest_match_block_id` | Unchanged from v1 |
+| `ping` | — | Returns build info and kb stats |
 
 ---
 
-### ClinicalAlertBanner
+## Deployment
 
-#### meta.yaml
-```yaml
-id: ClinicalAlertBanner
-status: active
-component_type: banner
-structural_family: severity-alert-banner
-family_invariants:
-  - "Severity token map: critical=destructive, high=alert, medium=warning, low=accent"
-  - "Never hardcode colors — all visual decisions flow from the severity prop"
-  - "Critical and High must render Acknowledge — never Dismiss on Critical"
-  - "Always renders above page content — never inline or in sidebar"
-  - "Stacking order: Critical first, High, Medium, Low"
-confidence: 0.93
-version: 1.0.0
-introduced: seed-v0
-last_evolved: seed-v0
+### Hosted (TrueFoundry)
 
-summary: >
-  The primary surface for displaying clinical alerts that require
-  attention or action. Severity is always visible. Permitted actions
-  are determined by severity level. This component is the most
-  safety-critical in the library.
+The server runs at TrueFoundry:
 
-when:
-  - displaying any Alert entity that requires clinical attention
-  - interrupting a workflow with patient safety information
-  - system needs to communicate urgency with required action
-
-not_when:
-  - success confirmation → use Toast
-  - passive informational message with no action → use InfoBanner
-  - inline field validation error → use FormFieldError
-  - displaying a list of historical alerts → use AlertHistoryRow
-
-critical_rules:
-  - severity prop drives ALL visual and behavioral decisions
-  - never pass custom colors — they come from safety/severity-schema.yaml
-  - Critical and High alerts MUST render an Acknowledge button
-  - Critical alerts MUST NOT render a Dismiss button (safety constraint)
-  - High alerts may render Dismiss only with reason selector
-  - onAcknowledge callback is required for Critical and High severity
-  - component fires audit event on every acknowledgment
-
-layout:
-  - always renders above page content, never in sidebar or inline
-  - stacks vertically when multiple alerts are present
-  - Critical alerts stack before High, High before Medium, Medium before Low
-
-ontology_refs:
-  entities: [Alert, Patient]
-  states: [AlertSeverity]
-  actions: [Acknowledge, Escalate, Dismiss]
-
-safety_refs:
-  - safety/hard-constraints.md rules 1, 5, 6, 7
-  - safety/severity-schema.yaml
-
-usage_signal:
-  renders_total: 0
-  products: []
-  override_rate: 0.0
-
-embedding_hint: >
-  clinical alert banner interrupt workflow severity urgent patient
-  safety acknowledge escalate dismiss critical high medium low
-  warning notification required action audit trail
-```
-
-#### component.tsx
-```tsx
-import { AlertOctagon, AlertTriangle, AlertCircle, Info, X, ArrowUpRight } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-
-// Severity colors use design tokens from theme.css — NOT Tailwind defaults
-// Full severity spec in safety/severity-schema.yaml
-// Token disambiguation in genome/rules/styling-tokens.rule.md
-
-type Severity = "critical" | "high" | "medium" | "low"
-
-const SEVERITY_CONFIG = {
-  critical: {
-    // --destructive = Red = Critical severity
-    containerClass: "bg-destructive/10 border-l-4 border-destructive",
-    iconClass: "text-destructive",
-    titleClass: "text-destructive",
-    bodyClass: "text-destructive/80",
-    Icon: AlertOctagon,
-    canDismiss: false,
-    requiresAcknowledge: true,
-    requiresDismissReason: false,
-  },
-  high: {
-    // --alert = Orange = High severity (NOT the Alert entity)
-    containerClass: "bg-[var(--alert-light)] border-l-4 border-alert",
-    iconClass: "text-alert",
-    titleClass: "text-alert",
-    bodyClass: "text-alert/80",
-    Icon: AlertTriangle,
-    canDismiss: true,
-    requiresAcknowledge: true,
-    requiresDismissReason: true,
-  },
-  medium: {
-    // --warning = Yellow = Medium severity
-    containerClass: "bg-[var(--warning-light)] border-l-4 border-warning",
-    iconClass: "text-warning",
-    titleClass: "text-warning",
-    bodyClass: "text-warning/80",
-    Icon: AlertCircle,
-    canDismiss: true,
-    requiresAcknowledge: false,
-    requiresDismissReason: false,
-  },
-  low: {
-    // --accent = blue tinted = Low severity / informational
-    containerClass: "bg-accent border-l-4 border-accent-foreground/30",
-    iconClass: "text-accent-foreground",
-    titleClass: "text-accent-foreground",
-    bodyClass: "text-accent-foreground/80",
-    Icon: Info,
-    canDismiss: true,
-    requiresAcknowledge: false,
-    requiresDismissReason: false,
-  },
-} as const
-
-interface ClinicalAlertBannerProps {
-  severity: Severity
-  title: string
-  body?: string
-  patientName?: string
-  triggeredAt?: string
-  onAcknowledge?: () => void
-  onEscalate?: () => void
-  onDismiss?: (reason?: string) => void
-  className?: string
-}
-
-export function ClinicalAlertBanner({
-  severity,
-  title,
-  body,
-  patientName,
-  triggeredAt,
-  onAcknowledge,
-  onEscalate,
-  onDismiss,
-  className,
-}: ClinicalAlertBannerProps) {
-  const config = SEVERITY_CONFIG[severity]
-  const { Icon } = config
-
-  if (process.env.NODE_ENV === "development") {
-    if (config.requiresAcknowledge && !onAcknowledge) {
-      console.error(
-        `ClinicalAlertBanner: severity="${severity}" requires onAcknowledge prop. ` +
-        `See safety/hard-constraints.md rule 7.`
-      )
+```json
+{
+  "mcpServers": {
+    "design-mind": {
+      "type": "sse",
+      "url": "https://design-mind.truefoundry-aws.innovaccer.com/sse"
     }
   }
-
-  return (
-    <div
-      role="alert"
-      aria-live={severity === "critical" ? "assertive" : "polite"}
-      aria-atomic="true"
-      className={cn(
-        "flex gap-3 p-4 rounded-r-md",
-        config.containerClass,
-        className
-      )}
-    >
-      <Icon
-        className={cn("h-5 w-5 flex-shrink-0 mt-0.5", config.iconClass)}
-        aria-hidden="true"
-      />
-
-      <div className="flex-1 min-w-0">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            {patientName && (
-              <p className={cn("text-xs font-medium mb-0.5", config.bodyClass)}>
-                {patientName}
-              </p>
-            )}
-            <p className={cn("text-sm font-semibold", config.titleClass)}>
-              {title}
-            </p>
-            {body && (
-              <p className={cn("text-sm mt-1", config.bodyClass)}>
-                {body}
-              </p>
-            )}
-            {triggeredAt && (
-              <p className={cn("text-xs mt-1.5 opacity-70", config.bodyClass)}>
-                {triggeredAt}
-              </p>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {onEscalate && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onEscalate}
-                className={cn("h-7 gap-1 text-xs", config.bodyClass)}
-              >
-                <ArrowUpRight className="h-3 w-3" />
-                Escalate
-              </Button>
-            )}
-
-            {config.requiresAcknowledge && onAcknowledge && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onAcknowledge}
-                className="h-7 text-xs bg-card"
-              >
-                Acknowledge
-              </Button>
-            )}
-
-            {config.canDismiss && onDismiss && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onDismiss()}
-                className={cn("h-7 w-7 p-0", config.bodyClass)}
-                aria-label="Dismiss alert"
-              >
-                <X className="h-3.5 w-3.5" />
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  )
 }
 ```
 
----
+### Environment variables
 
-### InlinePatientCard
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `OPENAI_API_KEY` | — | TrueFoundry JWT (gateway mode) |
+| `OPENAI_BASE_URL` | — | `https://truefoundry.innovaccer.com/api/llm/api/inference/openai/` (gateway mode) |
+| `OPENAI_MODEL` | `gpt-4o` | Gateway model name (e.g. `internal-bedrock/sonnet-46`) |
+| `ANTHROPIC_MODEL` | `claude-sonnet-4-5` | First-priority model in gateway mode |
+| `GEMINI_MODEL` | `gemini-2.0-flash` | Last-resort fallback model in gateway mode |
+| `ANTHROPIC_API_KEY` | — | Direct Anthropic key (direct mode) |
+| `GEMINI_API_KEY` | — | Direct Gemini key (direct mode) |
+| `TRANSPORT` | `stdio` | Set to `sse` to enable HTTP/SSE transport |
+| `PORT` | `8080` | HTTP port |
+| `API_KEY` | `dm-local-dev-key` | Key for `/candidates` endpoint |
+| `DESIGN_MIND_API_KEY` | `dm-local-dev-key` | Must match `API_KEY` |
+| `DESIGN_MIND_API_URL` | `http://localhost:3456` | Base URL of candidates API |
+| `SLACK_WEBHOOK_URL` | — | Optional Slack webhook for candidate notifications |
+| `DESIGN_MIND_PROJECT` | (dirname) | Project name attached to candidate submissions |
 
-#### meta.yaml
-```yaml
-id: InlinePatientCard
-status: active
-component_type: card
-structural_family: inline-chat-card
-family_invariants:
-  - "Only rendered inside Panel 2 chat context — never standalone"
-  - "Structure: avatar (initials, risk-tinted) + name + badge + max 2 info rows + footer divider"
-  - "Container: bg-card border border-border rounded-lg"
-  - "Always paired with a ChatQuickActionChip trigger"
-confidence: 0.85
-version: 1.0.0
-introduced: 2026-03-20
-last_evolved: 2026-03-20
+### Local development
 
-summary: >
-  A compact structured card rendered inside an assistant message bubble in Panel 2,
-  triggered by a ChatQuickActionChip. Uses a shared InlineCard shell: initials avatar
-  (risk-tinted color pool) + patient name (Last, First) + secondary badge, followed
-  by 1-2 info rows with icons, then a divider footer with metadata. Two implementations:
-  InlineOutreachCard (last outreach: type, outcome, care gap, coordinator, timestamp)
-  and InlineNextPatientCard (next patient: risk tier, open gap count, next due item,
-  suggested action).
-
-when:
-  - displaying structured patient data inline in the chat conversation after a chip tap
-  - data fits the avatar + 2 rows + footer template (not more complex)
-  - always paired with ChatQuickActionChip — never rendered standalone
-
-not_when:
-  - data requires more than 2 info rows — open a full artifact instead
-  - outside Panel 2 / chat context — use PatientRow or PatientContextHeader
-  - displaying more than one patient record — use a list artifact
-
-because: >
-  Inline cards keep the coordinator in conversation flow. The shared InlineCard shell
-  ensures visual consistency across all chip-triggered responses regardless of the
-  data domain. Avatar + secondary badge + rows + footer is the minimum viable
-  structure for patient-scoped data.
-
-ontology_refs:
-  entities: [Patient, CareGap, Task]
-  states: [CareGapStatus]
-  actions: []
-
-usage_signal:
-  renders_total: 0
-  products: []
-  override_rate: 0.0
-
-embedding_hint: >
-  inline card chat assistant message patient avatar initials outreach next patient
-  risk tier care gap suggested action coordinator timestamp bubble panel 2
-  structured data compact two rows footer shared shell chip triggered
+```bash
+cd server && npm install
+node src/index.js
 ```
 
-#### component.tsx
-```tsx
-// Canonical implementation lives in shell/panels/ChatPanel.tsx
-// Exports: InlineCard (shared shell), InlineOutreachCard, InlineNextPatientCard
-// Always used in conjunction with ChatQuickActionChip — see patterns/ChatQuickActionChip/
-export { ChatPanel } from "../../shell/panels/ChatPanel"
+Or with SSE transport:
+
+```bash
+TRANSPORT=sse PORT=8080 node src/index.js
 ```
 
 ---
 
-### OutreachLogRow
-
-#### meta.yaml
-```yaml
-id: OutreachLogRow
-status: active
-component_type: row
-structural_family: readonly-list-row
-family_invariants:
-  - "Layout: flex items-center gap-3 px-4 py-3 border-b border-border/40"
-  - "No action buttons — read-only display only"
-  - "Status indicators use icon + colored text, not Button components"
-  - "Hover: cursor-pointer if row opens detail, but no data modification on click"
-confidence: 0.85
-version: 1.0.0
-introduced: 2026-03-20
-last_evolved: 2026-03-20
-
-summary: >
-  A compact read-only row in a 24-hour outreach activity log. Shows patient avatar
-  (initials, risk-tinted), patient name (Last, First), related Care Gap or Task name,
-  outreach type (Phone Call / Portal Message / Letter) with icon, outcome
-  (Reached / Left Voicemail / No Answer / Declined / Sent) with colored icon and
-  design token, coordinator name, and relative timestamp. No-answer rows get a
-  left-border warning accent. Used inside OutreachLogArtifact — a full-panel artifact
-  with type and outcome filters and a summary header.
-
-when:
-  - displaying a single completed outreach attempt in a chronological log
-  - audit or review surface showing all outreach across a coordinator's panel
-  - coordinator needs to see who was contacted, what happened, and what needs follow-up
-
-not_when:
-  - scheduling or initiating outreach — this is a read-only log pattern
-  - patient-scoped surfaces showing outreach for a single patient — use TaskActionRow
-  - population-level outreach metrics — use a stat/chart component
-
-because: >
-  Coordinators need a fast daily audit of outreach activity. The compact row density
-  (per data-density rule) lets them scan the full day at once. No-answer left-border
-  accent makes unresolved attempts visually scannable without reading every row.
-
-ontology_refs:
-  entities: [Patient, CareGap, Task]
-  states: [CareGapStatus]
-  actions: []
-
-usage_signal:
-  renders_total: 0
-  products: []
-  override_rate: 0.0
-
-embedding_hint: >
-  outreach log row phone call portal message letter reached no answer voicemail
-  declined sent coordinator patient care gap audit 24 hours activity log
-  read only chronological filter type outcome compact density panel
-```
-
-#### component.tsx
-```tsx
-// Canonical implementation lives in shell/artifacts/OutreachLogArtifact.tsx (OutreachRow)
-// The full artifact (OutreachLogArtifact) is the reference surface for this pattern.
-export { OutreachLogArtifact } from "../../shell/artifacts/OutreachLogArtifact"
-```
-
----
-
-### PatientContextHeader
-
-#### meta.yaml
-```yaml
-id: PatientContextHeader
-status: active
-component_type: header
-structural_family: patient-context-header
-family_invariants:
-  - "Layout: flex items-center justify-between gap-4 px-6 py-4 bg-card border-b border-border"
-  - "Patient name: Last, First format — never truncated, never first-name only"
-  - "MRN always labeled 'MRN' — never 'Patient ID', 'Chart Number', etc."
-  - "DOB always full format: MMM D, YYYY — never shortened or omitted"
-  - "Always the topmost element of any patient-scoped surface"
-confidence: 0.90
-version: 1.0.0
-introduced: seed-v0
-last_evolved: seed-v0
-
-summary: >
-  Displays the current patient context at the top of any clinical
-  workflow surface. Ensures the clinician always knows who they are
-  acting on behalf of. The most visible component on any patient-scoped
-  surface — inconsistency here breaks clinician trust immediately.
-
-when:
-  - any surface scoped to a single patient's data
-  - any workflow where a clinician is taking action for a specific patient
-  - at the top of all patient-detail pages and workflow panels
-
-not_when:
-  - population-level views with no single patient context
-  - admin surfaces not scoped to a patient
-  - login, settings, or navigation-only pages
-
-required_fields:
-  - patient full name (Last, First format per ontology/entities.yaml)
-  - MRN (labeled "MRN" — hard-constraints.md rule 9)
-  - date of birth (full date — hard-constraints.md rule 10)
-
-optional_fields:
-  - primary payer
-  - risk score / risk tier
-  - care team name
-  - active alert count (drives urgency indicator)
-
-layout:
-  - always renders as a horizontal strip at top of content area
-  - never collapses to icon-only — patient identity must always be text-visible
-  - alert count badge links to ClinicalAlertBanner stack below
-
-ontology_refs:
-  entities: [Patient, CareTeam, Alert]
-  states: [AlertSeverity]
-
-safety_refs:
-  - safety/hard-constraints.md rules 8, 9, 10
-
-usage_signal:
-  renders_total: 0
-  products: []
-  override_rate: 0.0
-
-embedding_hint: >
-  patient context header identity name MRN date of birth DOB
-  risk score care team alert count clinical workflow who patient
-  is demographics top of page always visible
-```
-
-#### component.tsx
-```tsx
-import { cn } from "@/lib/utils"
-import { AlertOctagon } from "lucide-react"
-
-// Field labels and formats sourced from:
-// - ontology/entities.yaml (Patient canonical fields)
-// - safety/hard-constraints.md (rules 8, 9, 10)
-// DO NOT change "MRN" label or date format without SME approval
-
-interface PatientContextHeaderProps {
-  // Required — hard-constraints.md rules 8, 9, 10
-  lastName: string
-  firstName: string
-  mrn: string
-  dateOfBirth: string   // Display string: "Jan 5, 1968"
-
-  // Optional context
-  age?: number
-  primaryPayer?: string
-  riskTier?: "high" | "medium" | "low" | "none"
-  careTeamName?: string
-  activeAlertCount?: number
-  highestAlertSeverity?: "critical" | "high" | "medium" | "low"
-
-  onAlertClick?: () => void
-  className?: string
-}
-
-const RISK_CONFIG = {
-  high:   { label: "High Risk",   classes: "bg-destructive/10 text-destructive border border-destructive/30" },
-  medium: { label: "Medium Risk", classes: "bg-[var(--alert-light)] text-alert border border-alert/30" },
-  low:    { label: "Low Risk",    classes: "bg-success/10 text-success border border-success/30" },
-  none:   { label: "No Risk Score", classes: "bg-muted text-muted-foreground border border-border" },
-}
-
-export function PatientContextHeader({
-  lastName,
-  firstName,
-  mrn,
-  dateOfBirth,
-  age,
-  primaryPayer,
-  riskTier,
-  careTeamName,
-  activeAlertCount,
-  highestAlertSeverity,
-  onAlertClick,
-  className,
-}: PatientContextHeaderProps) {
-  const riskConfig = riskTier ? RISK_CONFIG[riskTier] : null
-  const hasAlerts = activeAlertCount && activeAlertCount > 0
-  const alertIsCritical = highestAlertSeverity === "critical"
-
-  return (
-    <div
-      className={cn(
-        "flex items-center justify-between gap-4 px-6 py-4",
-        "bg-card border-b border-border",
-        className
-      )}
-      aria-label="Patient context"
-    >
-      {/* Patient identity — always visible, never truncated */}
-      <div className="flex items-center gap-6 min-w-0">
-        <div>
-          {/* Last, First format per ontology/entities.yaml */}
-          <p className="text-sm font-semibold text-foreground leading-tight">
-            {lastName}, {firstName}
-          </p>
-          <div className="flex items-center gap-3 mt-0.5">
-            {/* MRN label is hard-constrained — rule 9 */}
-            <span className="text-xs text-muted-foreground">
-              MRN <span className="font-medium text-foreground">{mrn}</span>
-            </span>
-            {/* Full DOB always shown — rule 10 */}
-            <span className="text-xs text-muted-foreground">
-              DOB <span className="font-medium text-foreground">{dateOfBirth}</span>
-              {age !== undefined && (
-                <span className="text-muted-foreground"> ({age}y)</span>
-              )}
-            </span>
-            {primaryPayer && (
-              <span className="text-xs text-muted-foreground">{primaryPayer}</span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Contextual signals */}
-      <div className="flex items-center gap-3 flex-shrink-0">
-        {careTeamName && (
-          <span className="text-xs text-muted-foreground hidden md:block">
-            {careTeamName}
-          </span>
-        )}
-
-        {riskConfig && (
-          <span className={cn(
-            "inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full",
-            riskConfig.classes
-          )}>
-            {riskConfig.label}
-          </span>
-        )}
-
-        {/* Alert indicator — links to alert stack */}
-        {hasAlerts && (
-          <button
-            onClick={onAlertClick}
-            className={cn(
-              "inline-flex items-center gap-1 text-xs font-medium",
-              "px-2 py-0.5 rounded-full border transition-colors",
-              alertIsCritical
-                ? "bg-destructive/10 text-destructive border-destructive/30 hover:bg-destructive/20"
-                : "bg-[var(--alert-light)] text-alert border-alert/30 hover:bg-[var(--alert-light)]"
-            )}
-            aria-label={`${activeAlertCount} active alert${activeAlertCount > 1 ? "s" : ""}`}
-          >
-            <AlertOctagon className="h-3 w-3" aria-hidden="true" />
-            {activeAlertCount} alert{activeAlertCount > 1 ? "s" : ""}
-          </button>
-        )}
-      </div>
-    </div>
-  )
-}
-```
-
----
-
-### PatientRow
-
-#### meta.yaml
-```yaml
-id: PatientRow
-status: active
-component_type: row
-structural_family: actionable-list-row
-family_invariants:
-  - "Layout: flex items-start gap-3 px-4 py-3.5"
-  - "Container: border-b border-border/40 last:border-0 bg-card hover:bg-muted/60 transition-colors"
-  - "Left accent: border-l-2 (warning for overdue, accent for active/available, transparent for neutral)"
-  - "Primary action: Button variant='outline' size='sm' className='h-7 text-xs'"
-  - "Secondary actions: Button variant='ghost' size='sm' className='h-7 w-7 p-0 text-muted-foreground'"
-  - "Meta row: flex items-center gap-3 mt-1.5 with text-xs text-muted-foreground"
-confidence: 0.92
-version: 1.0.0
-
-summary: >
-  The primary list item for population-level patient worklists.
-  Shows patient identity, risk signal, band, and a context-specific
-  primary action. Used in priority patient lists, outreach queues,
-  and any surface where coordinators scan and act on patients.
-
-when:
-  - displaying a list of patients with risk scores and actions
-  - coordinator needs to scan and act on multiple patients quickly
-  - population-level or worklist view
-
-not_when:
-  - single patient detail view
-  - patient search results (different density/purpose)
-  - admin/non-clinical patient lists
-
-key_rules:
-  - name always Last, First format
-  - risk score uses tabular-nums for column alignment
-  - primary action label is context-specific (not generic "View")
-  - overdue patients get amber left border accent automatically
-  - avatar color is derived from initials, never random per render
-
-ontology_refs:
-  entities: [Patient, Provider]
-
-embedding_hint: >
-  patient row list worklist priority risk score band outreach
-  coordinator scan action population health care management
-```
-
-#### component.tsx
-```tsx
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { ChevronRight } from "lucide-react"
-
-type RiskTier = "high" | "medium" | "low"
-type BandLevel = 1 | 2 | 3 | 4
-
-const RISK_CONFIG: Record<RiskTier, { label: string; className: string; dot: string }> = {
-  high:   { label: "High",   className: "text-destructive font-semibold", dot: "bg-destructive" },
-  medium: { label: "Med",    className: "text-alert font-semibold",       dot: "bg-alert" },
-  low:    { label: "Low",    className: "text-muted-foreground",          dot: "bg-border" },
-}
-
-interface PatientRowProps {
-  initials: string
-  name: string                          // Last, First format
-  condition: string                     // e.g. "HbA1c overdue · 90 days"
-  riskScore: number
-  riskTrend?: "up" | "down" | "stable"
-  riskTier: RiskTier
-  band: BandLevel
-  primaryAction: string                 // e.g. "Start Outreach", "Triage now"
-  primaryActionVariant?: "default" | "outline"
-  isOverdue?: boolean
-  onPrimaryAction?: () => void
-  onExpand?: () => void
-  className?: string
-}
-
-const INITIALS_COLORS = [
-  "bg-primary/10 text-primary",
-  "bg-success/10 text-success",
-  "bg-alert/10 text-alert",
-  "bg-destructive/10 text-destructive",
-]
-
-export function PatientRow({
-  initials, name, condition, riskScore, riskTrend = "stable",
-  riskTier, band, primaryAction, primaryActionVariant = "default",
-  isOverdue, onPrimaryAction, onExpand, className,
-}: PatientRowProps) {
-  const risk = RISK_CONFIG[riskTier]
-  const colorIdx = initials.charCodeAt(0) % INITIALS_COLORS.length
-
-  return (
-    <div className={cn(
-      "flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 transition-colors cursor-default group",
-      isOverdue && "border-l-2 border-warning",
-      !isOverdue && "border-l-2 border-transparent",
-      className
-    )}>
-      {/* Avatar */}
-      <div className={cn(
-        "w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0",
-        INITIALS_COLORS[colorIdx]
-      )}>
-        {initials}
-      </div>
-
-      {/* Name + condition */}
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-foreground leading-tight">{name}</p>
-        <p className="text-xs text-muted-foreground mt-0.5 truncate">{condition}</p>
-      </div>
-
-      {/* Risk score */}
-      <div className="flex items-center gap-1 w-16 flex-shrink-0">
-        <span className={cn("text-sm tabular-nums", risk.className)}>{riskScore}</span>
-        {riskTrend === "up" && <span className="text-destructive text-xs">↑</span>}
-        {riskTrend === "down" && <span className="text-success text-xs">↓</span>}
-      </div>
-
-      {/* Band */}
-      <div className="flex items-center gap-1.5 w-20 flex-shrink-0">
-        <span className={cn("w-2 h-2 rounded-full flex-shrink-0", risk.dot)} />
-        <span className="text-xs text-muted-foreground">Band {band}</span>
-      </div>
-
-      {/* Primary action */}
-      <div className="flex-shrink-0">
-        <Button
-          size="sm"
-          variant={primaryActionVariant}
-          onClick={onPrimaryAction}
-          className="h-7 text-xs"
-        >
-          {primaryAction}
-        </Button>
-      </div>
-
-      {/* Expand */}
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={onExpand}
-        className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-      >
-        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-      </Button>
-    </div>
-  )
-}
-```
-
----
-
-### SdohAssessmentTab
-
-#### meta.yaml
-```yaml
-id: SdohAssessmentTab
-status: active
-component_type: form
-structural_family: assessment-form
-family_invariants:
-  - "Instrument questions are verbatim — never paraphrased or shortened (safety rule 14)"
-  - "Submit disabled until all required questions answered"
-  - "Score and results not shown until at least one answer recorded"
-  - "Self-harm indicator question: trigger Review badge on any non-zero answer"
-  - "Never navigate away on submit — show inline success/results state"
-confidence: 0.85
-version: 1.0.0
-introduced: 2026-03-20
-last_evolved: 2026-03-20
-
-summary: >
-  Two-view assessment component for SDOH (Social Determinants of Health) screening
-  in a patient-scoped surface. View 1: AHC HRSN-inspired questionnaire across 5 domains
-  (Housing, Food Security, Transportation, Social Isolation, Financial Strain) with radio
-  pill responses. View 2: per-domain results with need level indicators (flagged/clear/
-  not screened), Create Task CTA on flagged domains, and Re-screen action. Integrates
-  into the patient detail artifact as a tab.
-
-when:
-  - screening a patient for social determinants of health needs
-  - care coordinator needs to record and act on SDOH needs within patient context
-  - displaying SDOH screening results with per-domain flagged status and follow-up actions
-
-not_when:
-  - population-level SDOH summary counts — use a stat/metric component
-  - read-only display of a single SDOH data point — use StatusBadge
-  - outside a patient-scoped surface (PatientContextHeader must be present above)
-
-because: >
-  SDOH needs directly affect clinical outcomes and care gap closure rates. Coordinators
-  need a fast, structured way to screen and act without leaving patient context. The
-  two-view design (form → results) avoids re-entry and surfaces actionable tasks
-  immediately on flagged domains.
-
-actions_available:
-  - Start SDOH Screening (when no assessment on file)
-  - Save Assessment (completes the form, transitions to results view)
-  - Create Task (per flagged domain in results view)
-  - Re-screen (from results view, resets form)
-
-ontology_refs:
-  entities: [Patient, Task]
-  states: []
-  actions: [Assign]
-
-usage_signal:
-  renders_total: 0
-  products: []
-  override_rate: 0.0
-
-embedding_hint: >
-  SDOH social determinants health screening assessment form housing food security
-  transportation social isolation financial strain coordinator patient questionnaire
-  domains flagged needs identified results summary task create re-screen AHC HRSN
-  two-view form results tab patient detail
-```
-
-#### component.tsx
-```tsx
-// Canonical implementation lives in shell/artifacts/SdohAssessmentTab.tsx
-// This re-export makes the pattern discoverable from patterns/ like all other genome patterns.
-export { SdohAssessmentTab } from "../../shell/artifacts/SdohAssessmentTab"
-```
-
----
-
-### SectionHeader
-
-#### meta.yaml
-```yaml
-id: SectionHeader
-status: active
-component_type: other
-structural_family: section-divider
-family_invariants:
-  - "Typography: text-xs font-semibold uppercase tracking-wider text-muted-foreground"
-  - "Never bold or large — should recede visually, not dominate"
-  - "Always uppercase tracking-wider — wayfinding label, not a headline"
-confidence: 0.90
-version: 1.0.0
-
-summary: >
-  Artifact content section label with optional count and action.
-  Used to divide Panel 3 content into named groups — "NEEDS ATTENTION",
-  "COMING UP", "CARE GAPS". Muted and small — organizes without competing.
-
-when:
-  - dividing a list into named sections
-  - section has a count worth surfacing
-  - section has a single optional action (e.g. "View all")
-
-not_when:
-  - page-level heading — use an ArtifactContentHeader instead
-  - decorative divider with no semantic meaning — use a Separator
-
-key_rules:
-  - always uppercase tracking-wider — wayfinding, not a headline
-  - count urgent/warning variants only when the count itself is urgent
-  - never bold or large — should recede visually, not dominate
-
-embedding_hint: >
-  section header label group divider needs attention coming up
-  care gaps count wayfinding artifact content organizer
-```
-
-#### component.tsx
-```tsx
-import { cn } from "@/lib/utils"
-
-interface SectionHeaderProps {
-  title: string
-  count?: number
-  countVariant?: "default" | "urgent" | "warning"
-  action?: React.ReactNode
-  className?: string
-}
-
-export function SectionHeader({
-  title, count, countVariant = "default", action, className,
-}: SectionHeaderProps) {
-  const countClass = {
-    default: "text-muted-foreground",
-    urgent:  "text-destructive font-semibold",
-    warning: "text-warning font-semibold",
-  }[countVariant]
-
-  return (
-    <div className={cn(
-      "flex items-center justify-between px-4 py-2",
-      className
-    )}>
-      <div className="flex items-center gap-2">
-        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          {title}
-        </span>
-        {count !== undefined && (
-          <span className={cn("text-xs tabular-nums", countClass)}>
-            {count}
-          </span>
-        )}
-      </div>
-      {action && <div>{action}</div>}
-    </div>
-  )
-}
-```
-
----
-
-### StatCard
-
-#### meta.yaml
-```yaml
-id: StatCard
-status: active
-component_type: card
-structural_family: stat-metric-card
-family_invariants:
-  - "Label: text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-  - "Value: text-2xl font-bold tabular-nums"
-  - "Maximum 4 StatCards per row"
-  - "Variant tokens: default=foreground, urgent=destructive, warning=warning, success=success"
-confidence: 0.88
-version: 1.0.0
-
-summary: >
-  Metric display card for dashboard summary rows. Shows a label,
-  a large numeric value, and an optional subtitle. Used in the
-  artifact content header area to give coordinators their daily
-  snapshot at a glance.
-
-when:
-  - showing summary counts at the top of a dashboard artifact
-  - showing labelled count stats like Patients Need Attention or Tasks Due Today
-  - value needs to be scannable at a glance
-
-not_when:
-  - inline text metric — just use a span
-  - chart or trend data → use a chart component
-  - more than 6 stats in a row (breaks density)
-
-variants:
-  default: neutral — general counts
-  urgent: destructive red — requires immediate attention
-  warning: warning yellow — overdue or at-risk
-  success: success green — positive outcomes
-
-key_rules:
-  - value always uses tabular-nums for alignment
-  - label always uppercase tracking-wide (wayfinding, not a headline)
-  - max 4 StatCards in a single row for readability
-
-embedding_hint: >
-  stat card metric dashboard summary count number value
-  patients tasks care gaps overdue attention daily snapshot
-```
-
-#### component.tsx
-```tsx
-import { cn } from "@/lib/utils"
-
-type StatVariant = "default" | "urgent" | "warning" | "success"
-
-const VARIANT_CONFIG: Record<StatVariant, { valueClass: string; subtitleClass: string }> = {
-  default: { valueClass: "text-foreground",   subtitleClass: "text-muted-foreground" },
-  urgent:  { valueClass: "text-destructive",  subtitleClass: "text-destructive/70" },
-  warning: { valueClass: "text-warning",      subtitleClass: "text-warning/70" },
-  success: { valueClass: "text-success",      subtitleClass: "text-success/70" },
-}
-
-interface StatCardProps {
-  label: string
-  value: number | string
-  subtitle?: string
-  variant?: StatVariant
-  onClick?: () => void
-  className?: string
-}
-
-export function StatCard({
-  label, value, subtitle, variant = "default", onClick, className,
-}: StatCardProps) {
-  const v = VARIANT_CONFIG[variant]
-
-  return (
-    <div
-      onClick={onClick}
-      className={cn(
-        "flex flex-col gap-1 p-4 bg-card rounded-lg border border-border/40 shadow-card",
-        "transition-shadow",
-        onClick && "cursor-pointer hover:shadow-card-hover",
-        className
-      )}
-    >
-      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-        {label}
-      </p>
-      <p className={cn("text-2xl font-semibold tabular-nums leading-none", v.valueClass)}>
-        {value}
-      </p>
-      {subtitle && (
-        <p className={cn("text-xs leading-tight", v.subtitleClass)}>
-          {subtitle}
-        </p>
-      )}
-    </div>
-  )
-}
-```
-
----
-
-### StatusBadge
-
-#### meta.yaml
-```yaml
-id: StatusBadge
-status: active
-component_type: badge
-structural_family: status-indicator
-family_invariants:
-  - "Label text from ontology/states.yaml canonical_name only — never custom text"
-  - "Color token from ontology/states.yaml color_token only — never custom colors"
-  - "Always include aria-label for accessibility"
-  - "Sizes: sm (inline/dense), md (default in cards/rows) — never lg"
-confidence: 0.95
-version: 1.0.0
-introduced: seed-v0
-last_evolved: seed-v0
-
-summary: >
-  The atomic unit of status display. Every entity state in the platform
-  is rendered through this component. It is the most-used component
-  and the highest-stakes for semantic consistency.
-
-when:
-  - displaying the current state of any entity (Task, CareGap, Alert, Patient)
-  - any surface that shows a list of entities needs their status visible
-
-not_when:
-  - displaying severity of a clinical alert → use ClinicalAlertBanner which
-    renders its own severity indicator
-  - displaying a count or numeric value → use a plain text span
-
-variants:
-  - outline: default, low-emphasis states (Open, Excluded)
-  - subtle: colored background at 10% opacity (In Progress, In Outreach)
-  - solid: high-emphasis, reserved for Critical severity only
-
-size:
-  - sm: used inline within text or dense lists
-  - md: default, used in cards and rows
-  - lg: never — StatusBadge does not scale up
-
-rules:
-  - label text comes from ontology/states.yaml canonical_name only
-  - color token comes from ontology/states.yaml color_token only
-  - never use custom colors outside the token system
-  - always include aria-label for screen readers
-
-ontology_refs:
-  states: [TaskStatus, CareGapStatus, AlertSeverity]
-
-safety_refs:
-  - safety/severity-schema.yaml for AlertSeverity rendering
-
-usage_signal:
-  renders_total: 0
-  products: []
-  override_rate: 0.0
-
-embedding_hint: >
-  status badge state label entity task care gap alert active
-  open completed overdue cancelled closed severity indicator
-```
-
-#### component.tsx
-```tsx
-import { cn } from "@/lib/utils"
-
-// Status values from ontology/states.yaml
-// Color tokens from genome/rules/styling-tokens.rule.md (design tokens)
-// NEVER use hardcoded Tailwind color classes — always use semantic tokens
-
-const STATUS_CONFIG = {
-  // Task states
-  open:        { label: "Open",        classes: "border border-border text-muted-foreground bg-transparent" },
-  in_progress: { label: "In Progress", classes: "bg-accent text-accent-foreground border border-accent-foreground/20" },
-  completed:   { label: "Completed",   classes: "bg-success/10 text-success border border-success/30" },
-  overdue:     { label: "Overdue",     classes: "bg-[var(--warning-light)] text-warning border border-warning/30" },
-  cancelled:   { label: "Cancelled",   classes: "bg-muted text-muted-foreground border border-border" },
-
-  // Care gap states
-  in_outreach: { label: "In Outreach", classes: "bg-accent text-accent-foreground border border-accent-foreground/20" },
-  closed:      { label: "Closed",      classes: "bg-success/10 text-success border border-success/30" },
-  excluded:    { label: "Excluded",    classes: "border border-border text-muted-foreground bg-transparent" },
-
-  // Alert severity — sourced from safety/severity-schema.yaml
-  // --destructive = Critical, --alert = High, --warning = Medium, --accent = Low
-  critical:    { label: "Critical",    classes: "bg-destructive/10 text-destructive border border-destructive/30" },
-  high:        { label: "High",        classes: "bg-[var(--alert-light)] text-alert border border-alert/30" },
-  medium:      { label: "Medium",      classes: "bg-[var(--warning-light)] text-warning border border-warning/30" },
-  low:         { label: "Low",         classes: "bg-accent text-accent-foreground border border-accent-foreground/20" },
-
-  // Protocol / program-level statuses
-  active:      { label: "Active",      classes: "bg-success/10 text-success border border-success/30" },
-  draft:       { label: "Draft",       classes: "bg-accent text-accent-foreground border border-accent-foreground/20" },
-  inactive:    { label: "Inactive",    classes: "bg-muted text-muted-foreground border border-border" },
-  archived:    { label: "Archived",    classes: "bg-muted text-muted-foreground border border-border" },
-  coming_soon: { label: "Coming soon", classes: "bg-muted text-muted-foreground border border-border" },
-} as const
-
-export type StatusKey = keyof typeof STATUS_CONFIG
-
-interface StatusBadgeProps {
-  status: StatusKey
-  size?: "sm" | "md"
-  className?: string
-}
-
-export function StatusBadge({ status, size = "md", className }: StatusBadgeProps) {
-  const config = STATUS_CONFIG[status]
-
-  if (!config) {
-    if (process.env.NODE_ENV === "development") {
-      console.warn(`StatusBadge: unknown status "${status}". Add to ontology/states.yaml.`)
-    }
-    return null
-  }
-
-  return (
-    <span
-      role="status"
-      aria-label={config.label}
-      className={cn(
-        "inline-flex items-center font-medium rounded-full",
-        size === "sm" ? "px-2 py-0.5 text-xs" : "px-2.5 py-0.5 text-xs",
-        config.classes,
-        className
-      )}
-    >
-      {config.label}
-    </span>
-  )
-}
-```
-
----
-
-## Patterns — candidates (awaiting ratification)
-
-- **SdohAssessmentTab** — 2026-03-20 (`2026-03-20T11-39-52-sdohassessmenttab.yaml`)
-- **OutreachLogRow** — 2026-03-20 (`2026-03-20T11-50-13-outreachlogrow.yaml`)
-- **ChatQuickActionChip** — 2026-03-20 (`2026-03-20T11-53-02-chatquickactionchip.yaml`)
-- **InlineNextPatientCard** — 2026-03-20 (`2026-03-20T11-56-47-inlinenextpatientcard.yaml`)
-- **MobileChatDrawer** — 2026-03-20 (`2026-03-20T12-07-28-mobilechatdrawer.yaml`)
-- **IntakeForm** — 2026-03-20 (`2026-03-20T18-46-17-intakeform.yaml`)
-- **ClinicalAssessmentForm** — 2026-03-20 (`2026-03-20T20-18-25-clinicalassessmentform.yaml`)
-- **AssessmentInstrumentList** — 2026-03-20 (`2026-03-20T20-50-58-assessmentinstrumentlist.yaml`)
-
----
-
-## Surfaces
-
-6 surfaces:
-
-
-### ClinicalAssessment
-```yaml
-id: ClinicalAssessment
-type: surface
-user_type: [coordinator, clinician]
-
-intent: >
-  A surface for administering or recording a standardised clinical screening
-  instrument (PHQ-9, GAD-7, SDOH, CAGE, etc.) against a patient.
-  Captures verbatim instrument questions, computes a total score, classifies
-  severity, and logs the completed assessment.
-
-what_it_omits:
-  - item: Interpretation or clinical advice beyond score classification
-    reason: "Clinical interpretation requires licensed clinical judgment. This surface is used by coordinators as well as clinicians — generating advice here could constitute an unlicensed clinical recommendation. Score + severity classification is the boundary."
-  - item: Comparison to prior assessments
-    reason: "Trend analysis requires temporal context and a different visual model. Mixing it into the entry surface creates cognitive load during administration and risks the coordinator treating prior scores as a target rather than focusing on the current response."
-  - item: Free-text narrative responses
-    reason: "Standardised instruments have validated, structured response options. Allowing free text breaks clinical validity — scores would not be comparable across administrations or patients."
-
-empty_state_meaning: >
-  No answers recorded yet. Progress indicator in the submit bar shows 0/N answered.
-
-ordering: >
-  Questions presented in the instrument's canonical order — never reordered
-  or grouped differently, as clinical validity depends on standardised presentation.
-
-actions:
-  - label: "Record Assessment"
-    stage: submit bar
-    constraint: disabled until all questions answered — partial records are not valid
-  - label: "Clear"
-    stage: submit bar
-    constraint: resets all answers and patient identity, no confirmation needed
-
-never:
-  - Paraphrase or shorten instrument question text (safety rule 14)
-  - Enable submit on a partial response
-  - Show score or severity until at least one answer is recorded
-  - Omit a safety flag (e.g. Review badge) when a self-harm indicator question
-    receives any non-zero answer
-  - Navigate away on submit — show inline success state with score and severity
-```
-
-### IntakeForm
-```yaml
-id: IntakeForm
-type: surface
-user_type: [coordinator]
-
-intent: >
-  A coordinator-facing form to log a completed or attempted outreach contact.
-  Single-purpose: capture one outreach event against one patient and submit.
-  Not a multi-record entry surface.
-
-what_it_omits:
-  - item: Bulk outreach logging
-    reason: "This is a single-record entry surface. Bulk operations require a different interaction model with safety constraints (rule 12) — attempting bulk entry here would bypass per-record confirmation."
-  - item: Patient clinical data beyond identity and care gap reference
-    reason: "The coordinator needs to know who they contacted and why — not full clinical history. Exposing clinical data on an entry form creates HIPAA surface area without functional value."
-  - item: Scheduling or calendar integration
-    reason: "Scheduling is a separate workflow with its own surface and state machine. Embedding it here conflates two distinct intents and increases form complexity without serving the primary logging goal."
-
-empty_state_meaning: >
-  The form is blank and ready for a new entry. No message needed.
-
-ordering: >
-  Fields ordered: patient identity → outreach details → log details.
-  Identity first because the coordinator must confirm who before logging what.
-
-actions:
-  - label: "Log Outreach"
-    stage: submit bar
-    constraint: disabled until all required fields are complete
-  - label: "Clear"
-    stage: submit bar
-    constraint: resets form to empty state, no confirmation needed
-
-never:
-  - Submit partial records silently
-  - Auto-populate patient identity from a previous entry without explicit confirmation
-  - Navigate away on submit — show inline success state and offer "Log another"
-```
-
-### OutreachLog
-```yaml
-id: OutreachLog
-type: surface
-user_type: [coordinator]
-
-intent: >
-  Chronological read-only audit of all outreach activity across the coordinator's
-  patient panel in the last 24 hours. This is an observation surface, not an
-  action surface. Coordinators use it to review what happened, not to do things.
-
-what_it_omits:
-  - item: Outreach older than 24 hours (use reporting for historical views)
-    reason: "This surface is a shift-level review tool, not a historical ledger. 24h scope keeps the view relevant to the current coordinator session. Older records belong in a reporting surface."
-  - item: Any action that modifies an existing log entry
-    reason: "Outreach logs are audit records. Mutability would compromise their integrity as a compliance trail. Edits and corrections must go through a formal amendment process outside this surface."
-  - item: Patient clinical data beyond name and related care gap
-    reason: "This is an outreach surface, not a clinical record. Showing clinical data here would require the same access controls as PatientDetail — a different surface with different intent."
-
-empty_state_meaning: >
-  No outreach has been logged in the last 24 hours. Honest one-liner only —
-  no illustration, no call to action.
-
-ordering: >
-  Reverse chronological — most recent first. Never filtered by default.
-
-actions:
-  - label: none (read-only surface)
-    stage: n/a
-    constraint: rows are clickable to open the message thread drawer, not to edit
-
-never:
-  - Allow editing or deleting a log entry
-  - Show a "Log Outreach" button inside this surface (use New Intake tab instead)
-  - Paginate — show all 24h records in a single scrollable list
-```
-
-### PatientDetail
-```yaml
-id: PatientDetail
-type: surface
-user_type: [coordinator, clinician]
-
-intent: >
-  A single patient's full care picture scoped to what a coordinator or clinician
-  needs to act on. Not a medical record viewer — an action surface.
-  Everything shown should connect to a possible next step.
-
-what_it_omits:
-  - item: Historical closed gaps (unless explicitly surfaced in audit mode)
-    reason: "Closed gaps are audit record, not action items. Showing them by default inflates the list and obscures what still needs intervention. Audit mode is a deliberate opt-in."
-  - item: Billing and coding data
-    reason: "Billing is handled by a separate team with different access controls. Exposing it here creates HIPAA surface area without clinical value for the coordinator/clinician role."
-  - item: Raw lab values without clinical context
-    reason: "A lab value alone is uninterpretable and potentially alarming without reference range and clinical narrative. Showing raw values without context violates the principle that everything shown should connect to a possible next step."
-  - item: Unstructured notes
-    reason: "Free-text clinical notes require medical training to interpret safely. This surface serves coordinators who need structured, actionable data — not freeform narrative."
-
-empty_state_meaning: >
-  No open care gaps or tasks means this patient's panel is currently clear.
-  This is not an error — it means no coordinator action is required right now.
-
-ordering: >
-  Active alerts first (by severity descending), then open care gaps
-  (by measure priority), then tasks (by due date ascending).
-
-actions:
-  - label: "Close Gap"
-    stage: care gap section
-    constraint: one step
-  - label: "Acknowledge"
-    stage: alert banner only
-    constraint: critical and high alerts require acknowledgment, not dismissal
-  - label: "Add Task"
-    stage: task section
-    constraint: opens inline form, does not navigate away
-
-never:
-  - Show a Dismiss control on a Critical or High severity alert
-  - Display patient name in First Last order (always Last, First — rule 8)
-  - Show MRN without the "MRN" label (rule 9)
-  - Show DOB in short format — always MMM D, YYYY (rule 10)
-```
-
-### Today
-```yaml
-id: Today
-type: surface
-user_type: [coordinator]
-
-intent: >
-  The coordinator's daily summary view. A curated snapshot of what matters today —
-  not everything, not a dashboard. Designed to orient the coordinator at the start
-  of a session and surface the highest-priority items requiring attention.
-
-what_it_omits:
-  - item: Resolved and completed items
-    reason: "Today is a priority surface. Completed work is noise — it distracts from what still needs action. Historical views belong in reporting."
-  - item: Metrics and aggregate counts as the primary content
-    reason: "Counts imply quota. This surface is about clinical priority, not volume. A coordinator should act on items, not manage a number."
-  - item: Navigation or settings chrome
-    reason: "The shell handles navigation. Embedding nav chrome inside Today violates the 3-panel shell rule and creates ambiguous wayfinding."
-
-empty_state_meaning: >
-  No priority items today. Positive signal — the coordinator's panel is clear.
-  Never "no data available."
-
-ordering: >
-  Critical alerts first, then high-urgency care gaps, then tasks due today.
-  Section order is fixed — never user-configurable on this surface.
-
-actions:
-  - label: contextual per item type
-    stage: inline on each item
-    constraint: quick actions only — no multi-step flows initiated from Today
-
-never:
-  - Show a comprehensive list of all patients — this is a priority surface, not a list
-  - Use count-based headline metrics as the primary content (e.g. "12 gaps open")
-  - Allow configuration or customisation of the Today view layout
-```
-
-### Worklist
-```yaml
-id: Worklist
-type: surface
-user_type: [coordinator]
-
-intent: >
-  Shows the coordinator's prioritised patient panel for the current day.
-  Not all patients — only those requiring coordinator-driven action right now.
-  The worklist is the coordinator's primary working surface, not a reporting view.
-
-what_it_omits:
-  - item: Patients with no open care gaps or tasks
-    reason: "This is an action surface. Showing patients with nothing to do creates false urgency and obscures who needs attention."
-  - item: Completed and closed items from previous sessions
-    reason: "Closed items are historical record. The worklist is about today's work. Mixing closed items in degrades scannability."
-  - item: Administrative or billing data
-    reason: "Different role, different surface. Billing belongs to RCM workflows with separate access controls. Mixing it here creates compliance risk."
-  - item: Clinical notes and diagnoses
-    reason: "Unstructured clinical data requires clinical context to interpret safely. The worklist is a coordinator action surface — clinical depth belongs in PatientDetail."
-
-empty_state_meaning: >
-  The coordinator's panel is clear. This is a positive clinical signal —
-  not an error, not "no data found". Copy should reflect that.
-
-ordering: >
-  By clinical urgency: risk tier first, then gap severity, then task due date.
-  Never alphabetical. Never recency. Order encodes priority.
-
-actions:
-  - label: "Close Gap"
-    stage: any row
-    constraint: one step, no confirmation required
-  - label: "Complete Task"
-    stage: any task row
-    constraint: one step, no confirmation required
-  - label: "Schedule"
-    stage: care gap rows only
-    constraint: opens scheduling flow, does not navigate away from surface
-
-never:
-  - Navigate away from the worklist surface on a row action
-  - Show a patient count as a headline metric (implies quota, not care)
-  - Use "No results" as an empty state — it is clinically misleading
-  - Allow bulk selection without explicit confirmation (safety rule 12)
-```
-
----
-
-## Agent — Design Mind (system prompt)
-
-# Design Mind — system prompt
-# Model: claude-sonnet-4-6
-# Rewrite this file when swapping models. All other files are untouched.
-
----
-
-You are the Design Mind for a clinical healthcare platform.
-
-You are not a linter. You are not a rulebook. You are the accumulated
-design intelligence of this product — with memory, taste, and the
-authority to push back on decisions that feel wrong even when they
-are technically compliant.
-
----
-
-## Your identity
-
-You have worked on this platform longer than any individual team member.
-You have seen every pattern that has been built, every shortcut that
-was taken, every time a team solved a problem well and every time they
-invented something that already existed. You carry all of that.
-
-You have taste. Not arbitrary preferences — a point of view grounded
-in the specific needs of clinicians, care coordinators, and patients
-using this product under real conditions. When something feels wrong
-for this product, you say so and explain why.
-
-You have opinions. When a team agent asks "should I use a modal or a
-drawer here?", you do not say "both are valid options." You say which
-one is right for this context and why, and you reference what others
-have built in similar situations.
-
----
-
-## What you know
-
-At the start of every session you have access to:
-
-- `genome/taste.md` — the aesthetic identity of this product
-- `genome/principles.md` — what this platform is for
-- `genome/rules/_index.json` — confidence registry for all rules and patterns
-
-Per request, the context-builder assembles and provides you with:
-
-- Relevant decision rules from `genome/rules/`
-- Relevant pattern metas from `patterns/*/meta.yaml`
-- Relevant ontology definitions from `ontology/`
-- Applicable safety constraints from `safety/`
-- Similar past builds from episodic memory
-
-You never guess at ontology. If you need to know the canonical name
-for a concept or the permitted actions for an alert severity, you
-reference the provided context. If the context doesn't include it,
-you ask for it to be retrieved — you do not invent it.
-
----
-
-## How you respond to consult_before_build
-
-When a team agent asks for pre-build context, you return:
-
-1. **Matched patterns** — what exists that is relevant, with the
-   specific meta.yaml fields they need, ranked by relevance.
-
-2. **Applicable rules** — only the rules that apply to this intent.
-   Not the full rulebook. Three focused rules beat ten vague ones.
-
-3. **What others built** — if episodic memory contains similar builds,
-   surface them with brief context on what worked and what didn't.
-
-4. **Known gaps** — if the system has low confidence or no pattern
-   for this intent, say so explicitly. A gap is useful information.
-   Do not fill gaps with guesses.
-
-5. **Confidence score** — your overall assessment of how well the
-   system covers this intent (0.0–1.0).
-
-Format: structured, scannable, actionable. Not a wall of text.
-The team agent is about to write code — give them what they need
-to start, not everything you know.
-
----
-
-## How you respond to review_output
-
-When reviewing generated UI, you give reasoning — not pass/fail scores.
-
-Structure your review as:
-- What honored the genome (be specific — which rule, which pattern)
-- What was borderline (explain the tension)
-- What was novel (describe what the agent invented and whether it
-  feels coherent with the product's taste)
-- What to fix (specific, actionable, references the relevant rule)
-
-If the output introduces a pattern the system hasn't seen before,
-flag it explicitly: "This is a candidate pattern. If two more teams
-build something similar, it should be ratified into the genome."
-
----
-
-## What you never do
-
-- Override or suggest exceptions to `safety/hard-constraints.md`.
-  If a team agent asks you to approve a Critical alert with a Dismiss
-  button, you refuse and explain why. This is non-negotiable.
-
-- Approve the use of severity colors decoratively. Red is for Critical
-  alerts. This is not an aesthetic rule — it is a clinical safety rule.
-
-- Guess at canonical terminology. If you are unsure what something is
-  called in this product, say so and request the ontology entry.
-
-- Ratify a new genome pattern without flagging it for human review.
-  You propose mutations. Humans ratify them.
-
-- Pretend you have high confidence when you don't. Uncertainty is
-  a signal the system needs to grow. Name it.
-
----
-
-## Tone
-
-You are a senior collaborator, not a gatekeeper. Teams come to you
-because you make their work better, not because they are required to.
-
-Be direct. If something is wrong, say it's wrong. If something is
-right, say why it works. Do not hedge everything with "it depends."
-
-Be specific. Reference the actual rule, the actual pattern, the actual
-ontology term. Vague guidance helps no one.
-
-Be honest about gaps. "The system doesn't have a pattern for this yet"
-is a better answer than a confident guess that turns out to be wrong.
-
----
-
-## Agent — Critic (system prompt)
-
-# Critic agent — system prompt
-# Model: claude-sonnet-4-6
-# Rewrite when swapping models.
-
----
-
-You are the Critic agent for a clinical healthcare platform's Design Mind.
-
-Your job is to review agent-generated UI output against the genome —
-the rules, patterns, ontology, and safety constraints of the platform.
-
-You are not reviewing whether the code is correct. You are reviewing
-whether the design decisions are coherent with this product's identity.
-
----
-
-## What you receive
-
-Each review request includes:
-- The generated output (code or description)
-- The intent the agent stated before building
-- The context that was injected (rules, patterns, ontology refs)
-- The confidence score from the consult_before_build call
-
----
-
-## What you return
-
-Always return a structured review using this schema:
-
-```
-HONORED:
-  [List what explicitly followed the genome — be specific.
-   "Used StatusBadge with canonical status values" not "looks good"]
-
-BORDERLINE:
-  [List decisions that are defensible but not clearly right.
-   Explain the tension. The agent should know what to watch.]
-
-NOVEL:
-  [List anything the agent invented that isn't in the genome.
-   Describe what it is. Assess whether it feels coherent with taste.md.
-   Flag as candidate pattern if it seems reusable.]
-
-FIX:
-  [List specific things to change. One fix per bullet.
-   Reference the rule or constraint being violated.
-   Give the corrected approach, not just the problem.]
-
-CANDIDATE_PATTERNS:
-  [If NOVEL contains something worth promoting, name it here
-   with a one-line description. This feeds the ratification queue.]
-
-COPY_VIOLATIONS:
-  [List any violations of copy-voice.md rules found in the generated output.
-   Each item: { rule, found, correction }
-     rule: the specific copy-voice rule violated
-           (e.g. "empty-state-vague", "confirmation-are-you-sure", "label-gerund-tense")
-     found: the exact string from the generated output that violates it
-     correction: the corrected version following copy-voice.md
-
-   Rules to check:
-   - Tone: never cute ("All caught up!"), apologetic ("We're sorry"), or vague ("Something went wrong")
-   - Labels: imperative present tense ("Acknowledge" not "Acknowledging")
-   - Confirmations: [Consequence statement]. [Action instruction]. Never "Are you sure?"
-   - Empty states: honest and specific ("No open care gaps for this patient" not "No results found")
-   - Error messages: what happened + what to do (never "Something went wrong. Please try again.")
-   - Dates: MMM D, YYYY ("Jan 5, 2025" not "01/05/2025")
-   - Clinical quantities: always numerals ("3 patients" not "three patients")
-   - Entity names: use canonical names from ontology/entities.yaml
-
-   Empty array if none found. This section is ALWAYS present in every review response.]
-
-CONFIDENCE: [0.0–1.0 — your assessment of genome compliance]
-```
-
----
-
-## Priorities
-
-Safety constraints from `safety/hard-constraints.md` are the highest
-priority. A violation there is always a FIX, never BORDERLINE.
-
-Ontology violations (wrong terminology, invented concept names) are
-always a FIX. Semantic consistency is not negotiable.
-
-Aesthetic judgments from `genome/taste.md` are context-dependent.
-A novel pattern that violates taste is BORDERLINE unless it clearly
-contradicts a stated principle — then it's a FIX.
+## Remotes
+
+- **MCP server (GitLab):** https://gitlab.innovaccer.com/innovaccer-ui/design-mind-mcp.git
+- **Showcase repo (GitLab):** https://gitlab.innovaccer.com/innovaccer-ui/design-mind-showcase
+- **Current branch:** transformation
