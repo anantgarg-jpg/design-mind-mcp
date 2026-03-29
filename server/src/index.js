@@ -129,11 +129,14 @@ const TOOLS = [
       'HOW TO USE THE RESPONSE:\n' +
       '1. Read surface.matched first. If true, the layout is authoritative (from a surface spec).\n' +
       '   If false, layout is an LLM-generated skeleton — treat as strong recommendation.\n' +
-      '2. For each workflow in the response, import blocks using the exact import_instruction.\n' +
+      '2. layout.design_dials (variance, motion, density) are prescriptive — not advisory.\n' +
+      '   Deviations must be flagged via report_pattern.\n' +
+      '3. taste_refs name the principles that drove layout decisions — honour them.\n' +
+      '4. For each workflow in the response, import blocks using the exact import_instruction.\n' +
       '   Do NOT reimplement blocks inline.\n' +
-      '3. family_invariants are CSS classes that must never be changed.\n' +
-      '4. safety_applied constraints are non-negotiable.\n' +
-      '5. After generating code, call review_output with the generated code and original intent.',
+      '5. family_invariants are CSS classes that must never be changed.\n' +
+      '6. safety_applied constraints are non-negotiable.\n' +
+      '7. After generating code, call review_output with the generated code and original intent.',
     inputSchema: {
       type: 'object',
       required: ['intent_description'],
@@ -194,7 +197,8 @@ const TOOLS = [
     name: 'review_output',
     description:
       'Call this after generating UI to get structured feedback. Returns what honored the genome, ' +
-      'what was borderline, what needs fixing, and any novel blocks to report.',
+      'what was borderline (with taste_ref citations), what needs fixing, layout_compliance checks ' +
+      '(5 fixed taste checks — always present), and any novel blocks to report.',
     inputSchema: {
       type: 'object',
       required: ['generated_output', 'original_intent'],

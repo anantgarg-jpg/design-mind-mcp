@@ -76,8 +76,11 @@ export async function consultBeforeBuild(params, _kb, _patternIndex, _ruleIndex,
   // 3. Map surface
   const surfaceResult = llmResult.surface || { matched: false, confidence: 0, surface_id: null, import_instruction: null };
 
-  // 4. Map layout
+  // 4. Map layout (including design_dials if present)
   const layoutResult = llmResult.layout || { source: 'generated', regions: [] };
+  if (llmResult.layout?.design_dials) {
+    layoutResult.design_dials = llmResult.layout.design_dials;
+  }
 
   // 5. Map workflows — enrich blocks with genome data
   const enrichBlock = (block) => {
@@ -131,6 +134,7 @@ export async function consultBeforeBuild(params, _kb, _patternIndex, _ruleIndex,
     rules_applied: llmResult.rules_applied || [],
     safety_applied: llmResult.safety_applied || [],
     ontology_refs: llmResult.ontology_refs || [],
+    taste_refs: llmResult.taste_refs || [],
     confidence: llmResult.confidence || 0,
     gaps: llmResult.gaps || [],
   };
@@ -849,6 +853,7 @@ export async function reviewOutput(params, kb, patternIndex) {
     fix: [...allAutoChecks.filter(v => v.severity === 'blocker'), ...dedupedLlmFixes],
     candidate_patterns: criticResult.candidate_patterns || [],
     copy_violations: copyViolations,
+    layout_compliance: criticResult.layout_compliance || [],
     confidence: criticResult.confidence || 0,
   };
 }
