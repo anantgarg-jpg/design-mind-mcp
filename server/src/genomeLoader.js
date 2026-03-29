@@ -101,19 +101,29 @@ export function loadGenome() {
   }
 
   // ── Surfaces ─────────────────────────────────────────────────────────────────
+  // Convention mirrors blocks exactly: surfaces/SurfaceName/meta.yaml
+  // _candidates/ is skipped — not ratified. Directory starts empty — correct.
   const surfacesDir = join(BASE_PATH, 'surfaces');
   if (existsSync(surfacesDir)) {
-    for (const file of readdirSync(surfacesDir)) {
-      if (!file.endsWith('.surface.yaml')) continue;
+    for (const surfaceName of readdirSync(surfacesDir)) {
+      if (surfaceName.startsWith('_') || surfaceName.startsWith('.')) continue;
+
+      const metaPath = join(surfacesDir, surfaceName, 'meta.yaml');
+      if (!existsSync(metaPath)) continue;
+
       try {
-        const content = readFileSync(join(surfacesDir, file), 'utf-8');
-        const parsed  = parseYaml(content);
-        // Stash raw for serialization
-        parsed._raw = content;
-        const surfaceId = parsed.id || file.replace('.surface.yaml', '');
-        genome.surfaces.set(surfaceId, parsed);
+        const metaContent = readFileSync(metaPath, 'utf-8');
+        const meta        = parseYaml(metaContent);
+
+        if (meta.status === 'deprecated') continue;
+
+        meta._metaRaw     = metaContent;
+        meta._patternName = surfaceName;
+
+        const surfaceId = meta.id || surfaceName;
+        genome.surfaces.set(surfaceId, meta);
       } catch (e) {
-        process.stderr.write(`[genome] WARN: could not parse surfaces/${file}: ${e.message}\n`);
+        process.stderr.write(`[genome] WARN: could not parse surfaces/${surfaceName}/meta.yaml: ${e.message}\n`);
       }
     }
   }

@@ -10,8 +10,9 @@
 
 import { writeFileSync, readFileSync, readdirSync, existsSync, mkdirSync, appendFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { createHash } from 'node:crypto';
 import { loadGenome, getGenomeForLLM } from './genomeLoader.js';
-import { callDesignMind, callCritic } from './llmClient.js';
+import { callDesignMind, callCritic, callPriorBuildsMatch } from './llmClient.js';
 import { loadTokenAllowlist } from './tokenResolver.js';
 
 // ── Episodic memory writer ────────────────────────────────────────────────────
@@ -47,97 +48,135 @@ function toArray(val) {
 }
 
 // ── TOOL 1: consult_before_build ─────────────────────────────────────────────
+//
+// EXPERIMENT: experiment/mode-b-with-manifest
+//
+// The genome is served as MCP resources read at session start — not delivered
+// inside tool call responses. This handler does one thing: episodic memory
+// matching. Everything else (blocks, safety, ontology, tokens, taste) is
+// already in the agent's context window from the resources it read at startup.
 
-/**
- * Returns the design genome construction packet for the agent's stated intent.
- * Uses the LLM-based Design Mind agent via llmClient and the genome loader.
- */
-export async function consultBeforeBuild(params, _kb, _patternIndex, _ruleIndex, _surfaces) {
-  const {
-    intent_description,
-    domain,
-    user_type,
-    workflows,
-  } = params;
+// ── In-memory prior-builds cache ──────────────────────────────────────────────
+// Key: hash(intent) + hash(log entry IDs)
+// Invalidates automatically when new entries appear in the log.
+const _priorBuildsCache = new Map();
 
-  // 1. Load genome (cached after first call)
-  const genome = loadGenome();
-  const genomeContext = getGenomeForLLM();
+function _episodicLogPath() {
+  const BASE = join(new URL(import.meta.url).pathname, '..', '..', '..');
+  return join(BASE, 'memory', 'episodic-log.jsonl');
+}
 
-  // 2. Call LLM
-  const llmResult = await callDesignMind({
-    genomeContext,
-    intent: intent_description,
-    domain,
-    userType: user_type,
-    workflows,
-  });
+function _readEpisodicLog() {
+  try {
+    const logPath = _episodicLogPath();
+    if (!existsSync(logPath)) return [];
+    return readFileSync(logPath, 'utf8')
+      .trim().split('\n').filter(Boolean)
+      .map(line => { try { return JSON.parse(line); } catch { return null; } })
+      .filter(Boolean);
+  } catch { return []; }
+}
 
-  // 3. Map surface
-  const surfaceResult = llmResult.surface || { matched: false, confidence: 0, surface_id: null, import_instruction: null };
-
-  // 4. Map layout (including design_dials if present)
-  const layoutResult = llmResult.layout || { source: 'generated', regions: [] };
-  if (llmResult.layout?.design_dials) {
-    layoutResult.design_dials = llmResult.layout.design_dials;
-  }
-
-  // 5. Map workflows — enrich blocks with genome data
-  const enrichBlock = (block) => {
-    const entry = genome.blocks.get(block.id);
-    if (!entry) return block;
-    const npmPath = entry.meta.npm_path || '';
-    return {
-      ...block,
-      npm_path: npmPath,
-      import_instruction: npmPath ? `import { ${block.id} } from '${npmPath}'` : '',
-      family_invariants: entry.meta.family_invariants || [],
-      when: Array.isArray(entry.meta.when) ? entry.meta.when.join('; ') : (entry.meta.when || ''),
-      not_when: Array.isArray(entry.meta.not_when) ? entry.meta.not_when.join('; ') : (entry.meta.not_when || ''),
-    };
+function _logIntent(intentDescription, domain, userType) {
+  const entry = {
+    id:             `build_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    intent:         intentDescription,
+    domain:         domain    ?? null,
+    user_type:      userType  ?? null,
+    blocks_used:    [],
+    reviewer_flags: [],
+    confidence:     null,
+    status:         'active',
+    built_at:       new Date().toISOString(),
   };
+  try {
+    const logPath = _episodicLogPath();
+    mkdirSync(join(logPath, '..'), { recursive: true });
+    appendFileSync(logPath, JSON.stringify(entry) + '\n', 'utf8');
+  } catch { /* log failure must never block the response */ }
+}
 
-  let workflowResults;
-  if (llmResult.workflows && llmResult.workflows.length > 0) {
-    // New format: per-workflow blocks
-    workflowResults = llmResult.workflows.map(wf => ({
-      ...wf,
-      blocks: (wf.blocks || []).map(enrichBlock),
-    }));
-  } else if (llmResult.selected_blocks) {
-    // Old format fallback: flat block list → single implicit workflow
-    const blocks = llmResult.selected_blocks.map(id => enrichBlock({ id, level: 'composite' })).filter(b => b.npm_path);
-    workflowResults = [{ id: 'main', intent: intent_description, blocks }];
-  } else {
-    workflowResults = [];
-  }
+async function _getPriorBuilds(intentDescription) {
+  const entries = _readEpisodicLog();
+  if (entries.length === 0) return [];
 
-  // Flatten all blocks for backwards compatibility
-  const allBlocks = workflowResults.flatMap(wf => wf.blocks || []);
+  const recent = entries.slice(-20); // max 20 — more = noise
 
-  // 6. Log to episodic memory
-  logEpisodic({
-    timestamp: new Date().toISOString(),
-    intent: intent_description,
-    domain,
-    workflows: workflows || [],
-    surface_matched: surfaceResult.matched,
-    selected_blocks: allBlocks.map(b => b.id),
-    confidence: llmResult.confidence,
-  });
+  const intentHash = createHash('md5').update(intentDescription.toLowerCase().trim()).digest('hex').slice(0, 8);
+  const logHash    = createHash('md5').update(recent.map(e => e.id ?? e.built_at ?? '').join(',')).digest('hex').slice(0, 8);
+  const cacheKey   = `${intentHash}-${logHash}`;
+
+  if (_priorBuildsCache.has(cacheKey)) return _priorBuildsCache.get(cacheKey);
+
+  try {
+    const result = await callPriorBuildsMatch({ intentDescription, recentBuilds: recent });
+    const matches = result?.prior_builds ?? [];
+    _priorBuildsCache.set(cacheKey, matches);
+    return matches;
+  } catch { return []; }
+}
+
+export async function consultBeforeBuild(params, _kb, _patternIndex, _ruleIndex, _surfaces) {
+  const { intent_description, domain, user_type } = params;
+
+  _logIntent(intent_description, domain, user_type);
+
+  const priorBuilds = await _getPriorBuilds(intent_description);
 
   return {
-    surface: surfaceResult,
-    layout: layoutResult,
-    workflows: workflowResults,
-    blocks: allBlocks,
-    rules_applied: llmResult.rules_applied || [],
-    safety_applied: llmResult.safety_applied || [],
-    ontology_refs: llmResult.ontology_refs || [],
-    taste_refs: llmResult.taste_refs || [],
-    confidence: llmResult.confidence || 0,
-    gaps: llmResult.gaps || [],
+    mode:     'constraint-briefing',
+    _branch:  'experiment/mode-b-with-manifest',
+    _note:    [
+      'Genome is in your context from resources read at session start.',
+      'surfaces/manifest starts empty — populates as patterns ratify.',
+      'If a surface entry exists for your intent, treat its canonical_structure as a strong structural reference.',
+      'prior_builds: pre-ratification signal from teams that built similar surfaces.',
+      'You own the composition. Call review_output after generating.',
+    ].join(' '),
+    prior_builds: priorBuilds,
   };
+}
+
+// ── Episodic log updater (called by reviewOutput) ─────────────────────────────
+
+function _updateEpisodicLogEntry(originalIntent, generatedOutput, reviewResponse) {
+  try {
+    const logPath = _episodicLogPath();
+    if (!existsSync(logPath)) return;
+
+    const lines = readFileSync(logPath, 'utf8').trim().split('\n').filter(Boolean);
+
+    const entries = lines.map((line, idx) => {
+      try { return { idx, entry: JSON.parse(line) }; } catch { return null; }
+    }).filter(Boolean);
+
+    // Most recent entry matching this intent
+    const match = [...entries].reverse().find(
+      ({ entry }) => entry.intent === originalIntent && entry.status === 'active'
+    );
+    if (!match) return;
+
+    // Extract blocks from import statements
+    const importMatches = (generatedOutput || '').match(
+      /import\s+.*?from\s+['"]@innovaccer\/ui-assets[^'"]*['"]/g
+    ) ?? [];
+    const blocksUsed = importMatches.map(imp => {
+      const m = imp.match(/\/([A-Z][a-zA-Z]+)['"]/);
+      return m ? m[1] : null;
+    }).filter(Boolean);
+
+    const reviewerFlags = (reviewResponse.fix ?? []).map(f => f.problem).filter(Boolean);
+
+    const updated = {
+      ...match.entry,
+      blocks_used:    blocksUsed,
+      reviewer_flags: reviewerFlags,
+      confidence:     reviewResponse.confidence ?? null,
+    };
+
+    lines[match.idx] = JSON.stringify(updated);
+    writeFileSync(logPath, lines.join('\n') + '\n', 'utf8');
+  } catch { /* log update must never affect the review response */ }
 }
 
 
@@ -845,7 +884,7 @@ export async function reviewOutput(params, kb, patternIndex) {
     return !autoFixTexts.has(problem);
   });
 
-  return {
+  const response = {
     auto_checks: allAutoChecks,
     honored: [...honored, ...(criticResult.honored || [])],
     borderline: criticResult.borderline || [],
@@ -856,6 +895,12 @@ export async function reviewOutput(params, kb, patternIndex) {
     layout_compliance: criticResult.layout_compliance || [],
     confidence: criticResult.confidence || 0,
   };
+
+  // Side effect only — updates episodic log entry with blocks used + reviewer flags.
+  // Never changes the response shape.
+  _updateEpisodicLogEntry(original_intent, code, response);
+
+  return response;
 }
 
 // ── TOOL 3: report_pattern ────────────────────────────────────────────────────

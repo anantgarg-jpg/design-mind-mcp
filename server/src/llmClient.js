@@ -278,3 +278,88 @@ export async function callCritic({ generatedCode, originalIntent, genomeContext,
     return makeFallback(`Critic API error: ${err.message}`);
   }
 }
+
+// ── callPriorBuildsMatch ───────────────────────────────────────────────────────
+// Lightweight LLM call for episodic memory matching.
+// Static system prompt cached via Anthropic extended TTL.
+// Returns { prior_builds: [...] } or null on failure.
+
+const PRIOR_BUILDS_SYSTEM_PROMPT = `You match a new build intent against prior builds from an episodic log.
+Return ONLY entries that are structurally similar — same interaction model, same entity types, same user goal.
+Be strict. Superficial word overlap is not similarity. Return max 2 matches.
+If nothing is genuinely similar, return an empty array.
+Return JSON only, no markdown, no explanation: { "prior_builds": [...] }
+
+Each match shape:
+{
+  "intent": "the prior intent string",
+  "similarity_reason": "one sentence explaining structural similarity",
+  "blocks_used": ["BlockId"],
+  "reviewer_flags": ["string"],
+  "confidence": 0.0,
+  "built_at": "ISO timestamp"
+}`;
+
+export async function callPriorBuildsMatch({ intentDescription, recentBuilds }) {
+  const userContent = `New intent: "${intentDescription}"\n\nPrior builds:\n${JSON.stringify(recentBuilds, null, 2)}`;
+
+  try {
+    if (isGatewayMode()) {
+      return await gatewayCall(PRIOR_BUILDS_SYSTEM_PROMPT, userContent, 'callPriorBuildsMatch');
+    }
+
+    const provider = getDirectProvider();
+    if (!provider) return null;
+
+    if (provider === 'anthropic') {
+      // Cache the static system prompt content in the user message — mirrors callDesignMind pattern
+      const messages = [{ role: 'user', content: [
+        { type: 'text', text: PRIOR_BUILDS_SYSTEM_PROMPT, cache_control: { type: 'extended' } },
+        { type: 'text', text: userContent },
+      ]}];
+      const client = new Anthropic({
+        apiKey: process.env.ANTHROPIC_API_KEY,
+        defaultHeaders: { 'anthropic-beta': 'extended-cache-ttl-2025-04-11' },
+      });
+      process.stdout.write('[llmClient] callPriorBuildsMatch using Anthropic direct\n');
+      const response = await client.messages.create({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 600,
+        system: '',
+        messages,
+      });
+      return JSON.parse(response.content?.[0]?.text ?? '{}');
+    }
+
+    if (provider === 'openai') {
+      const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      process.stdout.write('[llmClient] callPriorBuildsMatch using OpenAI direct\n');
+      const response = await client.chat.completions.create({
+        model: process.env.OPENAI_MODEL || 'gpt-4o',
+        max_tokens: 600,
+        temperature: 0,
+        messages: [
+          { role: 'system', content: PRIOR_BUILDS_SYSTEM_PROMPT },
+          { role: 'user',   content: userContent },
+        ],
+        response_format: { type: 'json_object' },
+      });
+      return extractJson(response.choices?.[0]?.message?.content ?? '{}');
+    }
+
+    if (provider === 'gemini') {
+      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+      const model = genAI.getGenerativeModel({
+        model: process.env.GEMINI_MODEL || 'gemini-2.0-flash',
+        generationConfig: { responseMimeType: 'application/json' },
+        systemInstruction: PRIOR_BUILDS_SYSTEM_PROMPT,
+      });
+      process.stdout.write('[llmClient] callPriorBuildsMatch using Gemini direct\n');
+      const result = await model.generateContent(userContent);
+      return JSON.parse(result.response.text());
+    }
+  } catch (err) {
+    process.stderr.write(`[llmClient] callPriorBuildsMatch failed: ${err.message}\n`);
+    return null;
+  }
+}

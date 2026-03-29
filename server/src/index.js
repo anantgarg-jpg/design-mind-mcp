@@ -46,6 +46,17 @@ import {
 import { loadKnowledge }                                         from './knowledge.js';
 import { consultBeforeBuild, reviewOutput, reportPattern }      from './contextAssembler.js';
 import { check as checkPackage }                                from './packageChecker.js';
+import { loadGenome }                                           from './genomeLoader.js';
+import {
+  buildBlocksManifest,
+  buildSurfacesManifest,
+  buildSafetyResource,
+  buildOntologyResource,
+  buildTokensResource,
+  buildCopyVoiceResource,
+  buildPrinciplesResource,
+  buildTasteResource,
+} from './resources/buildResources.js';
 
 // ── Paths ─────────────────────────────────────────────────────────────────────
 
@@ -102,41 +113,23 @@ const TOOLS = [
   {
     name: 'consult_before_build',
     description:
-      'REQUIRED before generating ANY UI — component, page, surface, or style change.\n' +
-      'Returns the design genome construction packet: surface matching, layout structure,\n' +
-      'per-workflow block assignments, safety constraints, and copy rules.\n' +
-      'The response is a blueprint, not a suggestion.\n\n' +
-      'PRE-FLIGHT:\n' +
-      'Ensure @innovaccer/ui-assets is in the project\'s package.json before calling.\n' +
-      'If missing: npm install @innovaccer/ui-assets\n' +
-      'Ensure import \'@innovaccer/ui-assets/tokens\' is in the project entry file.\n\n' +
-      'HOW TO CALL:\n' +
-      '1. Describe WHAT you are building — who uses it, what data it shows, what actions\n' +
-      '   are available, and whether this is a new build or modification.\n' +
-      '2. Include domain and user_type if you can infer them from the codebase.\n' +
-      '3. DECOMPOSE the intent into WORKFLOWS — an array of { id, intent, region? }\n' +
-      '   objects representing bounded UI sections. Example:\n' +
-      '   Intent: "Care gap worklist for coordinators with filters and bulk actions"\n' +
-      '   Workflows: [\n' +
-      '     { id: "filter-bar", intent: "Filter patients by status, risk, and care team" },\n' +
-      '     { id: "patient-list", intent: "Show prioritized patient rows with risk tier and gap count" },\n' +
-      '     { id: "bulk-actions", intent: "Select multiple patients and assign care coordinator" }\n' +
-      '   ]\n' +
-      '   When workflows are omitted, the tool treats the entire intent as a single workflow.\n\n' +
-      'WRITING GOOD WORKFLOWS:\n' +
-      '  Good: { id: "filter-bar", intent: "Filter patients by status, risk tier, and assigned care team" }\n' +
-      '  Bad:  { id: "filters", intent: "add filters" }\n\n' +
-      'HOW TO USE THE RESPONSE:\n' +
-      '1. Read surface.matched first. If true, the layout is authoritative (from a surface spec).\n' +
-      '   If false, layout is an LLM-generated skeleton — treat as strong recommendation.\n' +
-      '2. layout.design_dials (variance, motion, density) are prescriptive — not advisory.\n' +
-      '   Deviations must be flagged via report_pattern.\n' +
-      '3. taste_refs name the principles that drove layout decisions — honour them.\n' +
-      '4. For each workflow in the response, import blocks using the exact import_instruction.\n' +
-      '   Do NOT reimplement blocks inline.\n' +
-      '5. family_invariants are CSS classes that must never be changed.\n' +
-      '6. safety_applied constraints are non-negotiable.\n' +
-      '7. After generating code, call review_output with the generated code and original intent.',
+      'Call this BEFORE generating any UI — once per surface or bounded section.\n\n' +
+      'A surface is one coherent screen or section. Not an entire product, module, or PRD.\n' +
+      'If building multiple surfaces, call this separately for each one as you begin.\n\n' +
+      'Ensure you have read these MCP resources at session start:\n' +
+      '  design-mind://blocks/manifest      — block palette\n' +
+      '  design-mind://surfaces/manifest    — ratified surface patterns\n' +
+      '  design-mind://genome/safety        — hard clinical rules\n' +
+      '  design-mind://genome/ontology      — canonical entity names\n' +
+      '  design-mind://genome/tokens        — token rules\n' +
+      '  design-mind://genome/copy-voice    — copy rules\n' +
+      '  design-mind://genome/principles    — product principles\n' +
+      '  design-mind://genome/taste         — aesthetic identity\n\n' +
+      'Returns:\n' +
+      '  prior_builds — pre-ratification signal: what similar surfaces looked like\n' +
+      '  before they became canonical patterns. May be empty.\n\n' +
+      'The genome is in your context. You own the composition.\n' +
+      'After generating, call review_output.',
     inputSchema: {
       type: 'object',
       required: ['intent_description'],
@@ -288,6 +281,86 @@ const TOOLS = [
     inputSchema: { type: 'object', properties: {} },
   },
 ];
+
+// ── MCP Resources ─────────────────────────────────────────────────────────────
+
+const RESOURCES = [
+  {
+    uri:         'design-mind://blocks/manifest',
+    name:        'Block palette manifest',
+    description: 'All ratified genome blocks. Each entry: id, level, import_instruction, when, not_when, family_invariants. Read at session start. Import from @innovaccer/ui-assets using import_instruction. Replaced by design-mind://blocks/search when genome exceeds ~120 blocks.',
+    mimeType:    'application/json',
+  },
+  {
+    uri:         'design-mind://surfaces/manifest',
+    name:        'Ratified surface patterns',
+    description: 'Canonical structural patterns for known surfaces. Mirrors blocks manifest. Starts empty — populates as patterns ratify. If a surface entry exists for your intent, treat its canonical_structure as a strong structural reference.',
+    mimeType:    'application/json',
+  },
+  {
+    uri:         'design-mind://genome/safety',
+    name:        'Clinical safety constraints',
+    description: 'Hard clinical rules. Non-negotiable. Apply to all UI on this platform.',
+    mimeType:    'text/plain',
+  },
+  {
+    uri:         'design-mind://genome/ontology',
+    name:        'Clinical ontology',
+    description: 'Canonical entity names, state definitions, action labels. Use these exactly — never synonyms.',
+    mimeType:    'text/plain',
+  },
+  {
+    uri:         'design-mind://genome/tokens',
+    name:        'Token rules',
+    description: 'What you can never do with colors, spacing, and typography. Read before generating any styled UI.',
+    mimeType:    'text/plain',
+  },
+  {
+    uri:         'design-mind://genome/copy-voice',
+    name:        'Copy and voice rules',
+    description: 'Clinical tone, tense, entity references, number formatting, confirmation dialog structure.',
+    mimeType:    'text/plain',
+  },
+  {
+    uri:         'design-mind://genome/principles',
+    name:        'Product principles',
+    description: 'The eight product principles that govern every surface. Action over information. Honest about uncertainty.',
+    mimeType:    'text/plain',
+  },
+  {
+    uri:         'design-mind://genome/taste',
+    name:        'Aesthetic identity and design dials',
+    description: 'Design variance, motion intensity, visual density baselines. Typography, color, layout, what we never do.',
+    mimeType:    'text/plain',
+  },
+  // ── Search stubs — not yet active ─────────────────────────────────────────
+  // Activate when blocks manifest exceeds ~15K tokens (~120 blocks).
+  {
+    uri:         'design-mind://blocks/search',
+    name:        'Block search (stub)',
+    description: 'NOT YET ACTIVE. Future: search blocks by intent. Use design-mind://blocks/manifest for now.',
+    mimeType:    'application/json',
+  },
+  {
+    uri:         'design-mind://surfaces/search',
+    name:        'Surface search (stub)',
+    description: 'NOT YET ACTIVE. Future: search surfaces by intent. Use design-mind://surfaces/manifest for now.',
+    mimeType:    'application/json',
+  },
+];
+
+const RESOURCE_BUILDERS = {
+  'design-mind://blocks/manifest':   g => JSON.stringify(buildBlocksManifest(g),   null, 2),
+  'design-mind://surfaces/manifest': g => JSON.stringify(buildSurfacesManifest(g), null, 2),
+  'design-mind://genome/safety':     g => buildSafetyResource(g),
+  'design-mind://genome/ontology':   g => buildOntologyResource(g),
+  'design-mind://genome/tokens':     g => buildTokensResource(g),
+  'design-mind://genome/copy-voice': g => buildCopyVoiceResource(g),
+  'design-mind://genome/principles': g => buildPrinciplesResource(g),
+  'design-mind://genome/taste':      g => buildTasteResource(g),
+  'design-mind://blocks/search':     () => JSON.stringify({ status: 'not_yet_active', use_instead: 'design-mind://blocks/manifest' }),
+  'design-mind://surfaces/search':   () => JSON.stringify({ status: 'not_yet_active', use_instead: 'design-mind://surfaces/manifest' }),
+};
 
 // ── Server state ──────────────────────────────────────────────────────────────
 
@@ -506,7 +579,10 @@ function handleMessage(message, reply) {
         const clientVersion = params?.protocolVersion || '2024-11-05';
         sendResult(id, {
           protocolVersion: clientVersion,
-          capabilities: { tools: { listChanged: false } },
+          capabilities: {
+            tools:     { listChanged: false },
+            resources: { subscribe: false, listChanged: false },
+          },
           serverInfo: { name: 'design-mind', version: `1.0.0-${BUILD_INFO.commit}` },
         });
         break;
@@ -542,8 +618,30 @@ function handleMessage(message, reply) {
       }
 
       case 'resources/list':
-        sendResult(id, { resources: [] });
+        sendResult(id, { resources: RESOURCES });
         break;
+
+      case 'resources/read': {
+        const uri = params?.uri;
+        const builder = RESOURCE_BUILDERS[uri];
+        if (!builder) {
+          sendError(id, -32602, `Unknown resource: ${uri}`);
+          break;
+        }
+        try {
+          const genome = loadGenome();
+          const text   = builder(genome);
+          const mime   = RESOURCES.find(r => r.uri === uri)?.mimeType ?? 'text/plain';
+          sendResult(id, {
+            contents: [{ uri, mimeType: mime, text }],
+          });
+        } catch (err) {
+          logErr(`[design-mind] Resource read error (${uri}): ${err.message}\n`);
+          sendError(id, -32603, `Failed to read resource: ${err.message}`);
+        }
+        break;
+      }
+
       case 'prompts/list':
         sendResult(id, { prompts: [] });
         break;
