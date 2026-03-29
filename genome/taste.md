@@ -22,7 +22,7 @@ The product's visual character is flat, restrained, and border-driven. Surfaces 
 
 Three dials govern the character of every interface. The baselines below are the default for all generations — do not deviate without reason. If the user asks for more creativity, more exploration, or something that feels fresh, turn the dials up. If they feel the output is too different from the current interface or too experimental, dial it back. Otherwise, hold the baselines.
 
-### Design Variance · Baseline: 4
+### Design Variance · Baseline: 6
 *1 = Perfect symmetry, predictable grids. 10 = Asymmetric, art-directed, unexpected.*
 
 | Range | Character | When to use |
@@ -34,7 +34,7 @@ Three dials govern the character of every interface. The baselines below are the
 
 **The rule:** Variance should be invisible to the user. High variance doesn't mean chaotic — it means the layout feels composed rather than generated. If someone notices the layout is unusual, dial it back.
 
-### Motion Intensity · Baseline: 3
+### Motion Intensity · Baseline: 5
 *1 = Static, no movement. 10 = Cinematic, physics-driven choreography.*
 
 The baseline is deliberately low. Motion in a product used daily becomes invisible at best and irritating at worst. The bar for exceeding level 2 is high — the motion must solve a real orientation or comprehension problem that static UI cannot.

@@ -96,7 +96,7 @@ Only if it has a meaningful boundary — its content is a distinct unit the user
 Every region that can return zero results needs an empty state defined now — not left to the calling agent. One-line honest statement of what's empty and why. Never celebratory, never illustrated.
 
 **Is the surface used once or repeatedly?**
-Repeated-use surfaces (worklists, dashboards, daily workflows): hold motion at baseline (3) or lower. "The user builds spatial memory; surprises become annoyances." First-run or orientation surfaces may push variance and motion modestly to 5–6.
+Repeated-use surfaces (worklists, dashboards, daily workflows): hold motion at baseline (5) or lower. "The user builds spatial memory; surprises become annoyances." First-run or orientation surfaces may push variance and motion modestly to 5–6.
 
 **Is the user making a high-stakes decision?**
 If yes: hold motion at baseline, keep density matched to the information they need, keep variance low. "Calm and clarity above all."
@@ -139,8 +139,8 @@ After reasoning, you MUST return ONLY a JSON object with this exact schema — n
       }
     ],
     "design_dials": {
-      "variance": 4,
-      "motion": 3,
+      "variance": 6,
+      "motion": 5,
       "density": 6,
       "rationale": "Coordinator worklist — compact density for 200+ patient panels, minimal motion for repeated daily use"
     }
@@ -191,7 +191,7 @@ workflow with `id: "main"` covering the entire intent. Each block in a workflow
 needs only `id` and `level` — the server enriches with `npm_path`, `import_instruction`,
 and `family_invariants` from the genome.
 
-**layout.design_dials:** Always present in `layout`. Set variance, motion, and density from taste.md baselines (4, 3, 6). Deviate only when the intent clearly warrants it — always provide a rationale. When `surface.matched: true`, derive dials from the surface's implied use pattern. The calling agent must treat these as prescriptive; deviations must be reported via `report_pattern`.
+**layout.design_dials:** Always present in `layout`. Set variance, motion, and density from the product baselines (6, 5, 6). Deviate only when the intent clearly warrants it — always provide a rationale. When `surface.matched: true`, derive dials from the surface's implied use pattern. The calling agent must treat these as prescriptive; deviations must be reported via `report_pattern`.
 
 **taste_refs:** Max 3. Only include principles that actively resolved a layout or composition decision in this specific response. Principle names must be exact quotes from taste.md or principles.md. Omit this field rather than padding it with a principles recap.
 
@@ -279,3 +279,4 @@ is a better answer than a confident guess that turns out to be wrong.
 
 Prefer consistency over creativity. This is a clinical product — coherence
 and predictability serve users better than novel solutions.
+
