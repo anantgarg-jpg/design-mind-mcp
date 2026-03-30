@@ -1,0 +1,48 @@
+id: Grid
+status: active
+intent: >
+  A dashboard or overview canvas where multiple independent panels sit directly
+  on the grey background. Each block or group of blocks manages its own card
+  surface. Panels are heterogeneous — each has a distinct, self-contained purpose.
+introduced: 2026-03-30
+times_built: 0
+
+canonical_structure:
+  shell_padding: p-4
+  background: bg-background
+  surface: >
+    Blocks render directly onto the bg-background grey canvas. No shared outer
+    card. Each independent block or block group owns its own bg-card rounded-lg
+    shadow-sm. The grey background is always visible as the gap between cards.
+  gap: gap-4
+  layout_class: "grid gap-4 h-full content-start"
+  card_rule: >
+    Every card on the grid must have bg-card rounded-lg shadow-sm.
+    Cards are self-contained — each serves a distinct purpose and can be
+    understood independently of the others.
+
+when:
+  - the canvas is a dashboard or overview with multiple independent panels
+  - different regions of the canvas serve different purposes and could be used independently
+  - the canvas is a summary view — heterogeneous data from multiple domains
+  - the user needs to scan across several unrelated data sections
+
+not_when:
+  - the canvas represents a single coherent task or entity — use Envelope
+  - all content belongs to one sequential flow or form
+  - the surface has one primary job-to-be-done
+
+never:
+  - no shared outer card wrapping all content — each card is independent
+  - never use a single full-width card that wraps everything (that is Envelope, not Grid)
+  - gap between cards must always be gap-4 — never gap-2 or gap-6 on the grid
+  - cards must never be flush with each other — the bg-background gap is always visible
+
+blocks_used: []
+
+rationale: >
+  The Innovaccer Unified Interface shell always renders a p-4 surround with a
+  bg-background grey canvas. Grid lets blocks own their own surfaces, making the
+  grey canvas the visual connective tissue between independent panels. This gives
+  dashboards and overviews the modular, scannable feel that multi-purpose surfaces
+  require without a false sense of unified containment.

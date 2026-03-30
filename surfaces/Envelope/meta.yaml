@@ -1,0 +1,46 @@
+id: Envelope
+status: active
+intent: >
+  A single coherent task, entity, or sequential process rendered on the artifact canvas.
+  The shell owns the outer card surface — blocks render inside it, never declaring
+  their own root surface.
+introduced: 2026-03-30
+times_built: 0
+
+canonical_structure:
+  shell_padding: p-4
+  background: bg-background
+  surface: >
+    Single bg-card rounded-lg shadow-sm fills the available canvas space inside
+    the p-4 surround. Blocks start from inside this card. No block declares its
+    own root bg-card or rounded-lg at the outermost level.
+  internal_organisation: >
+    Dividers (Separator), SectionHeaders, and ScrollArea are the block's tools
+    for internal organisation. The outer card boundary is fixed — never nest
+    another card at the root level.
+  layout_class: "flex flex-col h-full bg-card rounded-lg shadow-sm overflow-hidden"
+
+when:
+  - the canvas represents a single coherent task (form, intake, enrollment)
+  - the canvas is scoped to a single entity's workflow (review, assessment, detail)
+  - the canvas hosts a sequential process where all content belongs to one flow
+  - one primary job-to-be-done governs the entire surface
+
+not_when:
+  - the canvas shows heterogeneous panels with independent purposes — use Grid
+  - the canvas is a dashboard or overview with multiple unrelated data sections
+  - different regions of the canvas could be used independently
+
+never:
+  - blocks must not declare their own root bg-card rounded-lg — the shell owns the surface
+  - no shadow on block root elements — shadow lives on the Envelope card only
+  - no additional p-4 padding at block root — shell padding already provides the surround
+  - never use Envelope for overview or dashboard layouts
+
+blocks_used: []
+
+rationale: >
+  The Innovaccer Unified Interface shell always renders a p-4 surround with a
+  bg-background grey canvas. Envelope fills this canvas with a single card,
+  giving the surface visual coherence for focused, single-purpose workflows.
+  The shell owns the container so that no block duplicates the surface boundary.
