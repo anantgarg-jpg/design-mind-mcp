@@ -116,7 +116,7 @@ async function _getPriorBuilds(intentDescription) {
   } catch { return []; }
 }
 
-export async function consultBeforeBuild(params, _kb, _patternIndex, _ruleIndex, _surfaces) {
+export async function consultBeforeBuild(params) {
   const { intent_description, domain, user_type } = params;
 
   _logIntent(intent_description, domain, user_type);
@@ -729,9 +729,10 @@ function checkCopyVoice(code) {
 
 
 // Check for non-canonical terminology
-function checkNonCanonicalTerms(code, kb) {
+function checkNonCanonicalTerms(code, genome) {
   const violations = [];
-  const entities = kb.ontology?.entities || {};
+  const entitiesEntry = genome.ontology?.get('entities');
+  const entities = entitiesEntry?.entities || entitiesEntry || {};
 
   // Strip code of content that produces false positives before synonym scanning:
   // 1. Developer comments (// ... and /* ... */)
@@ -768,7 +769,7 @@ function checkNonCanonicalTerms(code, kb) {
 }
 
 // Check for honored patterns/rules (positive signals)
-function checkHonored(code, contextUsed, kb) {
+function checkHonored(code, contextUsed) {
   const honored = [];
 
   // Token-based checks
@@ -796,14 +797,6 @@ function checkHonored(code, contextUsed, kb) {
       rule_or_pattern_ref: 'safety/hard-constraints.md rule 5',
     });
   }
-  const blocks = contextUsed?.blocks || [];
-  if (blocks.length > 0 && blocks[0].score > 0.4) {
-    honored.push({
-      observation: `Matches established pattern: ${blocks[0].id} (similarity: ${blocks[0].score.toFixed(2)})`,
-      rule_or_pattern_ref: `blocks/${blocks[0].id}/meta.yaml`,
-    });
-  }
-
   return honored;
 }
 
@@ -824,7 +817,7 @@ function isInComment(code, needle) {
   return !withoutAllComments.includes(needle);
 }
 
-export async function reviewOutput(params, kb, patternIndex) {
+export async function reviewOutput(params) {
   const {
     generated_output: code,
     original_intent,
@@ -838,8 +831,8 @@ export async function reviewOutput(params, kb, patternIndex) {
   const alignmentViolations = validateConsultationAlignment(code, contextUsed);
   const tokenViolations     = validateTokenUsage(code, genome);
   const copyViolations      = checkCopyVoice(code);
-  const termViolations      = checkNonCanonicalTerms(code, kb);
-  const honored             = checkHonored(code, contextUsed, kb);
+  const termViolations      = checkNonCanonicalTerms(code, genome);
+  const honored             = checkHonored(code, contextUsed);
 
   const allAutoChecks = [
     ...blockViolations,

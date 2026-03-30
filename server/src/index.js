@@ -44,10 +44,9 @@ import {
   readFileSync, writeFileSync, existsSync, mkdirSync, statSync, readdirSync,
 } from 'node:fs';
 
-import { loadKnowledge }                                         from './knowledge.js';
 import { consultBeforeBuild, reviewOutput, reportPattern }      from './contextAssembler.js';
 import { check as checkPackage }                                from './packageChecker.js';
-import { loadGenome }                                           from './genomeLoader.js';
+import { loadGenome, refreshGenome }                           from './genomeLoader.js';
 import {
   buildBlocksManifest,
   buildSurfacesManifest,
@@ -344,19 +343,12 @@ const RESOURCE_BUILDERS = {
   'design-mind://surfaces/search':   () => JSON.stringify({ status: 'not_yet_active', use_instead: 'design-mind://surfaces/manifest' }),
 };
 
-// ── Server state ──────────────────────────────────────────────────────────────
-
-let kb           = null;
-let patternIndex = null;
-let ruleIndex    = null;
-
 async function initialize() {
   log('[design-mind] Starting Design Mind MCP Server...\n');
   log(`[design-mind] Knowledge base: ${BASE_PATH}\n`);
 
-  kb = loadKnowledge(BASE_PATH);
-  patternIndex = kb.patterns;
-  ruleIndex    = kb.rules;
+  // Pre-warm the genome cache so first tool call is fast
+  loadGenome();
 
   // ── Env / API-key check ──────────────────────────────────────────────────────
   const envPath = join(BASE_PATH, '.env');
@@ -396,8 +388,7 @@ async function initialize() {
 // ── Hot-reload (local dev only — disabled in production) ──────────────────────
 //
 // Polls mtime of genome directories and key files every HOT_RELOAD_INTERVAL ms
-// (default 2000). When a change is detected, re-runs loadKnowledge and
-// swaps the module-level refs atomically.
+// (default 2000). When a change is detected, clears and reloads the genome cache.
 //
 // Not enabled when NODE_ENV=production (Railway) — files don't change in a
 // running container and the poll overhead is unnecessary.
@@ -448,24 +439,14 @@ function startHotReload(basePath) {
   let reloadTimer = null;
 
   async function doReload() {
-    log('[design-mind] Hot-reload: genome change detected — reloading knowledge base...');
+    log('[design-mind] Hot-reload: genome change detected — reloading...');
     try {
-      const newKb = loadKnowledge(basePath);
-      // Atomic swap — in-flight tool calls finish against old refs
-      kb           = newKb;
-      patternIndex = newKb.patterns;
-      ruleIndex    = newKb.rules;
-      // Refresh poll targets in case rule files were added/removed
+      const genome = refreshGenome();
       targets  = expandTargets();
       lastSnap = snapshotMtimes(targets);
-      log(
-        `[design-mind] Hot-reload: done — ` +
-        `${newKb.patterns.length} patterns, ${newKb.rules.length} rules, ` +
-        `loaded_at=${newKb._loadedAt}`
-      );
+      log(`[design-mind] Hot-reload: done — ${genome.blocks.size} blocks, ${genome.surfaces.size} surfaces`);
     } catch (err) {
       logErr(`[design-mind] Hot-reload: FAILED — ${err.message}\n`);
-      // Keep stale kb — better than null
     }
     reloadTimer = null;
   }
@@ -489,50 +470,45 @@ function startHotReload(basePath) {
 // ── Tool dispatch ─────────────────────────────────────────────────────────────
 
 async function handleToolCall(toolName, toolArgs) {
-  if (!kb || !patternIndex || !ruleIndex) {
-    throw new Error('Server not yet initialized — please retry in a moment');
-  }
   switch (toolName) {
     case 'consult_before_build': {
       const pkgWarnings = await checkPackage(toolArgs.project_root);
-      const result = await consultBeforeBuild(toolArgs, kb, patternIndex, ruleIndex, kb.surfaces);
-      // Change 11 — ensure commit is a valid, closed JSON string (never raw-concatenated)
+      const result = await consultBeforeBuild(toolArgs);
       result._server = { commit: String(BUILD_INFO.commit ?? 'unknown') };
       if (pkgWarnings.length > 0) result._package_warnings = pkgWarnings;
       return result;
     }
     case 'review_output':
-      return await reviewOutput(toolArgs, kb, patternIndex);
+      return await reviewOutput(toolArgs);
     case 'report_pattern':
       return await reportPattern(toolArgs, BASE_PATH);
     case 'ping': {
       const shortHash = str =>
         createHash('sha256').update(str || '').digest('hex').slice(0, 8);
-      const tokenRule   = kb?.rules?.find(r => r.id === 'styling-tokens');
-      const genomeRules = (kb?.rules || []).map(r => ({
-        id:         r.id,
-        version:    r.version    || '1.0.0',
-        confidence: r.confidence ?? 0.9,
+      const genome = loadGenome();
+      const tokenRule = genome.rules.get('styling-tokens');
+      const genomeRules = [...genome.rules.entries()].map(([id, { fullContent }]) => ({
+        id,
+        version:    fullContent.match(/version:\s*([\d.]+)/)?.[1] ?? '1.0.0',
+        confidence: parseFloat(fullContent.match(/confidence:\s*([\d.]+)/)?.[1] ?? '0.9'),
         status:     'active',
       }));
       return {
-        server:         'design-mind-mcp',
-        commit:         BUILD_INFO.commit,
-        commit_msg:     BUILD_INFO.commit_msg,
-        started_at:     BUILD_INFO.started_at,
-        kb_loaded_at:   kb?._loadedAt ?? null,
+        server:        'design-mind-mcp',
+        commit:        BUILD_INFO.commit,
+        commit_msg:    BUILD_INFO.commit_msg,
+        started_at:    BUILD_INFO.started_at,
         knowledge_base: BASE_PATH,
-        kb_stats: {
-          patterns:           kb?.patterns?.length            ?? 0,
-          surfaces:           kb?.surfaces?.length            ?? 0,
-          rules:              kb?.rules?.length               ?? 0,
-          safety_constraints: kb?.safety?.constraints?.length ?? 0,
-          ontology_keys:      Object.keys(kb?.ontology ?? {}),
-          taste_hash:         shortHash(kb?.taste),
-          principles_hash:    shortHash(kb?.principles),
+        genome_stats: {
+          blocks:             genome.blocks.size,
+          surfaces:           genome.surfaces.size,
+          rules:              genome.rules.size,
+          ontology_keys:      [...genome.ontology.keys()],
+          taste_hash:         shortHash(genome.taste),
+          principles_hash:    shortHash(genome.principles),
         },
         genome_rules:       genomeRules,
-        token_set_version:  tokenRule?.version ?? 'unknown',
+        token_set_version:  tokenRule ? (tokenRule.fullContent.match(/version:\s*([\d.]+)/)?.[1] ?? 'unknown') : 'unknown',
       };
     }
     default:
