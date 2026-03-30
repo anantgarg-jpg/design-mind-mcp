@@ -130,11 +130,11 @@ const TOOLS = [
       '     its canonical_structure is authoritative. Do not deviate.\n' +
       '  2. Ratified blocks (blocks/manifest)     — use these for every covered pattern.\n' +
       '     when/not_when are binding. family_invariants must never be overridden.\n' +
-      '  3. prior_builds (returned below)         — weak signal only. Shows what teams\n' +
-      '     reached for before ratification. If a ratified block covers the intent,\n' +
-      '     use it — prior_builds do not override the manifest.\n\n' +
+      '  3. unratified_candidates (returned below) — patterns teams have built but that are\n' +
+      '     not yet ratified. Useful structural signal, but ratified blocks take precedence.\n' +
+      '     If a ratified block covers the intent, use it — candidates do not override the manifest.\n\n' +
       'Returns:\n' +
-      '  prior_builds — pre-ratification signal only. May be empty.\n\n' +
+      '  unratified_candidates — frequency-weighted patterns awaiting ratification. May be empty.\n\n' +
       'After generating, call review_output.',
     inputSchema: {
       type: 'object',
@@ -473,7 +473,7 @@ async function handleToolCall(toolName, toolArgs) {
   switch (toolName) {
     case 'consult_before_build': {
       const pkgWarnings = await checkPackage(toolArgs.project_root);
-      const result = await consultBeforeBuild(toolArgs);
+      const result = consultBeforeBuild(toolArgs);
       result._server = { commit: String(BUILD_INFO.commit ?? 'unknown') };
       if (pkgWarnings.length > 0) result._package_warnings = pkgWarnings;
       return result;

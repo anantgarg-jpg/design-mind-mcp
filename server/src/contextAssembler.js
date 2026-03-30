@@ -8,25 +8,12 @@
  *   reportPattern       — novel pattern candidate logging
  */
 
-import { writeFileSync, readFileSync, readdirSync, existsSync, mkdirSync, appendFileSync, unlinkSync } from 'node:fs';
+import { writeFileSync, readFileSync, readdirSync, existsSync, mkdirSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
-import { createHash } from 'node:crypto';
 import { loadGenome, getGenomeForLLM } from './genomeLoader.js';
-import { callDesignMind, callCritic, callPriorBuildsMatch } from './llmClient.js';
+import { callDesignMind, callCritic } from './llmClient.js';
 import { loadTokenAllowlist } from './tokenResolver.js';
 
-// ── Episodic memory writer ────────────────────────────────────────────────────
-function logEpisodic(entry) {
-  try {
-    const BASE_PATH = join(new URL(import.meta.url).pathname, '..', '..', '..');
-    const memDir  = join(BASE_PATH, 'memory');
-    const logPath = join(memDir, 'episodic-log.jsonl');
-    if (!existsSync(memDir)) mkdirSync(memDir, { recursive: true });
-    appendFileSync(logPath, JSON.stringify(entry) + '\n', 'utf-8');
-  } catch {
-    // Non-fatal: episodic logging must never interrupt the tool response
-  }
-}
 // ── Tokenizer ─────────────────────────────────────────────────────────────────
 // Used for not_when penalty, composition hint checks, and keyword scoring.
 function tokenize(text) {
@@ -49,135 +36,42 @@ function toArray(val) {
 
 // ── TOOL 1: consult_before_build ─────────────────────────────────────────────
 //
-// EXPERIMENT: experiment/mode-b-with-manifest
-//
-// The genome is served as MCP resources read at session start — not delivered
-// inside tool call responses. This handler does one thing: episodic memory
-// matching. Everything else (blocks, safety, ontology, tokens, taste) is
-// already in the agent's context window from the resources it read at startup.
+// The genome is served as MCP resources read at session start.
+// This handler returns unratified candidates that match the intent — frequency-
+// weighted patterns that teams have built but aren't yet ratified blocks.
+// Precedence: ratified surface > ratified blocks > unratified candidates.
 
-// ── In-memory prior-builds cache ──────────────────────────────────────────────
-// Key: hash(intent) + hash(log entry IDs)
-// Invalidates automatically when new entries appear in the log.
-const _priorBuildsCache = new Map();
-
-function _episodicLogPath() {
+function _candidatesDir() {
   const BASE = join(new URL(import.meta.url).pathname, '..', '..', '..');
-  return join(BASE, 'memory', 'episodic-log.jsonl');
+  return join(BASE, 'blocks', '_candidates');
 }
 
-function _readEpisodicLog() {
-  try {
-    const logPath = _episodicLogPath();
-    if (!existsSync(logPath)) return [];
-    return readFileSync(logPath, 'utf8')
-      .trim().split('\n').filter(Boolean)
-      .map(line => { try { return JSON.parse(line); } catch { return null; } })
-      .filter(Boolean);
-  } catch { return []; }
+function _getMatchingCandidates(intentDescription) {
+  const candidatesDir = _candidatesDir();
+  if (!existsSync(candidatesDir)) return [];
+
+  const candidates = loadExistingCandidates(candidatesDir);
+  if (candidates.length === 0) return [];
+
+  const intentLower = intentDescription.toLowerCase();
+  const scored = candidates
+    .map(c => {
+      const score = stringSimilarity(intentLower, compositeText(c.pattern_name, c.description, c.intent_it_serves));
+      return { ...c, _score: score };
+    })
+    .filter(c => c._score > 0.08)
+    .sort((a, b) => b._score - a._score)
+    .slice(0, 5);
+
+  return scored.map(({ _score, file, ...rest }) => rest);
 }
 
-function _logIntent(intentDescription, domain, userType) {
-  const entry = {
-    id:             `build_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-    intent:         intentDescription,
-    domain:         domain    ?? null,
-    user_type:      userType  ?? null,
-    blocks_used:    [],
-    reviewer_flags: [],
-    confidence:     null,
-    status:         'active',
-    built_at:       new Date().toISOString(),
-  };
-  try {
-    const logPath = _episodicLogPath();
-    mkdirSync(join(logPath, '..'), { recursive: true });
-    appendFileSync(logPath, JSON.stringify(entry) + '\n', 'utf8');
-  } catch { /* log failure must never block the response */ }
-}
-
-async function _getPriorBuilds(intentDescription) {
-  const entries = _readEpisodicLog();
-  if (entries.length === 0) return [];
-
-  const recent = entries.slice(-20); // max 20 — more = noise
-
-  const intentHash = createHash('md5').update(intentDescription.toLowerCase().trim()).digest('hex').slice(0, 8);
-  const logHash    = createHash('md5').update(recent.map(e => e.id ?? e.built_at ?? '').join(',')).digest('hex').slice(0, 8);
-  const cacheKey   = `${intentHash}-${logHash}`;
-
-  if (_priorBuildsCache.has(cacheKey)) return _priorBuildsCache.get(cacheKey);
-
-  try {
-    const result = await callPriorBuildsMatch({ intentDescription, recentBuilds: recent });
-    const matches = result?.prior_builds ?? [];
-    _priorBuildsCache.set(cacheKey, matches);
-    return matches;
-  } catch { return []; }
-}
-
-export async function consultBeforeBuild(params) {
-  const { intent_description, domain, user_type } = params;
-
-  _logIntent(intent_description, domain, user_type);
-
-  const priorBuilds = await _getPriorBuilds(intent_description);
-
+export function consultBeforeBuild(params) {
+  const { intent_description } = params;
+  const candidates = _getMatchingCandidates(intent_description);
   return {
-    mode:     'constraint-briefing',
-    _branch:  'experiment/mode-b-with-manifest',
-    _note:    [
-      'Follow precedence strictly:',
-      '(1) Ratified surface — if surfaces/manifest has an entry matching your intent, its canonical_structure is authoritative. Do not deviate.',
-      '(2) Ratified blocks — blocks/manifest covers every known pattern. Use when/not_when to select. family_invariants are immutable.',
-      '(3) prior_builds — weak signal only. What teams reached for before ratification.',
-      'If a ratified block covers the intent, use it. prior_builds do not override the manifest.',
-      'Call review_output after generating.',
-    ].join(' '),
-    prior_builds: priorBuilds,
+    unratified_candidates: candidates,
   };
-}
-
-// ── Episodic log updater (called by reviewOutput) ─────────────────────────────
-
-function _updateEpisodicLogEntry(originalIntent, generatedOutput, reviewResponse) {
-  try {
-    const logPath = _episodicLogPath();
-    if (!existsSync(logPath)) return;
-
-    const lines = readFileSync(logPath, 'utf8').trim().split('\n').filter(Boolean);
-
-    const entries = lines.map((line, idx) => {
-      try { return { idx, entry: JSON.parse(line) }; } catch { return null; }
-    }).filter(Boolean);
-
-    // Most recent entry matching this intent
-    const match = [...entries].reverse().find(
-      ({ entry }) => entry.intent === originalIntent && entry.status === 'active'
-    );
-    if (!match) return;
-
-    // Extract blocks from import statements
-    const importMatches = (generatedOutput || '').match(
-      /import\s+.*?from\s+['"]@innovaccer\/ui-assets[^'"]*['"]/g
-    ) ?? [];
-    const blocksUsed = importMatches.map(imp => {
-      const m = imp.match(/\/([A-Z][a-zA-Z]+)['"]/);
-      return m ? m[1] : null;
-    }).filter(Boolean);
-
-    const reviewerFlags = (reviewResponse.fix ?? []).map(f => f.problem).filter(Boolean);
-
-    const updated = {
-      ...match.entry,
-      blocks_used:    blocksUsed,
-      reviewer_flags: reviewerFlags,
-      confidence:     reviewResponse.confidence ?? null,
-    };
-
-    lines[match.idx] = JSON.stringify(updated);
-    writeFileSync(logPath, lines.join('\n') + '\n', 'utf8');
-  } catch { /* log update must never affect the review response */ }
 }
 
 
@@ -885,7 +779,7 @@ export async function reviewOutput(params) {
     novel: criticResult.novel || [],
     fix: [...allAutoChecks.filter(v => v.severity === 'blocker'), ...dedupedLlmFixes],
     candidate_patterns: criticResult.candidate_patterns || [],
-    _candidate_instruction: (criticResult.candidate_patterns || []).length > 0
+    next_step: (criticResult.candidate_patterns || []).length > 0
       ? `REQUIRED: call report_pattern for each entry in candidate_patterns before proceeding. ` +
         `Do not skip this step. review_output and report_pattern are separate obligations — ` +
         `completing review does not discharge the reporting requirement.`
@@ -894,10 +788,6 @@ export async function reviewOutput(params) {
     layout_compliance: criticResult.layout_compliance || [],
     confidence: criticResult.confidence || 0,
   };
-
-  // Side effect only — updates episodic log entry with blocks used + reviewer flags.
-  // Never changes the response shape.
-  _updateEpisodicLogEntry(original_intent, code, response);
 
   return response;
 }
@@ -921,6 +811,7 @@ function loadExistingCandidates(candidatesDir) {
       const intentMatch  = content.match(/intent_it_serves:\s*[>|]?\s*\n?((?:  .+\n?)+)/);
       const familyMatch  = content.match(/structural_family:\s*["']?(.+?)["']?\n/);
       const idMatch      = content.match(/candidate_id:\s*["']?(.+?)["']?\n/);
+      const freqMatch    = content.match(/frequency_count:\s*(\d+)/);
       return {
         file: f,
         pattern_name:      nameMatch   ? nameMatch[1].trim()                         : f,
@@ -928,9 +819,10 @@ function loadExistingCandidates(candidatesDir) {
         intent_it_serves:  intentMatch ? intentMatch[1].replace(/\s+/g, ' ').trim() : '',
         structural_family: familyMatch ? familyMatch[1].trim()                       : null,
         candidate_id:      idMatch     ? idMatch[1].trim()                           : f.replace('.yaml', ''),
+        frequency_count:   freqMatch   ? parseInt(freqMatch[1], 10)                  : 1,
       };
     } catch {
-      return { file: f, pattern_name: f, description: '', intent_it_serves: '', structural_family: null, candidate_id: f.replace('.yaml', '') };
+      return { file: f, pattern_name: f, description: '', intent_it_serves: '', structural_family: null, candidate_id: f.replace('.yaml', ''), frequency_count: 1 };
     }
   });
 }
