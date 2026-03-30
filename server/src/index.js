@@ -126,10 +126,16 @@ const TOOLS = [
       '  design-mind://genome/copy-voice    — copy rules\n' +
       '  design-mind://genome/principles    — product principles\n' +
       '  design-mind://genome/taste         — aesthetic identity\n\n' +
+      'Precedence — follow this order strictly:\n' +
+      '  1. Ratified surface (surfaces/manifest)  — if a surface entry matches your intent,\n' +
+      '     its canonical_structure is authoritative. Do not deviate.\n' +
+      '  2. Ratified blocks (blocks/manifest)     — use these for every covered pattern.\n' +
+      '     when/not_when are binding. family_invariants must never be overridden.\n' +
+      '  3. prior_builds (returned below)         — weak signal only. Shows what teams\n' +
+      '     reached for before ratification. If a ratified block covers the intent,\n' +
+      '     use it — prior_builds do not override the manifest.\n\n' +
       'Returns:\n' +
-      '  prior_builds — pre-ratification signal: what similar surfaces looked like\n' +
-      '  before they became canonical patterns. May be empty.\n\n' +
-      'The genome is in your context. You own the composition.\n' +
+      '  prior_builds — pre-ratification signal only. May be empty.\n\n' +
       'After generating, call review_output.',
     inputSchema: {
       type: 'object',

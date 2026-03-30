@@ -22,11 +22,10 @@ The MCP tools do not do layout or block selection for you. You own the compositi
 - Pass `domain` and `user_type` if inferable
 - Returns `prior_builds` — what similar surfaces looked like before ratification. Use as signal, not prescription.
 
-**Step 2 — Compose using the genome resources you read at session start:**
-- Match the intent against `blocks/manifest` — use `when` / `not_when` to select blocks
-- Check `surfaces/manifest` — if a surface entry exists, its `canonical_structure` is authoritative
-- Import blocks from `@innovaccer/ui-assets` using the exact `import_instruction`
-- Never reimplement a block inline. Never override `family_invariants`.
+**Step 2 — Compose using the genome resources, in this precedence order:**
+1. **Ratified surface** (`surfaces/manifest`) — if an entry matches your intent, its `canonical_structure` is authoritative. Do not deviate.
+2. **Ratified blocks** (`blocks/manifest`) — use `when` / `not_when` to select. `family_invariants` are immutable. Import from `@innovaccer/ui-assets` using `import_instruction`. Never reimplement inline.
+3. **`prior_builds`** (returned by `consult_before_build`) — weak signal only. Shows what teams built before ratification. If a ratified block covers the intent, use it — prior builds do not override the manifest.
 
 **Step 3 — After generating code**, call `review_output`:
 - Pass `generated_output`, `original_intent`, and optionally `context_used` (the consult response)
