@@ -8,7 +8,7 @@
  *   reportPattern       — novel pattern candidate logging
  */
 
-import { writeFileSync, readFileSync, readdirSync, existsSync, mkdirSync, appendFileSync } from 'node:fs';
+import { writeFileSync, readFileSync, readdirSync, existsSync, mkdirSync, appendFileSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { loadGenome, getGenomeForLLM } from './genomeLoader.js';
@@ -891,6 +891,11 @@ export async function reviewOutput(params, kb, patternIndex) {
     novel: criticResult.novel || [],
     fix: [...allAutoChecks.filter(v => v.severity === 'blocker'), ...dedupedLlmFixes],
     candidate_patterns: criticResult.candidate_patterns || [],
+    _candidate_instruction: (criticResult.candidate_patterns || []).length > 0
+      ? `REQUIRED: call report_pattern for each entry in candidate_patterns before proceeding. ` +
+        `Do not skip this step. review_output and report_pattern are separate obligations — ` +
+        `completing review does not discharge the reporting requirement.`
+      : undefined,
     copy_violations: copyViolations,
     layout_compliance: criticResult.layout_compliance || [],
     confidence: criticResult.confidence || 0,
@@ -1031,8 +1036,12 @@ function runStructuralGate(params, basePath) {
 
   const contract = loadBlockContract(blockId, basePath);
 
-  // No frozen field → advisory generic probe only, no hard block
+  // No frozen field → check for structural signal in why; if present, pass through.
+  // If absent, probe once (advisory) but do not loop — probe has no resubmit path here.
   if (!contract || contract.frozen.length === 0) {
+    if (hasStructuralSignal(why)) {
+      return { pass: true, structural_delta: why };
+    }
     return {
       pass: false,
       probe: true,
@@ -1042,9 +1051,8 @@ function runStructuralGate(params, basePath) {
         `Does your intent require slots or data zones that ${blockId} has no equivalent for?`,
       ],
       probe_instruction:
-        `If all answers are NO, your delta is content — use ${blockId} as-is. ` +
-        `Fill its free slots with your domain content. ` +
-        `If any answer is YES, state which one specifically, then resubmit.`,
+        `If all answers are NO, your delta is content — use ${blockId} as-is and do NOT resubmit. ` +
+        `If any answer is YES, resubmit once with why_existing_patterns_didnt_fit updated to name the specific structural difference.`,
     };
   }
 
@@ -1361,21 +1369,130 @@ function localFallback(params, basePath, reason) {
   return { candidate_id: candidateId, similar_candidates: similar.map(s => ({ file: s.file, pattern_name: s.pattern_name })), frequency_count: frequencyCount, status, source: 'local_fallback' };
 }
 
+// ── Session candidate cache ───────────────────────────────────────────────────
+// Tracks patterns reported in this server process lifetime.
+// Key: normalized pattern name (lowercase, alphanumeric only)
+// Value: { candidate_id, frequency_count }
+// Purpose: within one working session, revisions of the same pattern replace
+// the earlier candidate rather than creating duplicates or inflating frequency.
+
+const _sessionCandidates = new Map();
+
+function normalizePatternName(name) {
+  return (name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function replaceSessionCandidate(params, basePath, sessionEntry) {
+  const candidatesDir = join(basePath, 'blocks', '_candidates');
+  const { candidate_id: oldId, frequency_count: frozenFreq } = sessionEntry;
+
+  // Remove old files
+  try { if (existsSync(join(candidatesDir, `${oldId}.yaml`)))        unlinkSync(join(candidatesDir, `${oldId}.yaml`));        } catch {}
+  try { if (existsSync(join(candidatesDir, `${oldId}.preview.tsx`))) unlinkSync(join(candidatesDir, `${oldId}.preview.tsx`)); } catch {}
+
+  const newId = generateCandidateId(params.pattern_name);
+  const {
+    pattern_name, description, intent_it_serves,
+    why_existing_patterns_didnt_fit, ontology_refs = [],
+    implementation_ref = '', structural_delta,
+  } = params;
+
+  const status = frozenFreq >= 3 ? 'ready_for_ratification'
+               : frozenFreq === 2 ? 'needs_more_signal'
+               : 'logged';
+
+  const incomingFamily      = inferStructuralFamily(params, basePath);
+  const structuralFamilyLine = incomingFamily ? `structural_family: "${incomingFamily}"` : null;
+  const projectId           = process.env.DESIGN_MIND_PROJECT || basePath.split('/').pop() || 'unknown';
+  const today               = new Date().toISOString().substring(0, 10);
+
+  if (!existsSync(candidatesDir)) mkdirSync(candidatesDir, { recursive: true });
+
+  const yamlContent = [
+    `# Design Mind Pattern Candidate`,
+    `# Generated: ${new Date().toISOString()} (session revision — frequency frozen at ${frozenFreq})`,
+    `# Status: ${status}`,
+    ``,
+    `candidate_id: "${newId}"`,
+    `pattern_name: "${pattern_name}"`,
+    `status: ${status}`,
+    `frequency: ${frozenFreq}`,
+    `frequency_count: ${frozenFreq}`,
+    ...(structuralFamilyLine ? [structuralFamilyLine] : []),
+    ``,
+    `reporting_projects:`,
+    `  - project_id: "${projectId}"`,
+    `    last_active: "${today}"`,
+    ``,
+    `description: >`,
+    `  ${description.replace(/\n/g, '\n  ')}`,
+    ``,
+    `intent_it_serves: >`,
+    `  ${intent_it_serves.replace(/\n/g, '\n  ')}`,
+    ``,
+    `why_existing_patterns_didnt_fit: >`,
+    `  ${why_existing_patterns_didnt_fit.replace(/\n/g, '\n  ')}`,
+    ``,
+    structural_delta ? `structural_delta: >\n  ${structural_delta.replace(/\n/g, '\n  ')}` : null,
+    structural_delta ? `` : null,
+    implementation_ref ? `implementation_ref: "${implementation_ref}"` : `implementation_ref: null`,
+    ``,
+    `ontology_refs:`,
+    ...(Array.isArray(ontology_refs) && ontology_refs.length > 0
+      ? ontology_refs.map(r => `  - ${r}`)
+      : ['  []']),
+    ``,
+    `# Instructions for human ratification:`,
+    `# 1. Review the description and intent`,
+    `# 2. If valid: create blocks/${pattern_name}/ with meta.yaml`,
+    `# 3. Run: node server/src/seed.js to re-index`,
+  ].filter(l => l !== null).join('\n');
+
+  writeFileSync(join(candidatesDir, `${newId}.yaml`), yamlContent, 'utf-8');
+
+  if (params.preview_code) {
+    writeFileSync(join(candidatesDir, `${newId}.preview.tsx`), params.preview_code, 'utf-8');
+  }
+
+  _sessionCandidates.set(normalizePatternName(pattern_name), { candidate_id: newId, frequency_count: frozenFreq });
+
+  process.stderr.write(`[reportPattern] Session revision: ${oldId} → ${newId} (frequency frozen at ${frozenFreq})\n`);
+
+  return {
+    candidate_id:     newId,
+    frequency_count:  frozenFreq,
+    status,
+    session_revision: true,
+    replaced:         oldId,
+    source:           'local_session_replace',
+  };
+}
+
 /**
  * Submits a novel pattern candidate to the hosted API.
  * Falls back to local file write if the API is unreachable.
+ * Session revisions replace the earlier candidate and freeze frequency_count.
  */
 export async function reportPattern(params, basePath) {
-  // ── Change 2: structural gate — runs before API submission ───────────────────
-  const gateResult = runStructuralGate(params, basePath);
-  if (!gateResult.pass) {
-    // Probe (advisory, no frozen) — return questions but do not block hard
-    if (gateResult.probe) return gateResult;
-    // Blocked — content variation or safety conflict
-    return gateResult;
+  const nameKey = normalizePatternName(params.pattern_name);
+  const sessionEntry = _sessionCandidates.get(nameKey);
+
+  // Session revision — replace earlier candidate, freeze frequency_count
+  if (sessionEntry) {
+    // Still run the structural gate so probe/block logic applies to revisions too
+    const gateResult = runStructuralGate(params, basePath);
+    if (!gateResult.pass) return gateResult;
+    const paramsWithDelta = {
+      ...params,
+      structural_delta: gateResult.structural_delta || params.why_existing_patterns_didnt_fit,
+    };
+    return replaceSessionCandidate(paramsWithDelta, basePath, sessionEntry);
   }
 
-  // Gate passed — attach structural_delta for the candidate record
+  // ── First report in this session ─────────────────────────────────────────────
+  const gateResult = runStructuralGate(params, basePath);
+  if (!gateResult.pass) return gateResult;
+
   const paramsWithDelta = {
     ...params,
     structural_delta: gateResult.structural_delta || params.why_existing_patterns_didnt_fit,
@@ -1393,16 +1510,28 @@ export async function reportPattern(params, basePath) {
     submitted_by: process.env.DESIGN_MIND_PROJECT || basePath.split('/').pop() || 'unknown',
   };
 
+  let result;
   try {
-    const result = await submitToApi(payload);
-    if (result.status === 201) {
-      process.stderr.write(`[reportPattern] Submitted to API: ${result.body.candidate_id} (${result.body.status})\n`);
-      return result.body;
+    const apiResult = await submitToApi(payload);
+    if (apiResult.status === 201) {
+      process.stderr.write(`[reportPattern] Submitted to API: ${apiResult.body.candidate_id} (${apiResult.body.status})\n`);
+      result = apiResult.body;
+    } else {
+      result = localFallback(paramsWithDelta, basePath, `API returned ${apiResult.status}`);
     }
-    return localFallback(paramsWithDelta, basePath, `API returned ${result.status}`);
   } catch (err) {
-    return localFallback(paramsWithDelta, basePath, err.message);
+    result = localFallback(paramsWithDelta, basePath, err.message);
   }
+
+  // Register in session cache so subsequent calls for same pattern are treated as revisions
+  if (result?.candidate_id) {
+    _sessionCandidates.set(nameKey, {
+      candidate_id:    result.candidate_id,
+      frequency_count: result.frequency_count ?? 1,
+    });
+  }
+
+  return result;
 }
 
 

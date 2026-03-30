@@ -1,0 +1,68 @@
+id: Stepper
+status: active
+component_type: navigation
+level: composite
+npm_path: "@innovaccer/ui-assets/block-composites/Stepper"
+structural_family: step-navigation
+family_invariants:
+  - "Step indicator: numbered circle, completed steps show checkmark icon"
+  - "Connector line: bg-border, turns bg-primary when step is completed"
+  - "Active step label: font-medium text-foreground"
+  - "Inactive step label: text-muted-foreground"
+  - "Completed step indicator: bg-primary text-primary-foreground"
+  - "Active step indicator: border-2 border-primary text-primary bg-background"
+  - "Incomplete step indicator: bg-muted text-muted-foreground"
+confidence: 0.87
+version: 1.0.0
+introduced: 2026-03-29
+last_evolved: 2026-03-29
+
+summary: >
+  Linear step-by-step navigation indicator for multi-step flows — forms,
+  wizards, onboarding sequences. Shows position within a sequence, completed
+  steps, and remaining steps. Two orientations: horizontal (top of a form)
+  and vertical (sidebar of a multi-step wizard). The Stepper is a navigation
+  indicator only — it does not manage form state or step content.
+
+when:
+  - multi-step form or wizard with 2–7 discrete steps
+  - onboarding flow where user needs orientation in the sequence
+  - enrollment or intake process with named stages
+  - any flow where users benefit from knowing progress and can navigate back to completed steps
+
+not_when:
+  - single-step form — no stepper needed
+  - more than 7 steps (becomes unreadable — consider collapsing into phases)
+  - progress through a continuous process with no discrete steps — use Progress
+  - tab-based navigation where all sections are always accessible — use Tabs
+
+orientations:
+  horizontal: >
+    Steps laid out left-to-right with connector lines between indicators.
+    Use above form content. Best for 3–5 steps.
+  vertical: >
+    Steps stacked top-to-bottom in a sidebar. Use for complex wizards
+    where step labels need more space. Best for 4–7 steps.
+
+key_rules:
+  - step labels must be noun phrases, not verbs (e.g. "Patient Info" not "Enter Patient Info")
+  - completed steps are always clickable to navigate back — never locked after completion
+  - current step is always visually distinct from both completed and upcoming steps
+  - never skip step numbers — always sequential
+
+frozen:
+  - "step states: completed (checkmark + filled), active (border ring), incomplete (muted) — never deviate"
+  - "connector: always fills bg-primary for completed segment, bg-border for incomplete"
+  - "sequence: always sequential — no branching step indicators"
+
+free:
+  - stepCount: "2–7 steps"
+  - stepLabels: "any noun phrase per step"
+  - orientation: "horizontal | vertical"
+  - currentStep: "any step index"
+  - onStepClick: "navigation handler for completed steps"
+
+embedding_hint: >
+  stepper step wizard multi step form progress indicator
+  onboarding enrollment intake sequence stages linear flow
+  horizontal vertical completed active incomplete navigation

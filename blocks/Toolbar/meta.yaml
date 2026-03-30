@@ -1,0 +1,69 @@
+id: Toolbar
+status: active
+component_type: action
+level: composite
+npm_path: "@innovaccer/ui-assets/block-composites/Toolbar"
+structural_family: action-strip
+family_invariants:
+  - "Layout: flex items-center gap-1 — never gap-2 or larger between action buttons"
+  - "Height: h-9 (36px) — consistent with table header and filter bar heights"
+  - "Action buttons: Button variant='transparent' size='sm' — never outline or filled in toolbar context"
+  - "Separator between groups: Separator orientation='vertical' h-4 mx-1"
+  - "Overflow: actions beyond viewport width collapse into a MoreHorizontal dropdown"
+  - "Never floats — always anchored to its parent container edge"
+confidence: 0.87
+version: 1.0.0
+introduced: 2026-03-29
+last_evolved: 2026-03-29
+
+summary: >
+  A horizontal strip of contextual action buttons. Used in three contexts:
+  table toolbar (bulk actions on selected rows), page toolbar (primary page-level
+  actions anchored to a header), and inline toolbar (actions scoped to a specific
+  card or section). Actions are grouped by relationship with Separator dividers.
+  Overflow actions collapse into a MoreHorizontal dropdown.
+
+when:
+  - one or more rows are selected in a table and bulk actions are available
+  - a page or section has multiple actions that don't warrant individual primary buttons
+  - a card or panel has a set of related actions in its header
+  - replacing a row of disparate Buttons that belong to the same action group
+
+not_when:
+  - single primary CTA — use Button directly
+  - navigation between sections — use Tabs or NavigationMenu
+  - filter controls (search, chips, sort) — use FilterBar
+  - actions inside a list row — use ActionableRow's secondaryActions slot
+
+contexts:
+  table: >
+    Appears above DataTable when rows are selected. Shows selection count + bulk
+    actions (Delete, Export, Assign, etc.). Disappears when selection is cleared.
+  page: >
+    Anchored to PageHeader right slot. Contains page-level actions like
+    Export, Settings, Share. Always visible.
+  section: >
+    Inside a Card or section header. Scoped to that section's content.
+    Typically 2–3 actions max.
+
+key_rules:
+  - always use Button variant='transparent' inside a Toolbar — filled buttons break the strip aesthetic
+  - icon-only buttons must have tooltip (Tooltip block) for accessibility
+  - destructive actions (Delete) always placed last in the group, separated by a Separator
+  - bulk action toolbar always shows selected count as a text label before actions
+  - max ~5 visible actions before overflow menu is required
+
+frozen:
+  - "button variant: always transparent inside toolbar — never outline, never filled"
+  - "gap: always gap-1 between buttons — never larger"
+  - "destructive: always last, always separated"
+
+free:
+  - actions: "any set of action labels and icons"
+  - selectionCount: "any number (table context)"
+  - grouping: "any logical grouping with Separator"
+
+embedding_hint: >
+  toolbar action strip bulk actions selected rows table header
+  page actions section actions export delete assign icon button
+  group separator overflow more horizontal

@@ -1,0 +1,67 @@
+id: EmptyState
+status: active
+component_type: feedback
+level: composite
+npm_path: "@innovaccer/ui-assets/block-composites/EmptyState"
+structural_family: empty-feedback
+family_invariants:
+  - "Layout: flex flex-col items-center justify-center gap-3 py-12 text-center"
+  - "Icon: text-muted-foreground, size 40px — never colored/branded"
+  - "Heading: text-base font-medium text-foreground"
+  - "Body: text-sm text-muted-foreground max-w-xs"
+  - "CTA: single Button, variant default or outline — never more than one action"
+confidence: 0.90
+version: 1.0.0
+introduced: 2026-03-29
+last_evolved: 2026-03-29
+
+summary: >
+  Placeholder state for a list, table, or container with no data. Communicates
+  why the space is empty and what the user can do next. Three variants: no-data
+  (first-time, nothing exists yet), no-results (search/filter returned nothing),
+  and no-access (permission-gated content). Always centered in the available
+  space of the parent container.
+
+when:
+  - a list, table, or feed has zero items to display
+  - a search or filter returns no results
+  - a section is permission-gated and the user cannot view content
+  - replacing a loading skeleton when data fetch succeeds with empty payload
+
+not_when:
+  - error state (network failure, API error) — use ErrorState
+  - loading in progress — use Skeleton
+  - partial data exists but more is loading — do not show EmptyState
+
+variants:
+  no-data: >
+    First-time or genuinely empty. Icon reflects the content type.
+    CTA prompts creation or onboarding action.
+  no-results: >
+    Search or filter returned nothing. Copy says "No results for X".
+    CTA is "Clear filters" or "Try a different search".
+  no-access: >
+    User lacks permission. Icon is a lock. No CTA unless escalation path exists.
+
+key_rules:
+  - heading and body copy must be specific — never "No data found" or "Nothing here"
+  - icon must semantically match the empty content type (e.g. clipboard for tasks, user for patients)
+  - single CTA only — two actions creates decision paralysis in an already stuck state
+  - no-results variant must name what was searched/filtered so user knows why
+
+frozen:
+  - "layout: always centered (flex flex-col items-center) — never left-aligned"
+  - "icon color: always text-muted-foreground — never primary or destructive"
+  - "max CTAs: one — never two actions"
+
+free:
+  - icon: "any icon appropriate to content type"
+  - heading: "any specific empty-state heading"
+  - body: "any supporting copy"
+  - cta: "any single action label, or absent"
+  - variant: "no-data | no-results | no-access"
+
+embedding_hint: >
+  empty state no data no results nothing found zero items
+  placeholder blank list table search filter cleared
+  first time create onboard permission no access lock

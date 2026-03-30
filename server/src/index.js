@@ -158,31 +158,6 @@ const TOOLS = [
             'Absolute path to the consuming project root (where its package.json lives). ' +
             'If omitted, the server walks up from its working directory to find it.',
         },
-        workflows: {
-          type: 'array',
-          description:
-            'Optional workflow decompositions. Each represents a bounded UI section with ' +
-            'a specific intent. When provided, the response maps blocks to each workflow ' +
-            'individually. When omitted, the entire intent is treated as a single workflow.',
-          items: {
-            type: 'object',
-            required: ['id', 'intent'],
-            properties: {
-              id: {
-                type: 'string',
-                description: 'Unique workflow identifier (e.g. "filter-header", "patient-list")',
-              },
-              intent: {
-                type: 'string',
-                description: 'What this workflow section does — be specific about data and actions',
-              },
-              region: {
-                type: 'string',
-                description: 'Optional: which layout region this workflow belongs to',
-              },
-            },
-          },
-        },
       },
     },
   },
