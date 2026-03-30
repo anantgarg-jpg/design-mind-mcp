@@ -33,9 +33,9 @@
       "confidence": 0.97,
       "status": "active",
       "ratified_by": "design-leadership",
-      "mutation_count": 1,
-      "last_challenged": "v2-expansion",
-      "note": "v2.0.0 — expanded from color-only tokens to full styling system: typography (DM Sans), spacing (4px grid), border-radius, elevation, z-index, motion. Colors updated to the color palette defined in theme.css. Single comprehensive file. Load this rule for ANY styling decision."
+      "mutation_count": 2,
+      "last_challenged": "v3-slim",
+      "note": "v3.0.0 — token definitions removed from genome. Single rule: use tokens from @innovaccer/ui-assets/tokens. Token definitions live in the package."
     },
     "copy-voice": {
       "file": "genome/rules/copy-voice.rule.md",

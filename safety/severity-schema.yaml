@@ -15,8 +15,7 @@
 severity_levels:
   critical:
     token: "--destructive"
-    token_light: "--destructive-light"               # #FFF2F0
-    hex_reference: "#D62400"                         # Red — WCAG AA on white
+    token_light: "--destructive-light"
     tailwind_equivalent: "text-destructive"
     bg_class: "bg-[var(--destructive-light)]"
     text_class: "text-destructive"
@@ -31,8 +30,7 @@ severity_levels:
 
   high:
     token: "--alert"                                  # Orange — NOT the same as the Alert entity
-    token_light: "--alert-light"                     # #FFF3E6
-    hex_reference: "#944A00"                         # --alert-text — WCAG AA accessible foreground
+    token_light: "--alert-light"
     tailwind_equivalent: "text-alert-text"
     bg_class: "bg-[var(--alert-light)]"
     text_class: "text-alert-text"
@@ -47,8 +45,7 @@ severity_levels:
 
   medium:
     token: "--warning"
-    token_light: "--warning-light"                   # #FFF8E6
-    hex_reference: "#5C4403"                         # --warning-text — WCAG AA accessible foreground
+    token_light: "--warning-light"
     tailwind_equivalent: "text-warning-text"
     bg_class: "bg-[var(--warning-light)]"
     text_class: "text-warning-text"
@@ -62,8 +59,7 @@ severity_levels:
 
   low:
     token: "--accent"
-    token_light: "--accent"                          # #E8F1FD — accent is already the light bg
-    hex_reference: "#003374"                         # --accent-foreground — WCAG AA
+    token_light: "--accent"                          # accent is already the light bg
     tailwind_equivalent: "text-accent-foreground"
     bg_class: "bg-accent"
     text_class: "text-accent-foreground"

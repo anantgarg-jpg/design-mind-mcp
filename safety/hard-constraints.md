@@ -7,12 +7,6 @@
 
 ## Severity color rules
 
-1. `--severity-critical` is reserved exclusively for Critical severity alerts and Alert-type CTAs
-   that are part of a critical alert component. It may not be used for: brand elements,
-   general CTAs, hover states, success states, or decorative elements.
-
-2. `--severity-high` is reserved for High severity alerts and Overdue status indicators only.
-
 3. `--status-success` is used for success, Completed, and Closed states. It may only appear
    in a CTA when that CTA is within a success toast or confirmation message. It is not used
    for decorative or neutral UI elements.
@@ -68,9 +62,6 @@
 12. Any surface containing data entry must warn the user before navigating away
     with unsaved changes. Silent discard is not permitted.
 
-13. Form and input error states must use the designated error token. `--severity-critical`
-    must not be used for routine validation errors.
-
 ---
 
 ## CTA hierarchy rules
@@ -113,9 +104,7 @@
 
 ## Accessibility constraints
 
-20. focus-visible must never be suppressed with outline:none or
-    ring-0 without an explicit visible replacement. The --ring
-    token exists for this purpose.
+20. focus-visible must never be suppressed with outline:none or ring-0 without an explicit visible replacement.
 
 ## Block constraints
 

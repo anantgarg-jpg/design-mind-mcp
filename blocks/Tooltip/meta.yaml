@@ -30,8 +30,8 @@ variants:
   default: dark inverted tooltip
 
 key_rules:
-  - open delay 400ms to prevent accidental triggers
-  - close delay 100ms for smooth transitions
+  - open delay is intentional — prevents accidental triggers on hover
+  - close delay allows smooth transitions; set by the component
   - keyboard accessible via focus (not hover-only)
   - never for essential info (hover not reliable on touch)
   - single line preferred, max-w-[220px] for wrapping

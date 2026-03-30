@@ -5,7 +5,7 @@ level: primitive
 npm_path: "@innovaccer/ui-assets/block-primitives/Spinner"
 structural_family: loading-indicator
 family_invariants:
-  - "Animation: animate-spin, linear, 600ms — never ease or bounce"
+  - "Animation: animate-spin, linear — never ease or bounce; duration set by the component"
   - "Shape: circular SVG stroke — never dots, bars, or pulse"
   - "Color: currentColor — inherits from parent text color"
   - "No label text rendered inside the spinner — label is a sibling element if needed"
@@ -18,8 +18,7 @@ summary: >
   Circular indeterminate loading indicator for in-progress operations with
   unknown duration. Use when a specific region or element is loading and a
   full Skeleton layout is not appropriate — button loading states, inline
-  data fetches, icon-replacement loaders. Three sizes: sm (16px), default
-  (24px), lg (32px).
+  data fetches, icon-replacement loaders. Three sizes: sm, default, and lg.
 
 when:
   - a button is in a loading/submitting state (replaces button label)
@@ -34,17 +33,17 @@ not_when:
   - decorative animation with no loading semantics — never misuse Spinner
 
 sizes:
-  sm: 16px — inside buttons, inline next to text
-  default: 24px — standalone inline loading regions
-  lg: 32px — overlay centers, modal loading states
+  sm: inside buttons, inline next to text
+  default: standalone inline loading regions
+  lg: overlay centers, modal loading states
 
 key_rules:
   - always paired with aria-label or aria-busy on the container for accessibility
   - color inherits via currentColor — never hardcode a color
-  - never show spinner for operations expected to complete in under 300ms
+  - never show spinner for operations expected to complete near-instantly — prefer no indicator for instant responses
 
 frozen:
-  - "animation: always animate-spin linear 600ms — no bounce, no ease, no pulse"
+  - "animation: always animate-spin linear — no bounce, no ease, no pulse; duration set by the component"
   - "shape: circular stroke only — no other loader shapes"
 
 free:

@@ -82,7 +82,6 @@ AlertSeverity:
       canonical_name: "Critical"
       synonyms: ["urgent", "STAT", "P1", "high-priority", "emergent"]
       color_token: "--severity-critical"
-      hex_reference: "#DC2626"   # red-600 — never change without SME approval
       badge_variant: "solid-red"
       requires_acknowledgment: true
       sla_hours: 1
@@ -94,7 +93,6 @@ AlertSeverity:
       canonical_name: "High"
       synonyms: ["elevated", "P2", "important", "significant"]
       color_token: "--severity-high"
-      hex_reference: "#D97706"   # amber-600
       badge_variant: "solid-amber"
       requires_acknowledgment: true
       sla_hours: 4
@@ -104,7 +102,6 @@ AlertSeverity:
       canonical_name: "Medium"
       synonyms: ["moderate", "P3", "informational", "standard"]
       color_token: "--severity-medium"
-      hex_reference: "#CA8A04"   # yellow-600
       badge_variant: "subtle-yellow"
       requires_acknowledgment: false
       sla_hours: 24
@@ -114,7 +111,6 @@ AlertSeverity:
       canonical_name: "Low"
       synonyms: ["minor", "P4", "routine", "informational"]
       color_token: "--severity-low"
-      hex_reference: "#2563EB"   # blue-600
       badge_variant: "subtle-blue"
       requires_acknowledgment: false
       sla_hours: 72
