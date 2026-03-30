@@ -262,27 +262,23 @@ export function loadKnowledge(basePath) {
   kbLog('[knowledge] Loading surfaces...');
   const surfacesDir = join(basePath, 'surfaces');
   if (existsSync(surfacesDir)) {
-    for (const file of readdirSync(surfacesDir)) {
-      if (!file.endsWith('.surface.yaml')) continue;
+    for (const entry of readdirSync(surfacesDir)) {
+      if (entry.startsWith('_') || entry.startsWith('.')) continue;
+      const metaPath = join(surfacesDir, entry, 'meta.yaml');
+      if (!existsSync(metaPath)) continue;
       try {
-        const content = readFileSync(join(surfacesDir, file), 'utf-8');
+        const content = readFileSync(metaPath, 'utf-8');
         const parsed = parseYaml(content);
-        // Build embedding input from intent + what_it_omits + never fields
-        // what_it_omits entries may be plain strings (legacy) or {item, reason} objects (v2)
-        const omitsText = Array.isArray(parsed.what_it_omits)
-          ? parsed.what_it_omits.map(e => (typeof e === 'string' ? e : `${e.item || ''} ${e.reason || ''}`)).join(' ')
-          : '';
+        if (parsed.status === 'deprecated') continue;
         parsed.embedding_input = [
           parsed.id || '',
-          parsed.intent || '',
-          omitsText,
+          typeof parsed.intent === 'string' ? parsed.intent : '',
           Array.isArray(parsed.never) ? parsed.never.join(' ') : '',
-          Array.isArray(parsed.user_type) ? parsed.user_type.join(' ') : '',
         ].join(' ');
         kb.surfaces.push(parsed);
         kbLog(`[knowledge]   surface: ${parsed.id}`);
       } catch (e) {
-        kbLogErr(`could not parse ${file}: ${e.message}`);
+        kbLogErr(`could not parse surfaces/${entry}/meta.yaml: ${e.message}`);
       }
     }
   }
