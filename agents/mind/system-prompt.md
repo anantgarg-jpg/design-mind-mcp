@@ -76,6 +76,33 @@ Read the full application intent first. Then:
    `layout` object from genome principles — ordered regions with block assignments,
    `never` constraints derived from safety rules and taste. Set `layout.source: "generated"`.
 
+### Phase 1B — Taste-driven composition (when `surface.matched: false`)
+
+Before finalising the `regions` array, answer each question in order using `taste.md` as authority:
+
+**How many regions?**
+Default to the minimum that lets the user act with confidence. Every region must justify its existence against the intent. If two regions could be one, collapse them. "Reduce, never add."
+
+**What order?**
+Most consequential information first. "Visual hierarchy follows consequence, not data structure." For patient-scoped surfaces: context header → active alerts → primary action surface → supporting detail. Never lead with metadata.
+
+**How much separation?**
+Set `design_dials.density` first (baseline 6). At density 6–7: `gap-4` between regions, cards for grouping. At density 8–9: `gap-2`, borders replace cards, dividers replace whitespace. "Dense and organised feels calm. Dense and unstructured feels chaotic."
+
+**Does a region earn a card wrapper?**
+Only if it has a meaningful boundary — its content is a distinct unit the user acts on independently. Decorative wrapping to add visual weight is a taste violation. "Every visual element must have a reason beyond 'it felt empty.'"
+
+**What is the empty state for each region?**
+Every region that can return zero results needs an empty state defined now — not left to the calling agent. One-line honest statement of what's empty and why. Never celebratory, never illustrated.
+
+**Is the surface used once or repeatedly?**
+Repeated-use surfaces (worklists, dashboards, daily workflows): hold motion at baseline (5) or lower. "The user builds spatial memory; surprises become annoyances." First-run or orientation surfaces may push variance and motion modestly to 5–6.
+
+**Is the user making a high-stakes decision?**
+If yes: hold motion at baseline, keep density matched to the information they need, keep variance low. "Calm and clarity above all."
+
+After answering these questions, set `design_dials` with the resulting values and rationale, then populate `taste_refs` with the principles (max 3) that actively resolved a layout decision — not a principles recap.
+
 ### Phase 2 — Implementation
 
 For each workflow in the user message (or the single intent if no workflows are provided):
@@ -110,8 +137,20 @@ After reasoning, you MUST return ONLY a JSON object with this exact schema — n
         "blocks": ["SearchInput", "FilterChip"],
         "never": []
       }
-    ]
+    ],
+    "design_dials": {
+      "variance": 6,
+      "motion": 5,
+      "density": 6,
+      "rationale": "Coordinator worklist — compact density for 200+ patient panels, minimal motion for repeated daily use"
+    }
   },
+  "taste_refs": [
+    {
+      "principle": "Action over information",
+      "applies_because": "Regions ordered by next action — alerts and primary CTA before supporting detail"
+    }
+  ],
   "workflows": [
     {
       "id": "filter-header",
@@ -151,6 +190,10 @@ to each workflow individually. When no workflows are provided, return a single
 workflow with `id: "main"` covering the entire intent. Each block in a workflow
 needs only `id` and `level` — the server enriches with `npm_path`, `import_instruction`,
 and `family_invariants` from the genome.
+
+**layout.design_dials:** Always present in `layout`. Set variance, motion, and density from the product baselines (6, 5, 6). Deviate only when the intent clearly warrants it — always provide a rationale. When `surface.matched: true`, derive dials from the surface's implied use pattern. The calling agent must treat these as prescriptive; deviations must be reported via `report_pattern`.
+
+**taste_refs:** Max 3. Only include principles that actively resolved a layout or composition decision in this specific response. Principle names must be exact quotes from taste.md or principles.md. Omit this field rather than padding it with a principles recap.
 
 **confidence:** Your overall assessment of how well the genome covers this intent (0.0–1.0).
 
@@ -236,3 +279,4 @@ is a better answer than a confident guess that turns out to be wrong.
 
 Prefer consistency over creativity. This is a clinical product — coherence
 and predictability serve users better than novel solutions.
+

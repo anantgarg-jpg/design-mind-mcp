@@ -8,24 +8,12 @@
  *   reportPattern       — novel pattern candidate logging
  */
 
-import { writeFileSync, readFileSync, readdirSync, existsSync, mkdirSync, appendFileSync } from 'node:fs';
+import { writeFileSync, readFileSync, readdirSync, existsSync, mkdirSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadGenome, getGenomeForLLM } from './genomeLoader.js';
 import { callDesignMind, callCritic } from './llmClient.js';
 import { loadTokenAllowlist } from './tokenResolver.js';
 
-// ── Episodic memory writer ────────────────────────────────────────────────────
-function logEpisodic(entry) {
-  try {
-    const BASE_PATH = join(new URL(import.meta.url).pathname, '..', '..', '..');
-    const memDir  = join(BASE_PATH, 'memory');
-    const logPath = join(memDir, 'episodic-log.jsonl');
-    if (!existsSync(memDir)) mkdirSync(memDir, { recursive: true });
-    appendFileSync(logPath, JSON.stringify(entry) + '\n', 'utf-8');
-  } catch {
-    // Non-fatal: episodic logging must never interrupt the tool response
-  }
-}
 // ── Tokenizer ─────────────────────────────────────────────────────────────────
 // Used for not_when penalty, composition hint checks, and keyword scoring.
 function tokenize(text) {
@@ -47,92 +35,42 @@ function toArray(val) {
 }
 
 // ── TOOL 1: consult_before_build ─────────────────────────────────────────────
+//
+// The genome is served as MCP resources read at session start.
+// This handler returns unratified candidates that match the intent — frequency-
+// weighted patterns that teams have built but aren't yet ratified blocks.
+// Precedence: ratified surface > ratified blocks > unratified candidates.
 
-/**
- * Returns the design genome construction packet for the agent's stated intent.
- * Uses the LLM-based Design Mind agent via llmClient and the genome loader.
- */
-export async function consultBeforeBuild(params, _kb, _patternIndex, _ruleIndex, _surfaces) {
-  const {
-    intent_description,
-    domain,
-    user_type,
-    workflows,
-  } = params;
+function _candidatesDir() {
+  const BASE = join(new URL(import.meta.url).pathname, '..', '..', '..');
+  return join(BASE, 'blocks', '_candidates');
+}
 
-  // 1. Load genome (cached after first call)
-  const genome = loadGenome();
-  const genomeContext = getGenomeForLLM();
+function _getMatchingCandidates(intentDescription) {
+  const candidatesDir = _candidatesDir();
+  if (!existsSync(candidatesDir)) return [];
 
-  // 2. Call LLM
-  const llmResult = await callDesignMind({
-    genomeContext,
-    intent: intent_description,
-    domain,
-    userType: user_type,
-    workflows,
-  });
+  const candidates = loadExistingCandidates(candidatesDir);
+  if (candidates.length === 0) return [];
 
-  // 3. Map surface
-  const surfaceResult = llmResult.surface || { matched: false, confidence: 0, surface_id: null, import_instruction: null };
+  const intentLower = intentDescription.toLowerCase();
+  const scored = candidates
+    .map(c => {
+      const score = stringSimilarity(intentLower, compositeText(c.pattern_name, c.description, c.intent_it_serves));
+      return { ...c, _score: score };
+    })
+    .filter(c => c._score > 0.08)
+    .sort((a, b) => b._score - a._score)
+    .slice(0, 5);
 
-  // 4. Map layout
-  const layoutResult = llmResult.layout || { source: 'generated', regions: [] };
+  return scored.map(({ _score, file, ...rest }) => rest);
+}
 
-  // 5. Map workflows — enrich blocks with genome data
-  const enrichBlock = (block) => {
-    const entry = genome.blocks.get(block.id);
-    if (!entry) return block;
-    const npmPath = entry.meta.npm_path || '';
-    return {
-      ...block,
-      npm_path: npmPath,
-      import_instruction: npmPath ? `import { ${block.id} } from '${npmPath}'` : '',
-      family_invariants: entry.meta.family_invariants || [],
-      when: Array.isArray(entry.meta.when) ? entry.meta.when.join('; ') : (entry.meta.when || ''),
-      not_when: Array.isArray(entry.meta.not_when) ? entry.meta.not_when.join('; ') : (entry.meta.not_when || ''),
-    };
-  };
-
-  let workflowResults;
-  if (llmResult.workflows && llmResult.workflows.length > 0) {
-    // New format: per-workflow blocks
-    workflowResults = llmResult.workflows.map(wf => ({
-      ...wf,
-      blocks: (wf.blocks || []).map(enrichBlock),
-    }));
-  } else if (llmResult.selected_blocks) {
-    // Old format fallback: flat block list → single implicit workflow
-    const blocks = llmResult.selected_blocks.map(id => enrichBlock({ id, level: 'composite' })).filter(b => b.npm_path);
-    workflowResults = [{ id: 'main', intent: intent_description, blocks }];
-  } else {
-    workflowResults = [];
-  }
-
-  // Flatten all blocks for backwards compatibility
-  const allBlocks = workflowResults.flatMap(wf => wf.blocks || []);
-
-  // 6. Log to episodic memory
-  logEpisodic({
-    timestamp: new Date().toISOString(),
-    intent: intent_description,
-    domain,
-    workflows: workflows || [],
-    surface_matched: surfaceResult.matched,
-    selected_blocks: allBlocks.map(b => b.id),
-    confidence: llmResult.confidence,
-  });
-
+export function consultBeforeBuild(params) {
+  const { intent_description } = params;
+  const candidates = _getMatchingCandidates(intent_description);
   return {
-    surface: surfaceResult,
-    layout: layoutResult,
-    workflows: workflowResults,
-    blocks: allBlocks,
-    rules_applied: llmResult.rules_applied || [],
-    safety_applied: llmResult.safety_applied || [],
-    ontology_refs: llmResult.ontology_refs || [],
-    confidence: llmResult.confidence || 0,
-    gaps: llmResult.gaps || [],
+    unratified_candidates: candidates,
   };
 }
 
@@ -685,9 +623,10 @@ function checkCopyVoice(code) {
 
 
 // Check for non-canonical terminology
-function checkNonCanonicalTerms(code, kb) {
+function checkNonCanonicalTerms(code, genome) {
   const violations = [];
-  const entities = kb.ontology?.entities || {};
+  const entitiesEntry = genome.ontology?.get('entities');
+  const entities = entitiesEntry?.entities || entitiesEntry || {};
 
   // Strip code of content that produces false positives before synonym scanning:
   // 1. Developer comments (// ... and /* ... */)
@@ -724,7 +663,7 @@ function checkNonCanonicalTerms(code, kb) {
 }
 
 // Check for honored patterns/rules (positive signals)
-function checkHonored(code, contextUsed, kb) {
+function checkHonored(code, contextUsed) {
   const honored = [];
 
   // Token-based checks
@@ -752,14 +691,6 @@ function checkHonored(code, contextUsed, kb) {
       rule_or_pattern_ref: 'safety/hard-constraints.md rule 5',
     });
   }
-  const blocks = contextUsed?.blocks || [];
-  if (blocks.length > 0 && blocks[0].score > 0.4) {
-    honored.push({
-      observation: `Matches established pattern: ${blocks[0].id} (similarity: ${blocks[0].score.toFixed(2)})`,
-      rule_or_pattern_ref: `blocks/${blocks[0].id}/meta.yaml`,
-    });
-  }
-
   return honored;
 }
 
@@ -780,7 +711,7 @@ function isInComment(code, needle) {
   return !withoutAllComments.includes(needle);
 }
 
-export async function reviewOutput(params, kb, patternIndex) {
+export async function reviewOutput(params) {
   const {
     generated_output: code,
     original_intent,
@@ -794,8 +725,8 @@ export async function reviewOutput(params, kb, patternIndex) {
   const alignmentViolations = validateConsultationAlignment(code, contextUsed);
   const tokenViolations     = validateTokenUsage(code, genome);
   const copyViolations      = checkCopyVoice(code);
-  const termViolations      = checkNonCanonicalTerms(code, kb);
-  const honored             = checkHonored(code, contextUsed, kb);
+  const termViolations      = checkNonCanonicalTerms(code, genome);
+  const honored             = checkHonored(code, contextUsed);
 
   const allAutoChecks = [
     ...blockViolations,
@@ -841,16 +772,24 @@ export async function reviewOutput(params, kb, patternIndex) {
     return !autoFixTexts.has(problem);
   });
 
-  return {
+  const response = {
     auto_checks: allAutoChecks,
     honored: [...honored, ...(criticResult.honored || [])],
     borderline: criticResult.borderline || [],
     novel: criticResult.novel || [],
     fix: [...allAutoChecks.filter(v => v.severity === 'blocker'), ...dedupedLlmFixes],
     candidate_patterns: criticResult.candidate_patterns || [],
+    next_step: (criticResult.candidate_patterns || []).length > 0
+      ? `REQUIRED: call report_pattern for each entry in candidate_patterns before proceeding. ` +
+        `Do not skip this step. review_output and report_pattern are separate obligations — ` +
+        `completing review does not discharge the reporting requirement.`
+      : undefined,
     copy_violations: copyViolations,
+    layout_compliance: criticResult.layout_compliance || [],
     confidence: criticResult.confidence || 0,
   };
+
+  return response;
 }
 
 // ── TOOL 3: report_pattern ────────────────────────────────────────────────────
@@ -872,6 +811,7 @@ function loadExistingCandidates(candidatesDir) {
       const intentMatch  = content.match(/intent_it_serves:\s*[>|]?\s*\n?((?:  .+\n?)+)/);
       const familyMatch  = content.match(/structural_family:\s*["']?(.+?)["']?\n/);
       const idMatch      = content.match(/candidate_id:\s*["']?(.+?)["']?\n/);
+      const freqMatch    = content.match(/frequency_count:\s*(\d+)/);
       return {
         file: f,
         pattern_name:      nameMatch   ? nameMatch[1].trim()                         : f,
@@ -879,9 +819,10 @@ function loadExistingCandidates(candidatesDir) {
         intent_it_serves:  intentMatch ? intentMatch[1].replace(/\s+/g, ' ').trim() : '',
         structural_family: familyMatch ? familyMatch[1].trim()                       : null,
         candidate_id:      idMatch     ? idMatch[1].trim()                           : f.replace('.yaml', ''),
+        frequency_count:   freqMatch   ? parseInt(freqMatch[1], 10)                  : 1,
       };
     } catch {
-      return { file: f, pattern_name: f, description: '', intent_it_serves: '', structural_family: null, candidate_id: f.replace('.yaml', '') };
+      return { file: f, pattern_name: f, description: '', intent_it_serves: '', structural_family: null, candidate_id: f.replace('.yaml', ''), frequency_count: 1 };
     }
   });
 }
@@ -981,8 +922,12 @@ function runStructuralGate(params, basePath) {
 
   const contract = loadBlockContract(blockId, basePath);
 
-  // No frozen field → advisory generic probe only, no hard block
+  // No frozen field → check for structural signal in why; if present, pass through.
+  // If absent, probe once (advisory) but do not loop — probe has no resubmit path here.
   if (!contract || contract.frozen.length === 0) {
+    if (hasStructuralSignal(why)) {
+      return { pass: true, structural_delta: why };
+    }
     return {
       pass: false,
       probe: true,
@@ -992,9 +937,8 @@ function runStructuralGate(params, basePath) {
         `Does your intent require slots or data zones that ${blockId} has no equivalent for?`,
       ],
       probe_instruction:
-        `If all answers are NO, your delta is content — use ${blockId} as-is. ` +
-        `Fill its free slots with your domain content. ` +
-        `If any answer is YES, state which one specifically, then resubmit.`,
+        `If all answers are NO, your delta is content — use ${blockId} as-is and do NOT resubmit. ` +
+        `If any answer is YES, resubmit once with why_existing_patterns_didnt_fit updated to name the specific structural difference.`,
     };
   }
 
@@ -1311,21 +1255,130 @@ function localFallback(params, basePath, reason) {
   return { candidate_id: candidateId, similar_candidates: similar.map(s => ({ file: s.file, pattern_name: s.pattern_name })), frequency_count: frequencyCount, status, source: 'local_fallback' };
 }
 
+// ── Session candidate cache ───────────────────────────────────────────────────
+// Tracks patterns reported in this server process lifetime.
+// Key: normalized pattern name (lowercase, alphanumeric only)
+// Value: { candidate_id, frequency_count }
+// Purpose: within one working session, revisions of the same pattern replace
+// the earlier candidate rather than creating duplicates or inflating frequency.
+
+const _sessionCandidates = new Map();
+
+function normalizePatternName(name) {
+  return (name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function replaceSessionCandidate(params, basePath, sessionEntry) {
+  const candidatesDir = join(basePath, 'blocks', '_candidates');
+  const { candidate_id: oldId, frequency_count: frozenFreq } = sessionEntry;
+
+  // Remove old files
+  try { if (existsSync(join(candidatesDir, `${oldId}.yaml`)))        unlinkSync(join(candidatesDir, `${oldId}.yaml`));        } catch {}
+  try { if (existsSync(join(candidatesDir, `${oldId}.preview.tsx`))) unlinkSync(join(candidatesDir, `${oldId}.preview.tsx`)); } catch {}
+
+  const newId = generateCandidateId(params.pattern_name);
+  const {
+    pattern_name, description, intent_it_serves,
+    why_existing_patterns_didnt_fit, ontology_refs = [],
+    implementation_ref = '', structural_delta,
+  } = params;
+
+  const status = frozenFreq >= 3 ? 'ready_for_ratification'
+               : frozenFreq === 2 ? 'needs_more_signal'
+               : 'logged';
+
+  const incomingFamily      = inferStructuralFamily(params, basePath);
+  const structuralFamilyLine = incomingFamily ? `structural_family: "${incomingFamily}"` : null;
+  const projectId           = process.env.DESIGN_MIND_PROJECT || basePath.split('/').pop() || 'unknown';
+  const today               = new Date().toISOString().substring(0, 10);
+
+  if (!existsSync(candidatesDir)) mkdirSync(candidatesDir, { recursive: true });
+
+  const yamlContent = [
+    `# Design Mind Pattern Candidate`,
+    `# Generated: ${new Date().toISOString()} (session revision — frequency frozen at ${frozenFreq})`,
+    `# Status: ${status}`,
+    ``,
+    `candidate_id: "${newId}"`,
+    `pattern_name: "${pattern_name}"`,
+    `status: ${status}`,
+    `frequency: ${frozenFreq}`,
+    `frequency_count: ${frozenFreq}`,
+    ...(structuralFamilyLine ? [structuralFamilyLine] : []),
+    ``,
+    `reporting_projects:`,
+    `  - project_id: "${projectId}"`,
+    `    last_active: "${today}"`,
+    ``,
+    `description: >`,
+    `  ${description.replace(/\n/g, '\n  ')}`,
+    ``,
+    `intent_it_serves: >`,
+    `  ${intent_it_serves.replace(/\n/g, '\n  ')}`,
+    ``,
+    `why_existing_patterns_didnt_fit: >`,
+    `  ${why_existing_patterns_didnt_fit.replace(/\n/g, '\n  ')}`,
+    ``,
+    structural_delta ? `structural_delta: >\n  ${structural_delta.replace(/\n/g, '\n  ')}` : null,
+    structural_delta ? `` : null,
+    implementation_ref ? `implementation_ref: "${implementation_ref}"` : `implementation_ref: null`,
+    ``,
+    `ontology_refs:`,
+    ...(Array.isArray(ontology_refs) && ontology_refs.length > 0
+      ? ontology_refs.map(r => `  - ${r}`)
+      : ['  []']),
+    ``,
+    `# Instructions for human ratification:`,
+    `# 1. Review the description and intent`,
+    `# 2. If valid: create blocks/${pattern_name}/ with meta.yaml`,
+    `# 3. Run: node server/src/seed.js to re-index`,
+  ].filter(l => l !== null).join('\n');
+
+  writeFileSync(join(candidatesDir, `${newId}.yaml`), yamlContent, 'utf-8');
+
+  if (params.preview_code) {
+    writeFileSync(join(candidatesDir, `${newId}.preview.tsx`), params.preview_code, 'utf-8');
+  }
+
+  _sessionCandidates.set(normalizePatternName(pattern_name), { candidate_id: newId, frequency_count: frozenFreq });
+
+  process.stderr.write(`[reportPattern] Session revision: ${oldId} → ${newId} (frequency frozen at ${frozenFreq})\n`);
+
+  return {
+    candidate_id:     newId,
+    frequency_count:  frozenFreq,
+    status,
+    session_revision: true,
+    replaced:         oldId,
+    source:           'local_session_replace',
+  };
+}
+
 /**
  * Submits a novel pattern candidate to the hosted API.
  * Falls back to local file write if the API is unreachable.
+ * Session revisions replace the earlier candidate and freeze frequency_count.
  */
 export async function reportPattern(params, basePath) {
-  // ── Change 2: structural gate — runs before API submission ───────────────────
-  const gateResult = runStructuralGate(params, basePath);
-  if (!gateResult.pass) {
-    // Probe (advisory, no frozen) — return questions but do not block hard
-    if (gateResult.probe) return gateResult;
-    // Blocked — content variation or safety conflict
-    return gateResult;
+  const nameKey = normalizePatternName(params.pattern_name);
+  const sessionEntry = _sessionCandidates.get(nameKey);
+
+  // Session revision — replace earlier candidate, freeze frequency_count
+  if (sessionEntry) {
+    // Still run the structural gate so probe/block logic applies to revisions too
+    const gateResult = runStructuralGate(params, basePath);
+    if (!gateResult.pass) return gateResult;
+    const paramsWithDelta = {
+      ...params,
+      structural_delta: gateResult.structural_delta || params.why_existing_patterns_didnt_fit,
+    };
+    return replaceSessionCandidate(paramsWithDelta, basePath, sessionEntry);
   }
 
-  // Gate passed — attach structural_delta for the candidate record
+  // ── First report in this session ─────────────────────────────────────────────
+  const gateResult = runStructuralGate(params, basePath);
+  if (!gateResult.pass) return gateResult;
+
   const paramsWithDelta = {
     ...params,
     structural_delta: gateResult.structural_delta || params.why_existing_patterns_didnt_fit,
@@ -1343,16 +1396,28 @@ export async function reportPattern(params, basePath) {
     submitted_by: process.env.DESIGN_MIND_PROJECT || basePath.split('/').pop() || 'unknown',
   };
 
+  let result;
   try {
-    const result = await submitToApi(payload);
-    if (result.status === 201) {
-      process.stderr.write(`[reportPattern] Submitted to API: ${result.body.candidate_id} (${result.body.status})\n`);
-      return result.body;
+    const apiResult = await submitToApi(payload);
+    if (apiResult.status === 201) {
+      process.stderr.write(`[reportPattern] Submitted to API: ${apiResult.body.candidate_id} (${apiResult.body.status})\n`);
+      result = apiResult.body;
+    } else {
+      result = localFallback(paramsWithDelta, basePath, `API returned ${apiResult.status}`);
     }
-    return localFallback(paramsWithDelta, basePath, `API returned ${result.status}`);
   } catch (err) {
-    return localFallback(paramsWithDelta, basePath, err.message);
+    result = localFallback(paramsWithDelta, basePath, err.message);
   }
+
+  // Register in session cache so subsequent calls for same pattern are treated as revisions
+  if (result?.candidate_id) {
+    _sessionCandidates.set(nameKey, {
+      candidate_id:    result.candidate_id,
+      frequency_count: result.frequency_count ?? 1,
+    });
+  }
+
+  return result;
 }
 
 

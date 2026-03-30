@@ -1,0 +1,60 @@
+id: MultiSelect
+status: active
+component_type: input
+level: composite
+npm_path: "@innovaccer/ui-assets/block-composites/MultiSelect"
+structural_family: multi-value-input
+family_invariants:
+  - "Selected values render as dismissible chips inside the input — never comma-separated text"
+  - "Chips: rounded-md bg-accent text-accent-foreground text-xs h-5 — same as Badge but with dismiss X"
+  - "Dropdown: same visual treatment as Select/Combobox dropdown"
+  - "Search input inside trigger: always present when options > 7"
+  - "Placeholder shown only when zero items selected"
+  - "Max visible chips before overflow: 3 chips then '+N more' badge"
+confidence: 0.87
+version: 1.0.0
+introduced: 2026-03-29
+last_evolved: 2026-03-29
+
+summary: >
+  Input that allows selecting multiple values from a list, displaying each
+  selected value as a dismissible chip inside the trigger. Combines the
+  dropdown behavior of Select with the multi-value chip display of TagInput.
+  Supports optional search/filter within the dropdown for large option sets.
+  Use when the user needs to select 2+ values from a defined option set.
+
+when:
+  - selecting multiple values from a predefined list (e.g. care team members, tags, categories)
+  - filtering by multiple values simultaneously
+  - form field where 1–N selections from a bounded option set are valid
+  - replacing a group of checkboxes when option count exceeds ~5
+
+not_when:
+  - single selection only — use Select or Combobox
+  - free-form text tags with no predefined options — use TagInput
+  - fewer than 3 options — use CheckboxGroup instead (all visible, no dropdown overhead)
+  - options are mutually exclusive (only one valid) — use RadioGroup or Select
+
+key_rules:
+  - selected chips always dismissible via X button — never require reopening dropdown to deselect
+  - search within dropdown shown when options > 7
+  - "'Select all' option shown at top of dropdown when selectAll prop is true"
+  - keyboard: Enter selects focused option, Backspace removes last chip when input is empty
+  - never use MultiSelect for more than ~50 options — use a server-search Combobox instead
+
+frozen:
+  - "chip shape: rounded-md bg-accent — never pill (rounded-full) to visually distinguish from Badge/status chips"
+  - "chips inside trigger: always — never comma text"
+  - "overflow: always '+N more' badge after 3 visible chips — never wrap to new lines in trigger"
+
+free:
+  - options: "any array of { label, value } objects"
+  - placeholder: "any placeholder string"
+  - searchPlaceholder: "any search input placeholder"
+  - selectAll: "boolean — show Select All option"
+  - maxVisible: "number of chips before overflow badge (default 3)"
+
+embedding_hint: >
+  multi select multiple values chips tags dropdown filter
+  select many checkboxes group form field search within
+  dismiss remove selected values bounded options list

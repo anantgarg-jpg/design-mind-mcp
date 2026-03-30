@@ -1,0 +1,65 @@
+id: ErrorState
+status: active
+component_type: feedback
+level: composite
+npm_path: "@innovaccer/ui-assets/block-composites/ErrorState"
+structural_family: error-feedback
+family_invariants:
+  - "Layout: flex flex-col items-center justify-center gap-3 py-12 text-center"
+  - "Icon: text-destructive, size 40px"
+  - "Heading: text-base font-medium text-foreground"
+  - "Body: text-sm text-muted-foreground max-w-xs"
+  - "Primary CTA: retry action — Button variant default"
+  - "Secondary CTA: optional escalation (e.g. Contact support) — Button variant outline"
+confidence: 0.88
+version: 1.0.0
+introduced: 2026-03-29
+last_evolved: 2026-03-29
+
+summary: >
+  Feedback state for a failed data load, API error, or unrecoverable component
+  failure. Distinct from EmptyState — this communicates something went wrong,
+  not that data is absent. Always offers a recovery path (retry) and optionally
+  an escalation path (support, refresh page). Used inline within a card, panel,
+  or full-page container depending on the scope of the failure.
+
+when:
+  - network request fails and data cannot be displayed
+  - API returns a 5xx or unexpected error response
+  - a component throws and an error boundary catches it
+  - a resource is not found (404) and there is no fallback content
+
+not_when:
+  - data loaded successfully but is empty — use EmptyState
+  - loading in progress — use Skeleton
+  - validation error on a form field — use FormField error state
+  - inline warning that does not block the full surface — use Alert
+
+variants:
+  network: "Request failed. Retry button. Optional: show error code."
+  not-found: "Resource doesn't exist. No retry. Optional: back/home CTA."
+  permission: "User lacks access. No retry. Escalation CTA optional."
+  generic: "Something went wrong. Retry + support link."
+
+key_rules:
+  - always offer a retry action unless the error is definitively unrecoverable (not-found, permission)
+  - do not expose raw error messages or stack traces to users
+  - error code may be shown in small text for support reference — never as the primary message
+  - heading must name what failed, not just say "Error"
+
+frozen:
+  - "icon color: always text-destructive — never muted or primary"
+  - "layout: always centered — mirrors EmptyState for visual consistency"
+  - "raw errors: never shown — user-facing copy only"
+
+free:
+  - icon: "any icon appropriate to error type"
+  - heading: "specific failure description"
+  - body: "optional supporting copy or error reference code"
+  - retryAction: "any retry label, or absent for unrecoverable errors"
+  - secondaryAction: "optional escalation — support link, back navigation"
+
+embedding_hint: >
+  error state failed load api error network retry something went wrong
+  not found 404 500 permission denied unrecoverable fallback
+  error boundary inline full page panel

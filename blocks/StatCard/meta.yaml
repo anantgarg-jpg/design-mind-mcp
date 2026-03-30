@@ -6,7 +6,8 @@ npm_path: "@innovaccer/ui-assets/block-primitives/StatCard"
 structural_family: stat-metric-card
 family_invariants:
   - "Label: text-sm font-medium uppercase tracking-wide text-muted-foreground"
-  - "Value: text-[32px] font-medium tabular-nums leading-none"
+  - "Value font size: do not override — set by the component"
+  - "Value: font-medium tabular-nums leading-none"
   - "Maximum 4 StatCards per row"
   - "Variant tokens: default=foreground, urgent=destructive, warning=warning, success=success"
 confidence: 0.88
@@ -42,7 +43,7 @@ key_rules:
   - max 4 StatCards in a single row for readability
 
 frozen:
-  - "zones: label (text-sm font-medium uppercase tracking-wide) and value (text-[32px] font-medium tabular-nums leading-none) — both always present"
+  - "zones: label and value — both always present; font sizes set by the component, do not override"
   - "max density: no more than 4 StatCards in a single row"
   - "value: always tabular-nums — numeric alignment across a row of cards is non-negotiable"
 

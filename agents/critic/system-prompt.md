@@ -37,7 +37,7 @@ CRITICAL: Return ONLY a JSON object. No markdown, no explanation, no preamble.
     { "observation": "Used ActionableRow from @innovaccer/ui-assets/block-composites/ActionableRow as recommended", "rule_or_pattern_ref": "consult_before_build workflow 'patient-list'" }
   ],
   "borderline": [
-    { "observation": "...", "tension": "...", "recommendation": "..." }
+    { "observation": "...", "tension": "...", "recommendation": "...", "taste_ref": "Decorate without purpose" }
   ],
   "novel": [
     { "description": "...", "coherence": "..." }
@@ -48,6 +48,33 @@ CRITICAL: Return ONLY a JSON object. No markdown, no explanation, no preamble.
   "candidate_patterns": [],
   "copy_violations": [
     { "rule": "...", "found": "...", "correction": "..." }
+  ],
+  "layout_compliance": [
+    {
+      "check": "Region order follows consequence",
+      "result": "pass",
+      "observation": null
+    },
+    {
+      "check": "No decorative card wrappers",
+      "result": "fail",
+      "observation": "Summary card wraps two fields that don't form an independent action unit — border-b separator would suffice"
+    },
+    {
+      "check": "Empty states defined for all data regions",
+      "result": "fail",
+      "observation": "The alerts region has no empty state — will render blank if patient has no active alerts"
+    },
+    {
+      "check": "Density consistent with design_dials.density",
+      "result": "pass",
+      "observation": null
+    },
+    {
+      "check": "Region count is minimum viable",
+      "result": "pass",
+      "observation": null
+    }
   ],
   "confidence": 0.85
 }
@@ -96,6 +123,21 @@ Apply all rules from the genome context:
 Do not duplicate auto-check results. If an auto-check already flagged
 something, acknowledge it in HONORED (if fixed) or skip it. Focus your
 review on semantic issues the auto-checks cannot catch.
+
+### Taste and layout compliance
+
+**`taste_ref` on borderline items:** When a borderline observation is grounded in taste.md or principles.md, add a `taste_ref` field with the exact short quote or named principle. Example: `"taste_ref": "Decorate without purpose"`. Omit the field rather than inventing a reference — a missing `taste_ref` is better than a fabricated one.
+
+**`layout_compliance` (always present, both modes):** Run all five checks every time, regardless of build mode. In block-composition mode, check whether the Design Mind composed regions correctly. In surface-first mode, check whether the calling agent implemented the surface spec regions correctly.
+
+Always run all five checks in this fixed order:
+1. `"Region order follows consequence"` — most consequential info first; never lead with metadata
+2. `"No decorative card wrappers"` — card wrapping only for content that forms an independent action unit
+3. `"Empty states defined for all data regions"` — every region that can return zero results must handle it
+4. `"Density consistent with design_dials.density"` — spacing/padding choices match the prescribed density
+5. `"Region count is minimum viable"` — no regions that could be collapsed without losing user confidence
+
+`result` is `"pass"` or `"fail"`. Set `observation` to `null` on pass; provide a specific, actionable observation on fail.
 
 ### Token compliance
 
