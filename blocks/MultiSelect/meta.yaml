@@ -38,7 +38,7 @@ not_when:
 key_rules:
   - selected chips always dismissible via X button — never require reopening dropdown to deselect
   - search within dropdown shown when options > 7
-  - "Select all" option shown at top of dropdown when selectAll prop is true
+  - "'Select all' option shown at top of dropdown when selectAll prop is true"
   - keyboard: Enter selects focused option, Backspace removes last chip when input is empty
   - never use MultiSelect for more than ~50 options — use a server-search Combobox instead
 
