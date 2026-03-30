@@ -13,6 +13,7 @@
  *     POST /messages?sessionId=x  — send JSON-RPC message
  *     POST /candidates             — submit pattern candidate (API key required)
  *     GET  /candidates             — list candidates (API key required)
+ *     GET  /episodes               — list episodic log entries (API key required)
  *     GET  /health                 — health check
  *
  * Tools exposed:
@@ -894,6 +895,26 @@ function startHttp(port) {
       }
     }
 
+    // ── Episodes API ──────────────────────────────────────────────────────────
+    if (url.pathname === '/episodes') {
+      if (req.headers['x-api-key'] !== API_KEY) {
+        return sendJson(res, 401, { error: 'Invalid or missing API key' });
+      }
+
+      if (req.method === 'GET') {
+        const logPath = join(BASE_PATH, 'memory', 'episodic-log.jsonl');
+        const episodes = existsSync(logPath)
+          ? readFileSync(logPath, 'utf-8')
+              .split('\n')
+              .filter(line => line.trim() && !line.startsWith('#'))
+              .map(line => { try { return JSON.parse(line); } catch { return null; } })
+              .filter(Boolean)
+              .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+          : [];
+        return sendJson(res, 200, { episodes, total: episodes.length });
+      }
+    }
+
     sendJson(res, 404, { error: 'Not found' });
   });
 
@@ -903,6 +924,7 @@ function startHttp(port) {
     log(`[design-mind] Transport: HTTP/SSE — listening on port ${port}\n`);
     log(`[design-mind] MCP endpoint: http://localhost:${port}/sse\n`);
     log(`[design-mind] Health check: http://localhost:${port}/health\n`);
+    log(`[design-mind] Episodes API:  http://localhost:${port}/episodes  (X-Api-Key required)\n`);
   });
 }
 
