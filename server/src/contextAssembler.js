@@ -47,6 +47,8 @@ function _candidatesDir() {
 }
 
 function _getMatchingCandidates(intentDescription) {
+  if (!intentDescription) return [];
+
   const candidatesDir = _candidatesDir();
   if (!existsSync(candidatesDir)) return [];
 
