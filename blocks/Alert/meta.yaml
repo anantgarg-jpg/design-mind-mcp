@@ -4,16 +4,12 @@ component_type: feedback
 level: primitive
 npm_path: "@innovaccer/ui-assets/block-primitives/Alert"
 structural_family: feedback-banner
-family_invariants:
-  - "rounded-lg border"
-  - "p-4 internal padding"
-  - "gap-3 icon-to-text spacing"
 confidence: 0.85
 version: 1.0.0
 
 summary: >
-  Inline contextual message for non-critical feedback. Wraps shadcn Alert
-  to present informational or warning-level messages within the page flow.
+  Inline contextual message for non-critical feedback. presents informational
+  or warning-level messages within the page flow.
   Not intended for safety-critical alerts — use AlertBanner for those.
 
 when:
@@ -27,14 +23,15 @@ not_when:
   - global page-level errors
 
 variants:
-  default: neutral informational message with border-border
-  destructive: error or destructive message with border-destructive
+  access: use for access-related messages such as permissions, entitlements, or restricted content
+  destructive: use for error states, failed actions, or destructive outcomes requiring user attention
+  warning: use for cautionary messages where action may lead to unintended consequences
+  alert: use for important notices that require acknowledgment but are not errors
 
 key_rules:
   - not for safety-critical alerts (use AlertBanner)
-  - icon and text always present together
   - never auto-dismiss — user must navigate away or resolve
 
 embedding_hint: >
-  alert inline message info warning feedback
-  contextual notice tip guidance banner
+  alert info warning feedback
+  contextual notice tip guidance
