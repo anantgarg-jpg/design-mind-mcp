@@ -116,15 +116,9 @@ const TOOLS = [
       'Call this BEFORE generating any UI — once per surface or bounded section.\n\n' +
       'A surface is one coherent screen or section. Not an entire product, module, or PRD.\n' +
       'If building multiple surfaces, call this separately for each one as you begin.\n\n' +
-      'Ensure you have read these MCP resources at session start:\n' +
-      '  design-mind://blocks/manifest      — block palette\n' +
-      '  design-mind://surfaces/manifest    — ratified surface patterns\n' +
-      '  design-mind://genome/safety        — hard clinical rules\n' +
-      '  design-mind://genome/ontology      — canonical entity names\n' +
-      '  design-mind://genome/tokens        — token rules\n' +
-      '  design-mind://genome/copy-voice    — copy rules\n' +
-      '  design-mind://genome/principles    — product principles\n' +
-      '  design-mind://genome/taste         — aesthetic identity\n\n' +
+      'Ensure you have loaded the genome at session start — either by reading all 8 MCP resources\n' +
+      '(design-mind://blocks/manifest etc.) or by calling get_genome once. Do not call this tool\n' +
+      'before the genome is loaded.\n\n' +
       'Precedence — follow this order strictly:\n' +
       '  1. Ratified surface (surfaces/manifest)  — if a surface entry matches your intent,\n' +
       '     its canonical_structure is authoritative. Do not deviate.\n' +
@@ -253,6 +247,17 @@ const TOOLS = [
         },
       },
     },
+  },
+  {
+    name: 'get_genome',
+    description:
+      'Call this ONCE at session start before generating any UI.\n\n' +
+      'Returns the full design system genome: block palette, ratified surfaces, safety rules, ' +
+      'ontology, token rules, copy voice, principles, and aesthetic identity.\n\n' +
+      'Use this if MCP resources (design-mind://blocks/manifest etc.) are not supported by your client. ' +
+      'Functionally identical to reading all 8 genome resources — same data, same context footprint, ' +
+      'called once per session only. Do not call this on every surface or tool call.',
+    inputSchema: { type: 'object', properties: {} },
   },
   {
     name: 'ping',
@@ -482,6 +487,19 @@ async function handleToolCall(toolName, toolArgs) {
       return await reviewOutput(toolArgs);
     case 'report_pattern':
       return await reportPattern(toolArgs, BASE_PATH);
+    case 'get_genome': {
+      const genome = loadGenome();
+      return {
+        blocks:      buildBlocksManifest(genome),
+        surfaces:    buildSurfacesManifest(genome),
+        safety:      buildSafetyResource(genome),
+        ontology:    buildOntologyResource(genome),
+        tokens:      buildTokensResource(genome),
+        copy_voice:  buildCopyVoiceResource(genome),
+        principles:  buildPrinciplesResource(genome),
+        taste:       buildTasteResource(genome),
+      };
+    }
     case 'ping': {
       const shortHash = str =>
         createHash('sha256').update(str || '').digest('hex').slice(0, 8);
@@ -544,27 +562,25 @@ function handleMessage(message, reply) {
           serverInfo: { name: 'design-mind', version: `1.0.0-${BUILD_INFO.commit}` },
           instructions:
             'Design Mind enforces the Innovaccer design system during UI generation.\n\n' +
-            'ARCHITECTURE — read resources first, then use tools:\n\n' +
-            '1. GENOME RESOURCES (read all 8 at session start before generating any UI):\n' +
-            '   design-mind://blocks/manifest      — full block palette: when to use each, import paths, family invariants\n' +
-            '   design-mind://surfaces/manifest    — ratified surface patterns: canonical_structure is authoritative\n' +
-            '   design-mind://genome/safety        — hard clinical rules, non-negotiable\n' +
-            '   design-mind://genome/ontology      — canonical entity names and forbidden synonyms\n' +
-            '   design-mind://genome/tokens        — color, spacing, typography rules\n' +
-            '   design-mind://genome/copy-voice    — clinical tone, number formatting, confirmation copy\n' +
-            '   design-mind://genome/principles    — the eight product principles\n' +
-            '   design-mind://genome/taste         — aesthetic identity and design dials\n\n' +
-            '2. TOOLS (called during the build loop):\n' +
-            '   consult_before_build  — call once per surface before generating. Returns unratified_candidates:\n' +
-            '                           patterns teams have built that are not yet ratified blocks.\n' +
-            '   review_output         — call after generating. Returns honors, fixes, layout compliance,\n' +
-            '                           and candidate_patterns to report.\n' +
-            '   report_pattern        — call for each entry in candidate_patterns. Separate obligation\n' +
-            '                           from review — both must be called.\n\n' +
-            '3. PRECEDENCE (follow strictly):\n' +
-            '   Ratified surface (surfaces/manifest)  → canonical_structure is authoritative, do not deviate\n' +
-            '   Ratified blocks (blocks/manifest)     → family_invariants are immutable\n' +
-            '   Unratified candidates                 → weak signal only, ratified blocks take precedence',
+            'STEP 1 — LOAD THE GENOME (do this once at session start, before any UI):\n' +
+            '  Option A (preferred): read all 8 resources if your client supports them:\n' +
+            '    design-mind://blocks/manifest      — full block palette\n' +
+            '    design-mind://surfaces/manifest    — ratified surface patterns\n' +
+            '    design-mind://genome/safety        — hard clinical rules\n' +
+            '    design-mind://genome/ontology      — canonical entity names\n' +
+            '    design-mind://genome/tokens        — color, spacing, typography rules\n' +
+            '    design-mind://genome/copy-voice    — clinical tone and copy rules\n' +
+            '    design-mind://genome/principles    — the eight product principles\n' +
+            '    design-mind://genome/taste         — aesthetic identity and design dials\n' +
+            '  Option B (fallback): call get_genome tool once — returns identical data as a single response.\n\n' +
+            'STEP 2 — BUILD LOOP (per surface):\n' +
+            '   consult_before_build  — call once per surface before generating.\n' +
+            '   review_output         — call after generating.\n' +
+            '   report_pattern        — call for each entry in candidate_patterns from review_output.\n\n' +
+            'PRECEDENCE (follow strictly):\n' +
+            '   Ratified surface  → canonical_structure is authoritative, do not deviate\n' +
+            '   Ratified blocks   → family_invariants are immutable\n' +
+            '   Unratified candidates → weak signal only, ratified blocks take precedence',
         });
         break;
       }
