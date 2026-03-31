@@ -5,8 +5,7 @@ level: primitive
 npm_path: "@innovaccer/ui-assets/block-primitives/Card"
 structural_family: content-container
 family_invariants:
-  - "rounded-lg border border-subtle bg-card"
-  - "shadow-sm when on muted/tinted background, no shadow on white background"
+  - "Use Flat card only when placed on a White background"
 confidence: 0.85
 version: 1.1.0
 
@@ -16,12 +15,11 @@ summary: >
   responsible for padding and content organisation.
 
 when:
-  - grouping related content into a visually distinct surface
+  - grouping related content into a visually distinct element
   - dashboard tiles or content panels
   - form sections that need visual separation
 
 not_when:
-  - nesting a Card inside another Card (no nested cards)
   - single-line items in a list (use a row component)
   - full-width page sections without visual boundaries
 
