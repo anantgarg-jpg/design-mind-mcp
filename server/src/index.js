@@ -251,12 +251,13 @@ const TOOLS = [
   {
     name: 'get_genome',
     description:
-      'Call this ONCE at session start before generating any UI.\n\n' +
-      'Returns the full design system genome: block palette, ratified surfaces, safety rules, ' +
-      'ontology, token rules, copy voice, principles, and aesthetic identity.\n\n' +
-      'Use this if MCP resources (design-mind://blocks/manifest etc.) are not supported by your client. ' +
-      'Functionally identical to reading all 8 genome resources — same data, same context footprint, ' +
-      'called once per session only. Do not call this on every surface or tool call.',
+      'Fallback for clients that do not support MCP resources.\n\n' +
+      'Try reading the 8 genome resources first (design-mind://blocks/manifest etc.). ' +
+      'Only call this if resources fail or are unsupported.\n\n' +
+      'Call once at session start — returns the full genome: block palette, ratified surfaces, ' +
+      'safety rules, ontology, token rules, copy voice, principles, and aesthetic identity.\n\n' +
+      'Subsequent calls within the same session return { status: "already_loaded" } — no data. ' +
+      'Do not call this more than once, and do not call it if resources loaded successfully.',
     inputSchema: { type: 'object', properties: {} },
   },
   {
@@ -472,6 +473,11 @@ function startHotReload(basePath) {
   log(`[design-mind] Hot-reload: active (polling every ${POLL_MS}ms, NODE_ENV=${process.env.NODE_ENV || 'dev'})`);
 }
 
+// ── Session genome flag ───────────────────────────────────────────────────────
+// Tracks whether get_genome has been called this session.
+// For stdio, each session is a new process so this resets automatically.
+let _genomeLoaded = false;
+
 // ── Tool dispatch ─────────────────────────────────────────────────────────────
 
 async function handleToolCall(toolName, toolArgs) {
@@ -488,7 +494,14 @@ async function handleToolCall(toolName, toolArgs) {
     case 'report_pattern':
       return await reportPattern(toolArgs, BASE_PATH);
     case 'get_genome': {
+      if (_genomeLoaded) {
+        return {
+          status: 'already_loaded',
+          message: 'Genome is already in your context. Do not call get_genome again this session.',
+        };
+      }
       const genome = loadGenome();
+      _genomeLoaded = true;
       return {
         blocks:      buildBlocksManifest(genome),
         surfaces:    buildSurfacesManifest(genome),
@@ -562,8 +575,8 @@ function handleMessage(message, reply) {
           serverInfo: { name: 'design-mind', version: `1.0.0-${BUILD_INFO.commit}` },
           instructions:
             'Design Mind enforces the Innovaccer design system during UI generation.\n\n' +
-            'STEP 1 — LOAD THE GENOME (do this once at session start, before any UI):\n' +
-            '  Option A (preferred): read all 8 resources if your client supports them:\n' +
+            'STEP 1 — LOAD THE GENOME ONCE at session start, before any UI:\n' +
+            '  Try reading all 8 resources first (preferred):\n' +
             '    design-mind://blocks/manifest      — full block palette\n' +
             '    design-mind://surfaces/manifest    — ratified surface patterns\n' +
             '    design-mind://genome/safety        — hard clinical rules\n' +
@@ -572,7 +585,8 @@ function handleMessage(message, reply) {
             '    design-mind://genome/copy-voice    — clinical tone and copy rules\n' +
             '    design-mind://genome/principles    — the eight product principles\n' +
             '    design-mind://genome/taste         — aesthetic identity and design dials\n' +
-            '  Option B (fallback): call get_genome tool once — returns identical data as a single response.\n\n' +
+            '  If resources are not supported by your client, call get_genome once instead.\n' +
+            '  Do not call get_genome if resources loaded. Do not call it more than once.\n\n' +
             'STEP 2 — BUILD LOOP (per surface):\n' +
             '   consult_before_build  — call once per surface before generating.\n' +
             '   review_output         — call after generating.\n' +
