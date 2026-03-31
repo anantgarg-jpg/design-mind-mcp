@@ -42,6 +42,9 @@ function toArray(val) {
 // Precedence: ratified surface > ratified blocks > unratified candidates.
 
 function _candidatesDir() {
+  if (process.env.DESIGN_MIND_DATA_DIR) {
+    return join(process.env.DESIGN_MIND_DATA_DIR, 'candidates');
+  }
   const BASE = join(new URL(import.meta.url).pathname, '..', '..', '..');
   return join(BASE, 'blocks', '_candidates');
 }
@@ -1144,7 +1147,7 @@ function localFallback(params, basePath, reason) {
     ontology_refs = [],
   } = params;
 
-  const candidatesDir = join(basePath, 'blocks', '_candidates');
+  const candidatesDir = _candidatesDir();
   if (!existsSync(candidatesDir)) mkdirSync(candidatesDir, { recursive: true });
 
   const existing = loadExistingCandidates(candidatesDir);
@@ -1271,7 +1274,7 @@ function normalizePatternName(name) {
 }
 
 function replaceSessionCandidate(params, basePath, sessionEntry) {
-  const candidatesDir = join(basePath, 'blocks', '_candidates');
+  const candidatesDir = _candidatesDir();
   const { candidate_id: oldId, frequency_count: frozenFreq } = sessionEntry;
 
   // Remove old files
