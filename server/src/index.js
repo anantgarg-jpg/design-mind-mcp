@@ -542,6 +542,29 @@ function handleMessage(message, reply) {
             resources: { subscribe: false, listChanged: false },
           },
           serverInfo: { name: 'design-mind', version: `1.0.0-${BUILD_INFO.commit}` },
+          instructions:
+            'Design Mind enforces the Innovaccer design system during UI generation.\n\n' +
+            'ARCHITECTURE — read resources first, then use tools:\n\n' +
+            '1. GENOME RESOURCES (read all 8 at session start before generating any UI):\n' +
+            '   design-mind://blocks/manifest      — full block palette: when to use each, import paths, family invariants\n' +
+            '   design-mind://surfaces/manifest    — ratified surface patterns: canonical_structure is authoritative\n' +
+            '   design-mind://genome/safety        — hard clinical rules, non-negotiable\n' +
+            '   design-mind://genome/ontology      — canonical entity names and forbidden synonyms\n' +
+            '   design-mind://genome/tokens        — color, spacing, typography rules\n' +
+            '   design-mind://genome/copy-voice    — clinical tone, number formatting, confirmation copy\n' +
+            '   design-mind://genome/principles    — the eight product principles\n' +
+            '   design-mind://genome/taste         — aesthetic identity and design dials\n\n' +
+            '2. TOOLS (called during the build loop):\n' +
+            '   consult_before_build  — call once per surface before generating. Returns unratified_candidates:\n' +
+            '                           patterns teams have built that are not yet ratified blocks.\n' +
+            '   review_output         — call after generating. Returns honors, fixes, layout compliance,\n' +
+            '                           and candidate_patterns to report.\n' +
+            '   report_pattern        — call for each entry in candidate_patterns. Separate obligation\n' +
+            '                           from review — both must be called.\n\n' +
+            '3. PRECEDENCE (follow strictly):\n' +
+            '   Ratified surface (surfaces/manifest)  → canonical_structure is authoritative, do not deviate\n' +
+            '   Ratified blocks (blocks/manifest)     → family_invariants are immutable\n' +
+            '   Unratified candidates                 → weak signal only, ratified blocks take precedence',
         });
         break;
       }
