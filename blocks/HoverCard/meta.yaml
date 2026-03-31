@@ -5,36 +5,50 @@ level: primitive
 npm_path: "@innovaccer/ui-assets/block-primitives/HoverCard"
 structural_family: hover-preview
 family_invariants:
-  - "Container: rounded-lg shadow-md z-20 bg-card border border-border p-4 max-w-[320px]"
-  - "Open and close delays: set by the component to avoid accidental triggers"
+  - "Container: w-auto max-w-xs rounded-lg border-0 bg-card text-card-foreground shadow-md p-4"
+  - "Open delay 200ms, close delay 100ms — prevents accidental triggers"
   - "Must be keyboard-accessible via focus"
-confidence: 0.85
-version: 1.0.0
+  - "Interior layout is fully consumer-defined via children"
+confidence: 0.9
+version: 1.1.0
 
 summary: >
   Hover-triggered content preview card that appears when the user
   hovers over or focuses a trigger element. Provides supplementary
-  context without navigating away from the current view.
+  context without navigating away from the current view. Interior
+  layout is open — the block owns only the container shell.
 
 when:
-  - previewing a linked entity (user profile, resource summary)
+  - previewing a linked entity (provider profile, patient summary, medication detail)
   - showing supplementary info on hover without navigation
-  - augmenting a text link or avatar with richer context
+  - augmenting a text link, badge, or avatar with richer context
 
 not_when:
   - content is critical — hover is not accessible on touch devices
   - interactive content inside the preview — use Popover instead
   - mobile-first context — hover is unavailable
 
-variants:
-  default: simple text preview with optional avatar
-  rich: preview with image, title, description, and metadata
+props:
+  positioning:
+    - side: preferred opening side (top | right | bottom | left); subject to collision flip
+    - sideOffset: pixel gap between trigger and card
+    - align: alignment along the side axis (start | center | end)
+    - alignOffset: pixel nudge along the alignment axis
+    - avoidCollisions: set false to disable auto-flip (default true)
+    - collisionPadding: viewport edge padding before a flip triggers
+  state:
+    - open / onOpenChange: controlled open state
+    - defaultOpen: uncontrolled initial open state
+  timing:
+    - openDelay: ms before card opens (default 200)
+    - closeDelay: ms before card closes after pointer leaves (default 100)
 
 key_rules:
   - never used for critical information (hover unavailable on touch)
-  - open delay is intentional — prevents accidental triggers on hover
-  - close delay allows cursor re-entry without dismissing
+  - open delay is intentional — prevents accidental triggers on fast cursor passes
+  - close delay allows cursor re-entry into the card without dismissing
   - keyboard accessible via focus on the trigger element
+  - interior content layout is the consumer's responsibility — no structure is imposed
   - color never sole differentiator for meaning (rule 19)
 
 embedding_hint: >
