@@ -8,19 +8,21 @@ family_invariants:
   - "rounded-md border radius"
   - "whitespace-nowrap label never wraps (rule 18)"
   - "focus-visible:ring-2 focus-visible:ring-offset-1 (rule 20)"
-  - "font-normal (400 weight)"
-  - "transition-[color,background-color,border-color,transform] duration-100"
+  - "font-light (300 weight) for all variants except link; font-normal (400) for link"
+  - "transition-all inherited from shadcn base; no explicit transition override in block"
 confidence: 0.85
 version: 3.0.0
 
 summary: >
   Primary interactive trigger for user actions. Linear-inspired flat aesthetic
-  with font-weight 400, no shadows, tight padding, and subtle scale-down on
-  press. Supports six visual types (primary, destructive, basic, outline,
+  with font-weight 300 (light) for standard variants and 400 (normal) for the
+  link variant, no shadows, tight padding, and no scale transform on press.
+  Supports six visual types (primary, destructive, basic, outline,
   transparent, link), three explicit heights (sm=24px, default=32px, lg=40px),
   four content layouts (text, text+left icon, text+right icon, icon-only),
-  and five interactive states (default, hover, pressed, focused, disabled).
-  Icon-only is not available for the link type.
+  asChild render delegation, and five interactive states (default, hover,
+  pressed, focused, disabled). Icon-only and lg size are not available for
+  the link type.
 
 when:
   - triggering a form submission, navigation, or state change
@@ -33,26 +35,27 @@ not_when:
   - icon-only action without accessible label (add aria-label)
 
 variants:
-  primary: bg-primary, flat fill, single primary CTA per surface
-  destructive: bg-destructive, flat fill, delete and remove actions only
-  basic: bg-foreground/6%, subtle tinted fill for secondary actions
-  outline: border-border, transparent bg — also used as a toggle (pair with aria-pressed and selected state)
-  transparent: no background or border, inline or toolbar actions
-  link: text-primary, underlined on hover, in-text navigational triggers
+  primary: bg-primary text-primary-foreground, flat fill, single primary CTA per surface
+  destructive: bg-destructive text-destructive-foreground, flat fill, delete and remove actions only
+  basic: bg-muted text-foreground, subtle tinted fill for secondary actions
+  outline: border-border bg-transparent text-foreground — also used as a toggle (pair with aria-pressed and selected state)
+  transparent: bg-transparent text-foreground/70 resting, inline or toolbar actions
+  link: text-primary underline-offset-2, underlines on hover, in-text navigational triggers; lg size not supported
 
 content_variants:
   text: label only
   left-icon: icon before label (leftIcon prop)
   right-icon: icon after label (rightIcon prop)
   icon-only: square icon button, no label (iconOnly prop; not for link type)
+  as-child: render as a child element such as an anchor (asChild prop)
 
 states:
   default: resting state, flat appearance
-  hover: subtle background opacity shift (primary/90, foreground/4-10%)
-  pressed: slightly darker bg + subtle scale-down on all types except link
-  focused: focus-visible:ring-2 with per-variant ring color (primary/40 or destructive/40)
+  hover: explicit token-based bg shift — primary uses bg-primary-hover; basic/outline/transparent use bg-muted-hover; link uses text-primary-hover + underline
+  pressed: active color token shift — bg-primary-active / bg-muted-active / text-primary-active; no scale transform
+  focused: focus-visible:ring-2 ring-offset-1 with ring-ring token for all types except destructive which uses ring-ring-destructive
   disabled: opacity-50, pointer-events-none
-  selected: outline variant with aria-pressed=true — use border-primary bg-accent text-accent-foreground to indicate the on state; this is the toggle pattern
+  selected: outline variant with aria-pressed=true — border-primary bg-accent text-accent-foreground indicates the on state; this is the toggle pattern
 
 key_rules:
   - only one primary CTA per surface (rule 14)
@@ -60,10 +63,12 @@ key_rules:
   - label never wraps (rule 18)
   - disabled state reduces opacity, not contrast
   - icon-only buttons must have aria-label for accessibility
-  - focus ring uses primary/40 for all types except destructive which uses destructive/40
+  - focus ring uses ring-ring token for all types except destructive which uses ring-ring-destructive
+  - link variant does not support size lg (falls back to default with dev warning) or iconOnly
   - toggle pattern: use outline variant with aria-pressed; apply border-primary bg-accent text-accent-foreground when selected/on
+  - use asChild to render button markup as an anchor or other element
 
 embedding_hint: >
   button cta action trigger submit primary destructive basic
   outline transparent link click icon left right small large
-  hover pressed focused disabled state flat linear scale
+  hover pressed focused disabled state flat linear asChild anchor
