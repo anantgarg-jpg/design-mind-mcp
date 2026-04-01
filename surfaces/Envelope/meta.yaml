@@ -36,6 +36,8 @@ never:
   - no shadow on block root elements — shadow lives on the Envelope card only
   - no additional p-4 padding at block root — shell padding already provides the surround
   - never use Envelope for overview or dashboard layouts
+  - no nested bg-muted or bg-background inside the Envelope — inner sections sit on the white bg-card surface, never on grey
+  - use Separator and SectionHeader for internal section boundaries — never a card, box, or container with a background color
 
 blocks_used: []
 
